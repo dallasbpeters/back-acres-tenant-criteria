@@ -4,47 +4,72 @@ import { AcknowledgmentForm } from '@/components/acknowledgment-form';
 
 export const dynamic = 'force-dynamic';
 
-function HomeIcon() {
-  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3.5 10 8.5-7 8.5 7v10.25a.75.75 0 0 1-.75.75H4.25a.75.75 0 0 1-.75-.75V10Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><path d="M9 21v-8h6v8" stroke="currentColor" strokeWidth="1.4"/></svg>;
-}
-
 export default function Page() {
   const ready = canAcceptAcknowledgments();
   const requiresCode = Boolean(process.env.ACCESS_CODE);
-  return <main>
-    <header className="masthead"><div className="layout-width masthead-inner">
-      <a href="#top" className="brand"><span className="brand-icon"><HomeIcon /></span><span><strong>BACK ACRES</strong><small>RENTAL PROPERTY</small></span></a>
-      <span className="location-top">AMARILLO, TEXAS <span className="location-dot">•</span> PRIVATE APPLICATION NOTICE</span>
-    </div></header>
 
-    <div id="top" className="layout-width">
+  return <main id="top">
+    <a className="skip-link" href="#criteria">Skip to selection criteria</a>
+    <header className="masthead">
+      <div className="layout-width masthead-inner">
+        <a href="#top" className="brand"><span className="brand-monogram" aria-hidden="true">BA</span><span><strong>Back Acres</strong><small>Rental property · Amarillo, Texas</small></span></a>
+        <span className="location-top">Applicant documents <span aria-hidden="true">/</span> 01</span>
+      </div>
+    </header>
+
+    <div className="layout-width">
       <section className="hero" aria-labelledby="main-heading">
-        <div><div className="eyebrow"><span className="line" /> APPLICATION INFORMATION <span className="bullet">/</span> DOCUMENT 01</div>
-          <h1 id="main-heading">Tenant selection<br /><em>criteria & acknowledgment.</em></h1>
-          <p className="hero-lede">Before applying for this property, please review the criteria we use to evaluate rental applications. When you're finished, acknowledge that you've had an opportunity to read them.</p>
+        <div className="document-heading">
+          <p className="eyebrow">Residential rental · Application notice</p>
+          <h1 id="main-heading">Tenant selection criteria <span>& acknowledgment</span></h1>
+          <p className="hero-lede">Review the selection criteria before applying. Each adult applicant must acknowledge that they have had an opportunity to read this notice.</p>
         </div>
-        <aside className="property-card"><div className="property-overline">PROPERTY DETAILS</div><div className="property-address">7800 Back Acres Rd</div><div className="property-city">Amarillo, TX 79119</div><div className="property-line" /><div className="property-rent-label">MONTHLY RENT</div><div className="property-rent">$2,500 <span>/ month</span></div></aside>
+        <dl className="document-details">
+          <div><dt>Property</dt><dd>{POLICY.street}<span>{POLICY.city}</span></dd></div>
+          <div><dt>Monthly rent</dt><dd className="property-rent">${POLICY.rent.toLocaleString('en-US')}<span>Per month</span></dd></div>
+          <div><dt>Last revised</dt><dd>{POLICY.revised}<span className="policy-version">{POLICY.version}</span></dd></div>
+        </dl>
       </section>
 
-      {!ready && <div className="draft-banner" role="status"><span className="draft-dot" /><div><strong>Draft preview — submissions disabled</strong><p>The landlord must review and finalize these proposed criteria and configure email delivery before this form can accept acknowledgments.</p></div></div>}
+      {!ready && <div className="draft-banner" role="status"><strong>Draft notice</strong><p>These proposed criteria require final review. Acknowledgments are unavailable until email delivery is configured.</p></div>}
 
       <div className="content-grid">
-        <aside className="sidebar"><div className="sidebar-label">IN THIS DOCUMENT</div>
-          <a href="#criteria" className="step"><span>01</span> Selection criteria</a>
-          <a href="#important-notice" className="step"><span>02</span> Important notice</a>
-          <a href="#acknowledge" className="step"><span>03</span> Acknowledgment</a>
-          <div className="sidebar-meta"><span>VERSION</span><strong>{POLICY.version}</strong><span>LAST UPDATED</span><strong>{POLICY.revised}</strong></div>
+        <aside className="sidebar">
+          <nav aria-label="Document sections">
+            <p className="sidebar-label">Contents</p>
+            <a href="#criteria" className="step"><span>01</span> Selection criteria</a>
+            <a href="#important-notice" className="step"><span>02</span> Required notice</a>
+            <a href="#acknowledge" className="step"><span>03</span> Acknowledgment</a>
+          </nav>
+          <p className="sidebar-note">For your records<br /><span>Use your browser’s Print command to save or print this notice.</span></p>
         </aside>
 
-        <article className="document-content">
-          <section id="criteria" className="criteria-section"><div className="section-kicker">01 — THE REVIEW PROCESS</div><h2>What we look at.</h2><p className="section-intro">Each completed application is evaluated using the same published standards, in accordance with applicable law. Supporting records may be requested to verify information.</p>
-            <div className="criteria-list">{POLICY.items.map((item)=><div className="criterion" key={item.number}><div className="criterion-number">{item.number}</div><div><h3>{item.title}</h3><p>{item.detail}</p></div></div>)}</div>
+        <article className="document-content" aria-label="Tenant selection notice">
+          <section id="criteria" className="criteria-section">
+            <div className="section-heading"><span className="section-number" aria-hidden="true">01</span><h2>Selection criteria</h2></div>
+            <p className="section-intro">Each completed application is evaluated using the same published standards, in accordance with applicable law. Supporting records may be requested to verify information.</p>
+            <div className="criteria-list">{POLICY.items.map((item) => <div className="criterion" key={item.number}>
+              <div className="criterion-number" aria-hidden="true">{item.number}</div>
+              <div><h3>{item.title}</h3><p>{item.detail}</p></div>
+            </div>)}</div>
           </section>
-          <section id="important-notice" className="statutory-section"><div className="section-kicker">02 — IMPORTANT NOTICE</div><h2>Notice of eligibility requirements.</h2><p className="section-intro">Texas Property Code § 92.3515 requires disclosure of tenant-selection criteria and an acknowledgment of the opportunity to review them.</p><div className="statutory-box"><div className="box-kicker">REQUIRED ACKNOWLEDGMENT LANGUAGE</div><p><strong>{POLICY.statutoryAcknowledgment}</strong></p></div><p className="small-note">This document is not a lease, a promise to rent, or an approval of an application. Any decision will be made separately under applicable law. Please keep a copy for your records.</p><div className="print-actions"><a href="https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.3515" target="_blank" rel="noreferrer">Texas Property Code § 92.3515 <span aria-hidden="true">↗</span></a><span>•</span><span>To print this notice, use your browser's Print command.</span></div></section>
-          <section id="acknowledge" className="ack-section"><div className="section-kicker">03 — YOUR ACKNOWLEDGMENT</div><h2>Confirm you’ve reviewed it.</h2><p className="section-intro">Enter your information exactly as it appears on your rental application. You'll receive a confirmation by email; the landlord and co-owner will receive copies as well.</p><AcknowledgmentForm ready={ready} requiresCode={requiresCode} version={POLICY.version} /></section>
+
+          <section id="important-notice" className="statutory-section">
+            <div className="section-heading"><span className="section-number" aria-hidden="true">02</span><h2>Notice of eligibility requirements</h2></div>
+            <p className="section-intro">Texas Property Code § 92.3515 requires disclosure of tenant-selection criteria and an acknowledgment of the opportunity to review them.</p>
+            <div className="statutory-box"><p className="box-kicker">Required acknowledgment language</p><p><strong>{POLICY.statutoryAcknowledgment}</strong></p></div>
+            <p className="small-note">This document is not a lease, a promise to rent, or an approval of an application. Any decision will be made separately under applicable law. Please keep a copy for your records.</p>
+            <div className="print-actions"><a href="https://statutes.capitol.texas.gov/Docs/PR/htm/PR.92.htm#92.3515" target="_blank" rel="noreferrer">Texas Property Code § 92.3515 <span aria-hidden="true">↗</span></a></div>
+          </section>
+
+          <section id="acknowledge" className="ack-section">
+            <div className="section-heading"><span className="section-number" aria-hidden="true">03</span><h2>Applicant acknowledgment</h2></div>
+            <p className="section-intro">Enter your information as it appears on your rental application. A confirmation will be emailed to you and copied to the property owners.</p>
+            <AcknowledgmentForm ready={ready} requiresCode={requiresCode} version={POLICY.version} />
+          </section>
         </article>
       </div>
     </div>
-    <footer><div className="layout-width footer-inner"><span>© {new Date().getFullYear()} Back Acres Rental</span><span>{POLICY.street} · {POLICY.city}</span><span>Questions? Contact the property owner.</span></div></footer>
+    <footer><div className="layout-width footer-inner"><span>Back Acres Rental · {new Date().getFullYear()}</span><span>{POLICY.street} · {POLICY.city}</span><span>Questions? Contact the property owner.</span></div></footer>
   </main>;
 }
