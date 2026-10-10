@@ -31,7 +31,7 @@ export default function Page() {
         </dl>
       </section>
 
-      {!ready && <div className="draft-banner" role="status"><strong>Draft notice</strong><p>These proposed criteria require final review. Acknowledgments are unavailable until email delivery is configured.</p></div>}
+      {!ready && <div className="draft-banner" role="status"><strong>Acknowledgments temporarily unavailable</strong><p>You can review the final criteria below. Please contact the property owner if you need to submit an acknowledgment.</p></div>}
 
       <div className="content-grid">
         <aside className="sidebar">

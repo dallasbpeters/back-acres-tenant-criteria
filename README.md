@@ -2,11 +2,11 @@
 
 A responsive, GitHub-ready Next.js application for `7800 Back Acres Rd, Amarillo, TX 79119`, designed for deployment on Vercel. Applicants can review tenant-selection criteria, acknowledge them electronically, and receive an emailed receipt. Copies are emailed privately to both property owners (the landlord and Tandra) through Resend.
 
-**Status:** DRAFT. The app deliberately **refuses submissions** until the criteria have been finalized and all required email settings are configured.
+**Status:** FINAL — version `FINAL-2026-10-10-v1`. Published at the property owner’s direction. Submissions require the enable setting and all required email configuration.
 
 ## Important before publishing
 
-1. Review and replace the **PROPOSED** text in [`lib/policy.ts`](lib/policy.ts) with your actual, consistently applied, pre-established tenant-selection criteria. The 3× rent income rule is a **suggested draft**, not a claimed current policy. In particular, decide credit/history and animal policies before activating.
+1. The final criteria are maintained in [`lib/policy.ts`](lib/policy.ts). Review any future changes before publishing and keep the receipt version synchronized.
 2. Increment `POLICY.version` every time you materially change the criteria. Each email records the complete criteria, version identifier, SHA-256 digest, date/time, typed name, email, and technical request metadata.
 3. Have qualified Texas counsel verify statutory compliance, including whether your electronic presentation and acknowledgment satisfy the statute's **printed notice** requirement and electronic-consent rules. Texas Property Code § 92.3515 requires notice when the rental application is made available; a new notice **cannot retroactively satisfy** an earlier application.
 4. Add your actual sender and recipient email addresses as **Vercel Environment Variables**. Do not hardcode emails or commit keys.
