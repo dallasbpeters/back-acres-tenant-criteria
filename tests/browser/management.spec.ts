@@ -349,7 +349,11 @@ test("property lifecycle, private records, public applications, resident links, 
       await sql`SELECT status FROM rental_invoices WHERE id=${invoiceId}`;
     expect(paid[0].status).toBe("paid");
   }
-  const { slug: ignoredSlug, ...automaticProperty } = property;
+  const {
+    slug: ignoredSlug,
+    emergencyContact: ignoredEmergencyContact,
+    ...automaticProperty
+  } = property;
   expect(
     (
       await send({
@@ -403,6 +407,18 @@ test("property lifecycle, private records, public applications, resident links, 
     ),
   ).toBeVisible();
 
+  await expect(
+    page.getByLabel("Urgent repair contact", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Open maintenance portal", exact: true }),
+  ).toHaveAttribute("href", "/admin#maintenance");
+  const portalPage = await page.context().newPage();
+  await portalPage.goto("/admin#maintenance");
+  await expect(
+    portalPage.getByRole("heading", { name: "Maintenance", exact: true }),
+  ).toBeVisible();
+  await portalPage.close();
   await page.screenshot({
     path: "test-results/property-workspace.png",
     fullPage: true,

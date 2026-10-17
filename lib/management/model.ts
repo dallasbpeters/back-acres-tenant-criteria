@@ -23,7 +23,7 @@ export const propertySchema = z
     bathrooms: z.number().min(0).max(50),
     availableDate: text(10),
     contact: required(500),
-    emergencyContact: required(500),
+    emergencyContact: text(500).optional().default(""),
     criteria: required(20000),
     criteriaVersion: required(100),
     published: z.boolean(),

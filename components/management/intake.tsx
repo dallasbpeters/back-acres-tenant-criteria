@@ -110,7 +110,8 @@ export function IntakeForm({
       ) : (
         <p className="draft-banner">
           This form is not monitored for emergencies. For immediate danger, call
-          911. For urgent repairs: {property.emergencyContact}.
+          911. For urgent repairs:{" "}
+          {property.emergencyContact || property.contact}.
         </p>
       )}
       <fieldset disabled={busy}>

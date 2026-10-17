@@ -111,6 +111,7 @@ export function Dashboard() {
     setRecords(data);
   }
   useEffect(() => {
+    if (window.location.hash === "#maintenance") setTab("Maintenance");
     load().catch((e) => setError(e.message));
   }, []);
   async function save(body: unknown) {
@@ -580,7 +581,7 @@ function PropertyWorkspace({
                 bathrooms: Number(s("bathrooms")),
                 availableDate: s("availableDate"),
                 contact: s("contact"),
-                emergencyContact: s("emergencyContact"),
+                emergencyContact: data?.emergencyContact ?? "",
                 criteria: s("criteria"),
                 criteriaVersion: s("criteriaVersion"),
                 published: f.get("published") === "on",
@@ -634,11 +635,13 @@ function PropertyWorkspace({
                 label="Public owner contact"
                 value={data?.contact}
               />
-              <Field
-                name="emergencyContact"
-                label="Urgent repair contact"
-                value={data?.emergencyContact}
-              />
+              <div className="field">
+                <span>Urgent repairs</span>
+                <a href="/admin#maintenance" target="_blank" rel="noreferrer">
+                  Open maintenance portal
+                </a>
+                <small>Manage resident request links in a new tab.</small>
+              </div>
               <Field
                 name="criteriaVersion"
                 label="Criteria version"
