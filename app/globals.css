@@ -238,3 +238,25 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .site-policy-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem 2rem; padding: 1.5rem var(--gutter); border-block-start: 1px solid var(--line); background: var(--bg); font-size: var(--text-label); }
 .site-policy-links a { display: inline-flex; align-items: center; min-block-size: 2.75rem; }
 @media print { .site-policy-links { display: none; } .legal-body { max-inline-size: none; padding-block: 1rem; } .legal-body section { break-inside: avoid; } }
+
+/* Property operations use the same restrained document layout. */
+.management-main { padding-block: 2.5rem 4rem; display: grid; gap: 1.5rem; }
+.management-nav, .management-tabs, .management-actions { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; }
+.management-tabs { border-block-end: 1px solid var(--line); padding-block-end: 1rem; }
+.management-tabs button, .management-actions button { padding: 0.65rem 1rem; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor:pointer; }
+.management-tabs button[aria-pressed="true"] { background: var(--accent); color:var(--paper); }
+.management-section, .management-form { display: grid; gap: 1.25rem; padding-block:1.5rem; border-block-start:1px solid var(--line); }
+.management-form fieldset { border:0; padding:0; margin:0; display:grid; gap:1.5rem; min-inline-size:0; }
+.management-form legend { font-family:var(--font-document); font-size:1.5rem; margin-block-end:1rem; }
+.management-main .field textarea, .management-main .field select { inline-size:100%; min-inline-size:0; border:1px solid var(--line); border-radius:2px; padding:0.8rem; background:var(--paper); color:var(--ink); font:inherit; font-size:1rem; }
+.management-main textarea { resize:vertical; }
+.document-text { white-space:pre-wrap; font-family:var(--font-document); line-height:1.7; margin-block:1rem; }
+.property-list { display:grid; gap:1.5rem; }
+.property-list article, .record { display:grid; gap:0.75rem; padding-block:1.5rem; border-block-start:1px solid var(--line); min-inline-size:0; }
+.record summary { cursor:pointer; font-weight:600; padding-block:0.75rem; }
+.record dl { display:grid; gap:0.5rem; }
+.record a { overflow-wrap:anywhere; }
+.management-main [role="alert"] { color:var(--danger); }
+.management-main .submit-button { max-inline-size:34rem; text-decoration:none; }
+.management-empty { padding-block:2rem; color:var(--muted); }
+@media print { .management-nav,.management-tabs,.management-actions {display:none;} }

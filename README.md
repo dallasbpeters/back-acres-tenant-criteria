@@ -122,3 +122,42 @@ then run `ADMIN_EMAILS=admin-test@example.invalid npm run test:e2e`. Tests use h
 Neon database, create explicitly labeled test records, and remove those records.
 The browser tests sign local fixture sessions with NEXTAUTH_SECRET; they exercise access enforcement, not a real Google consent round-trip. They do not send email. Production provider delivery still needs a deliberately
 addressed test or an authorized real notice.
+
+## Property-management workspace
+
+`/admin` uses the same approved Google owner accounts. It manages properties,
+applications, immutable lease templates/draft versions, payment requests, and
+resident maintenance links. Public listings live at `/properties`; a published
+property can accept applications at `/properties/<slug>/apply`.
+
+Applications capture the property/criteria snapshot presented at submission.
+Applicant identity and email are self-reported. Screening is arranged separately
+with a provider such as SmartMove; this app never collects SSNs or orders reports.
+Status updates do not email decisions. Maintenance forms show emergency contact
+instructions, use revocable one-year private links, and do not reveal past tickets.
+The owner must check the workspace for submissions; automatic email alerts and
+attachments are not implemented.
+
+The supplied Avail lease model is adapted as editable text in
+`lib/leases/avail-template.ts`. The original PDF and extracted temporary files
+stay outside Git. Explicit disclosures replace sample-specific assertions.
+Generated leases remain drafts, with private PDF downloads and immutable saves;
+e-signatures and the original PDF's separately listed enclosures are not included.
+
+Apply migrations before publishing: `npm run db:migrate`. The provided lease model
+was imported into the configured Neon database under template ID
+`91268531-0000-4000-8000-000000000001`. On a new database, add the template through
+the workspace or an explicit server-side seed.
+
+Stripe Checkout is wired for one-time payments but remains unavailable without
+STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET. Begin with sandbox/test values in
+Vercel Production, stored as sensitive values. Configure the webhook endpoint
+`/api/payments/webhook` for `checkout.session.completed`,
+`checkout.session.async_payment_succeeded`, and
+`checkout.session.async_payment_failed`. Stripe-hosted payment methods are managed
+in Stripe's Dashboard. Both secret and restricted live keys additionally require
+PAYMENTS_LIVE_ENABLED=true; leave it false while testing.
+
+These requests are not Stripe Invoices or recurring subscriptions. See
+`docs/stripe-integration-plan.md` for Billing, Invoicing, Tax, and live-payment
+requirements. No live funds or real applicant emails were used in testing.

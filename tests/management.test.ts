@@ -1,0 +1,44 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { generateLease, type LeaseValues } from "../lib/management/leases";
+import {
+  applicationSchema,
+  invoiceSchema,
+  propertySchema,
+} from "../lib/management/model";
+const values: LeaseValues = {
+  property_name: "Test",
+  property_address: "1 Test St",
+  landlord_name: "Owner",
+  tenant_names: "Tenant",
+  start_date: "2026-11-01",
+  end_date: "2027-10-31",
+  monthly_rent: "$2,500.00",
+  security_deposit: "$2,500.00",
+};
+test("lease substitution preserves original wording and refuses missing or unknown fields", () => {
+  assert.equal(
+    generateLease("Tenant: {{tenant_names}}\nRent: {{ monthly_rent }}", values),
+    "Tenant: Tenant\nRent: $2,500.00",
+  );
+  assert.throws(() => generateLease("{{unknown}}", values));
+  assert.throws(() =>
+    generateLease("{{tenant_names}}", { ...values, tenant_names: "" }),
+  );
+});
+test("intake requires acknowledgments and invoice amounts are integer cents", () => {
+  assert.equal(applicationSchema.safeParse({}).success, false);
+  assert.equal(
+    invoiceSchema.safeParse({
+      propertyId: crypto.randomUUID(),
+      payerName: "Test",
+      payerEmail: "test@example.com",
+      description: "Rent",
+      category: "rent",
+      amountCents: 2500.5,
+      dueDate: "2026-11-01",
+    }).success,
+    false,
+  );
+  assert.equal(propertySchema.safeParse({ published: true }).success, false);
+});

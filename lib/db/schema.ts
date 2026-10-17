@@ -35,3 +35,4 @@ export const noticeDeliveries = pgTable("adverse_notice_deliveries", {
     .notNull(),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
 });
+export * from "./management";

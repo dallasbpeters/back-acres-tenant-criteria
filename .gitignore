@@ -9,3 +9,10 @@ node_modules/
 
 test-results/
 playwright-report/
+
+tmp/
+output/
+
+# Locally installed integration guidance
+.agents/
+skills-lock.json
