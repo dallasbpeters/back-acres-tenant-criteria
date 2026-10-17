@@ -10,7 +10,7 @@ const propertyId = crypto.randomUUID(),
   invoiceId = crypto.randomUUID(),
   templateId = crypto.randomUUID();
 const slug = `test-${propertyId}`;
-const canceledInvoiceId=crypto.randomUUID();
+const canceledInvoiceId = crypto.randomUUID();
 let linkId = "",
   draftId = "";
 const sql = neon(process.env.DATABASE_URL!);
@@ -29,6 +29,9 @@ test("property lifecycle, private records, public applications, resident links, 
   request,
 }) => {
   test.setTimeout(60000);
+  expect(
+    (await request.post("/api/admin/billing", { data: {} })).status(),
+  ).toBe(401);
   expect((await request.get("/api/admin/management")).status()).toBe(401);
   const token = await encode({
     secret: process.env.NEXTAUTH_SECRET!,
@@ -39,19 +42,20 @@ test("property lifecycle, private records, public applications, resident links, 
     },
     maxAge: 3600,
   });
-  await page
-    .context()
-    .addCookies([
-      {
-        name: "next-auth.session-token",
-        value: token,
-        url: origin,
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: "next-auth.session-token",
+      value: token,
+      url: origin,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
   const send = (data: unknown) =>
-    page.request.post("/api/admin/management", { headers: { origin, "x-vercel-forwarded-for": propertyId }, data });
+    page.request.post("/api/admin/management", {
+      headers: { origin, "x-vercel-forwarded-for": propertyId },
+      data,
+    });
   expect(
     (
       await page.request.post("/api/admin/management", {
@@ -60,6 +64,26 @@ test("property lifecycle, private records, public applications, resident links, 
       })
     ).status(),
   ).toBe(403);
+  expect(
+    (
+      await page.request.post("/api/admin/billing", {
+        headers: { origin: "https://evil.example" },
+        data: {},
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await page.request.post("/api/admin/billing", {
+        headers: { origin },
+        data: {
+          action: "create",
+          id: crypto.randomUUID(),
+          data: { authorized: false },
+        },
+      })
+    ).status(),
+  ).toBe(400);
   const property = {
     name: "Test property",
     slug,
@@ -244,11 +268,38 @@ test("property lifecycle, private records, public applications, resident links, 
       })
     ).ok(),
   ).toBe(true);
-  expect((await send({action:"invoice",id:canceledInvoiceId,data:{propertyId,payerName:"Fixture",payerEmail:"fixture@example.invalid",category:"rent",description:"Canceled fixture",amountCents:1000,dueDate:"2026-11-01"}})).ok()).toBe(true);
-  expect((await send({action:"voidInvoice",id:canceledInvoiceId})).ok()).toBe(true);
-  records=await (await page.request.get("/api/admin/management")).json();
-  const canceled=records.invoices.find((i:{id:string})=>i.id===canceledInvoiceId);
-  expect((await request.post("/api/payments/checkout",{headers:{origin},data:{token:canceled.url.split("/").pop()}})).status()).toBe(410);
+  expect(
+    (
+      await send({
+        action: "invoice",
+        id: canceledInvoiceId,
+        data: {
+          propertyId,
+          payerName: "Fixture",
+          payerEmail: "fixture@example.invalid",
+          category: "rent",
+          description: "Canceled fixture",
+          amountCents: 1000,
+          dueDate: "2026-11-01",
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  expect(
+    (await send({ action: "voidInvoice", id: canceledInvoiceId })).ok(),
+  ).toBe(true);
+  records = await (await page.request.get("/api/admin/management")).json();
+  const canceled = records.invoices.find(
+    (i: { id: string }) => i.id === canceledInvoiceId,
+  );
+  expect(
+    (
+      await request.post("/api/payments/checkout", {
+        headers: { origin },
+        data: { token: canceled.url.split("/").pop() },
+      })
+    ).status(),
+  ).toBe(410);
   expect(
     (
       await request.post("/api/payments/webhook", {
@@ -266,7 +317,7 @@ test("property lifecycle, private records, public applications, resident links, 
         object: {
           id: "cs_test_fixture",
           object: "checkout.session",
-          livemode:false,
+          livemode: false,
           client_reference_id: invoiceId,
           metadata: { invoiceId },
           currency: "usd",

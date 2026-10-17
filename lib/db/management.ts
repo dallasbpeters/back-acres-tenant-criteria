@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -6,6 +7,7 @@ import {
   jsonb,
   timestamp,
   boolean,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { PropertyInput, ApplicationInput } from "../management/model";
 const createdAt = () =>
@@ -61,8 +63,39 @@ export const maintenanceRequests = pgTable("maintenance_requests", {
   status: text("status").notNull().default("received"),
   createdAt: createdAt(),
 });
+export const rentSchedules = pgTable(
+  "rent_schedules",
+  {
+    id: uuid("id").primaryKey(),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => properties.id),
+    payerName: text("payer_name").notNull(),
+    payerEmail: text("payer_email").notNull(),
+    monthlyCents: integer("monthly_cents").notNull(),
+    firstDate: text("first_date").notNull(),
+    installments: integer("installments").notNull(),
+    mode: text("mode").notNull(),
+    status: text("status").notNull().default("creating"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeScheduleId: text("stripe_schedule_id").unique(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("one_active_rent_schedule")
+      .on(t.propertyId, t.payerEmail, t.mode)
+      .where(
+        sql`${t.status} in ('creating','not_started','active','needs_review')`,
+      ),
+  ],
+);
 export const invoices = pgTable("rental_invoices", {
   mode: text("mode").notNull().default("test"),
+  stripeInvoiceId: text("stripe_invoice_id").unique(),
+  hostedInvoiceUrl: text("hosted_invoice_url"),
+  billingScheduleId: uuid("billing_schedule_id").references(
+    () => rentSchedules.id,
+  ),
   id: uuid("id").primaryKey(),
   propertyId: uuid("property_id")
     .notNull()

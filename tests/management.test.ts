@@ -4,6 +4,7 @@ import { generateLease, type LeaseValues } from "../lib/management/leases";
 import {
   applicationSchema,
   invoiceSchema,
+  rentScheduleSchema,
   propertySchema,
 } from "../lib/management/model";
 const values: LeaseValues = {
@@ -41,4 +42,30 @@ test("intake requires acknowledgments and invoice amounts are integer cents", ()
     false,
   );
   assert.equal(propertySchema.safeParse({ published: true }).success, false);
+});
+
+test("rent schedules require owner authorization and a finite installment count", () => {
+  const valid = {
+    propertyId: crypto.randomUUID(),
+    payerName: "Tenant",
+    payerEmail: "TENANT@example.com",
+    monthlyCents: 250000,
+    firstDate: "2026-11-01",
+    installments: 12,
+    authorized: true,
+  };
+  assert.equal(
+    rentScheduleSchema.parse(valid).payerEmail,
+    "tenant@example.com",
+  );
+  for (const patch of [
+    { authorized: false },
+    { installments: 0 },
+    { installments: 61 },
+    { monthlyCents: 2500.5 },
+  ])
+    assert.equal(
+      rentScheduleSchema.safeParse({ ...valid, ...patch }).success,
+      false,
+    );
 });

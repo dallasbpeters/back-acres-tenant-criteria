@@ -5,6 +5,10 @@ import { invoices } from "@/lib/db/schema";
 import { reply } from "@/lib/adverse/auth";
 import { stripe } from "@/lib/management/stripe";
 import type Stripe from "stripe";
+import {
+  billingEvents,
+  handleBillingEvent,
+} from "@/lib/management/billing-events";
 export async function POST(request: NextRequest) {
   let event: Stripe.Event;
   try {
@@ -15,6 +19,14 @@ export async function POST(request: NextRequest) {
     );
   } catch {
     return reply({ error: "Invalid webhook signature or configuration." }, 400);
+  }
+  if (billingEvents.includes(event.type)) {
+    try {
+      await handleBillingEvent(event);
+      return reply({ received: true });
+    } catch {
+      return reply({ error: "Could not record billing event." }, 503);
+    }
   }
   if (
     ![

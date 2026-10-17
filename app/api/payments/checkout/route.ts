@@ -26,11 +26,23 @@ export async function POST(request: NextRequest) {
       .from(invoices)
       .where(eq(invoices.id, id));
     if (!invoice) return reply({ error: "Payment request not found." }, 404);
-    if(invoice.mode!==paymentMode())return reply({error:"This request belongs to a different payment environment. Ask the owner for a new payment link."},409);
+    if (invoice.mode !== paymentMode())
+      return reply(
+        {
+          error:
+            "This request belongs to a different payment environment. Ask the owner for a new payment link.",
+        },
+        409,
+      );
     if (invoice.status === "void")
       return reply({ error: "This payment request was canceled." }, 410);
     if (invoice.status === "paid")
       return reply({ error: "This payment has already been received." }, 409);
+    if (invoice.stripeInvoiceId) {
+      if (!invoice.hostedInvoiceUrl)
+        return reply({ error: "This invoice is still being prepared." }, 409);
+      return reply({ url: invoice.hostedInvoiceUrl });
+    }
     if (!(await allowIntake(request, `payment:${id}`)))
       return reply({ error: "Please wait before trying again." }, 429);
     const client = stripe();
@@ -89,7 +101,13 @@ export async function POST(request: NextRequest) {
       await d
         .update(invoices)
         .set({ stripeSessionId: session.id, status: "open" })
-        .where(and(eq(invoices.id, id), eq(invoices.status,"creating_checkout"), isNull(invoices.stripeSessionId)));
+        .where(
+          and(
+            eq(invoices.id, id),
+            eq(invoices.status, "creating_checkout"),
+            isNull(invoices.stripeSessionId),
+          ),
+        );
     }
     if (session.status !== "open" || !session.url)
       return reply(

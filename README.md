@@ -158,6 +158,11 @@ Vercel Production, stored as sensitive values. Configure the webhook endpoint
 in Stripe's Dashboard. Both secret and restricted live keys additionally require
 PAYMENTS_LIVE_ENABLED=true; leave it false while testing.
 
-These requests are not Stripe Invoices or recurring subscriptions. See
+One-time requests use Checkout. Fixed-term monthly rent schedules use Stripe
+Billing and send-invoice collection, with hosted invoice payment pages and no
+autopay. Subscribe the same endpoint to invoice.finalized, invoice.paid,
+invoice.payment_failed, invoice.voided, invoice.marked_uncollectible, and
+subscription_schedule.created/updated/canceled/completed/released. The webhook
+retrieves current provider records to tolerate out-of-order notifications. See
 `docs/stripe-integration-plan.md` for Billing, Invoicing, Tax, and live-payment
 requirements. No live funds or real applicant emails were used in testing.

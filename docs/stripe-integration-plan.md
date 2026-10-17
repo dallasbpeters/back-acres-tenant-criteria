@@ -17,17 +17,15 @@ Required server settings: STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET. PAYMENTS_
 - Server uses the database amount, not a browser-supplied amount. A database claim and stable idempotency key prevent concurrent session creation. An uncertain session-creation failure requires owner reconciliation instead of automatically creating another checkout.
 - The success page never marks a request paid. Only a signed webhook can confirm payment. Validate the request ID, Stripe session, currency, and total before updating the ledger. Duplicate webhook delivery must not duplicate payments or regress a paid state.
 - The first endpoint subscribes to checkout.session.completed, checkout.session.async_payment_succeeded, and checkout.session.async_payment_failed.
-- Browser and database tests currently use fixtures; actual Stripe sandbox checkout and actual endpoint delivery remain required after account access.
+- Verified an actual $1 sandbox card payment through hosted Checkout and its signed webhook on the deployed app. Production checkout also reused its session on repeated clicks. No live funds were used.
 
-## Billing and Invoicing: next integration
+## Billing and Invoicing: current implementation
 
-The current payment request is an app record, not a Stripe Invoice. Recurring Billing and Stripe Invoicing are not implemented yet.
+Owners can create fixed-term monthly rent schedules using Stripe Subscription Schedules, one Customer per schedule, send_invoice collection, an explicit installment count, and end_behavior=cancel. Dates are limited to days 1–28 to avoid month-end ambiguity. Invoices are due when issued; future dates use noon UTC. Tenants open Stripe Hosted Invoice Pages to pay each invoice. No automatic debits or automatic lease renewals are configured. The owner must confirm the amount and authorized lease term before creation.
 
-For a signed tenancy, store a Stripe Customer per payer and define the lease start, end, rent amount, due day, and payment preferences. Use Billing APIs for scheduled rent instead of a home-grown renewal loop. Do not automatically renew beyond the lease's authorized term. Do not enroll tenants in automatic debits without their explicit authorization and Stripe's mandate/consent flow.
+Signed invoice.finalized, invoice.paid, invoice.payment_failed, invoice.voided, invoice.marked_uncollectible and subscription_schedule created/updated/canceled/completed/released events reconcile the ledger. Handlers retrieve current Stripe records because event delivery can be out of order. Existing Stripe invoices use their hosted invoice URL, never a second Checkout session. The owner can stop future invoices; existing obligations and the legal lease remain separate.
 
-Use Stripe Invoicing for hosted invoices, downloadable invoice PDFs, and receipts; use Checkout for one-time application fees and deposits. Do not expose both an invoice payment link and a separate Checkout request for the same obligation. Reconcile payments by one obligation ID.
-
-Before enabling recurring billing, implement invoice.paid, invoice.payment_failed, applicable customer.subscription.* events, refunds, disputes, early fraud warnings, and customer.updated if customer details are mirrored. Provide payment-method management and a clear owner-managed lease-end/cancellation flow. A Stripe subscription is a payment schedule, not an executed residential lease.
+Creation uses stable idempotency keys, a database uniqueness guard per active property/payer/environment, and an uncertain state requiring reconciliation rather than blind retries. Live mode remains blocked. Refunds, disputes, delayed bank outcomes, and full term-end tests remain requirements before real-money activation. Autopay and its tenant consent/payment-method-management flow are not implemented.
 
 ## Tax
 

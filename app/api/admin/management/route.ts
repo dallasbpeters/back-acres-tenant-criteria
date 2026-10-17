@@ -13,6 +13,7 @@ import {
   managementEvents,
   leaseTemplates,
   leaseDrafts,
+  rentSchedules,
 } from "@/lib/db/schema";
 import { guard, readBody, reply } from "@/lib/adverse/auth";
 import { authOptions } from "@/lib/adverse/google-auth";
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest) {
       invoiceRows,
       templates,
       drafts,
+      schedules,
     ] = await Promise.all([
       d
         .select()
@@ -111,6 +113,11 @@ export async function GET(request: NextRequest) {
         .from(leaseDrafts)
         .orderBy(desc(leaseDrafts.createdAt))
         .limit(200),
+      d
+        .select()
+        .from(rentSchedules)
+        .orderBy(desc(rentSchedules.createdAt))
+        .limit(200),
     ]);
     return reply({
       properties: propertyRows,
@@ -126,6 +133,7 @@ export async function GET(request: NextRequest) {
       })),
       templates,
       drafts,
+      rentSchedules: schedules,
       paymentsReady: paymentReady(),
       paymentMode: /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "")
         ? "live"
@@ -257,6 +265,9 @@ export async function POST(request: NextRequest) {
           },
           409,
         );
+      if (invoice.stripeInvoiceId) {
+        await stripe().invoices.voidInvoice(invoice.stripeInvoiceId);
+      }
       if (invoice.stripeSessionId) {
         const session = await stripe().checkout.sessions.retrieve(
           invoice.stripeSessionId,
@@ -301,7 +312,7 @@ export async function POST(request: NextRequest) {
         .where(eq(invoices.id, c.id));
       if (existing) return reply({ ok: true });
       await d.batch([
-        d.insert(invoices).values({ id: c.id, ...c.data, mode:paymentMode() }),
+        d.insert(invoices).values({ id: c.id, ...c.data, mode: paymentMode() }),
         event(c.id, {
           amountCents: c.data.amountCents,
           category: c.data.category,

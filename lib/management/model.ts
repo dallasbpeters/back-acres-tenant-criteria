@@ -72,3 +72,13 @@ export function dollars(cents: number) {
     currency: "USD",
   }).format(cents / 100);
 }
+
+export const rentScheduleSchema = z.object({
+  propertyId: z.string().uuid(),
+  payerName: required(),
+  payerEmail: z.string().trim().email().max(254).toLowerCase(),
+  monthlyCents: z.number().int().min(50).max(10000000),
+  firstDate: required(10).regex(/^\d{4}-\d{2}-\d{2}$/),
+  installments: z.number().int().min(1).max(60),
+  authorized: z.literal(true),
+});

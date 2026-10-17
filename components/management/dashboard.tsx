@@ -10,6 +10,7 @@ import {
 } from "@/lib/management/model";
 import { POLICY, policyRecordText } from "@/lib/policy";
 import { LeaseWorkspace } from "./leases";
+import { BillingWorkspace, type RentScheduleRecord } from "./billing";
 export type PropertyRecord = {
   id: string;
   slug: string;
@@ -76,6 +77,7 @@ export type DraftRecord = {
   createdAt: string;
 };
 type Records = {
+  rentSchedules: RentScheduleRecord[];
   properties: PropertyRecord[];
   applications: ApplicationRecord[];
   maintenance: MaintenanceRecord[];
@@ -275,9 +277,16 @@ export function Dashboard() {
                 {records.paymentsReady
                   ? `Stripe ${records.paymentMode} mode is configured.`
                   : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
-                Create a separate request for each rent period, deposit, or fee.
-                Recurring autopay is not enabled.
+                Use a rent schedule for monthly invoices, or a separate request
+                for a deposit, fee, or one-time rent charge. Avoid requesting
+                the same obligation twice. Recurring autopay is not enabled.
               </p>
+              <BillingWorkspace
+                properties={records.properties}
+                schedules={records.rentSchedules}
+                onSaved={load}
+                ready={records.paymentsReady}
+              />
               <InvoiceForm
                 properties={records.properties}
                 save={save}
