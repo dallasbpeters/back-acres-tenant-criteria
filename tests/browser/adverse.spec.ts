@@ -59,7 +59,7 @@ test("private access, rich editing, durable versions, conflicts, mobile and dupl
         sameSite: "Lax",
       },
     ]);
-  await page.reload();
+  await page.goto("/admin/adverse-actions/new");
   await expect(
     page.getByRole("button", { name: "New notice", exact: true }),
   ).toBeVisible();

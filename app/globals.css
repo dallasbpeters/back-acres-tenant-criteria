@@ -333,3 +333,20 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .owner-layout { flex:1; inline-size:100%; }
 .owner-sidebar nav { position:sticky; top:1rem; }
 @media (max-width:640px) { .owner-sidebar nav { position:static; } }
+.notice-return { margin-block-end:1.25rem; font-size:.85rem; }
+.notice-list-filters { display:grid; grid-template-columns:minmax(12rem,1fr) minmax(10rem,15rem) auto auto; align-items:end; gap:.75rem; margin-block:1.5rem; }
+.notice-list-filters button,.notice-list-footer button { min-block-size:2.6rem; border:1px solid var(--line); background:var(--paper); color:var(--ink); }
+.notice-table-scroll { overflow-x:auto; max-inline-size:100%; border-block:1px solid var(--line); }
+.notice-table { border-collapse:collapse; inline-size:100%; text-align:start; font-size:.85rem; min-inline-size:42rem; }
+.notice-table th { font-size:.72rem; font-weight:600; color:var(--muted); background:var(--bg); padding:.8rem; text-align:start; }
+.notice-table td { border-block-start:1px solid var(--line); padding:1rem .8rem; vertical-align:top; max-inline-size:24rem; overflow-wrap:anywhere; }
+.notice-table td>span,.notice-table td>small { display:block; margin-block-start:.35rem; font-size:.76rem; color:var(--muted); }
+.notice-table td .notice-status { display:inline-block; margin:0; padding:.2rem .45rem; background:var(--tint); color:var(--ink); font-size:.72rem; }
+.notice-table td .notice-status-unknown,.notice-table td .notice-status-rejected { color:var(--danger); }
+.notice-table td:last-child { white-space:nowrap; }
+.notice-list-footer { justify-content:space-between; padding-block:1rem; }
+@media(max-width:640px){.notice-list-filters {grid-template-columns:1fr 1fr;} .notice-list-filters .field:first-child {grid-column:1/-1;} }
+@media print { .notice-return,.notice-list-filters,.notice-list-footer { display:none; } }
+.owner-main.management-main { grid-template-columns:minmax(0,1fr); }
+.notice-table-scroll { min-inline-size:0; }
+@media(max-width:640px) { .notice-list-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }

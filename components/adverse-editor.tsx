@@ -118,8 +118,10 @@ function Reasons({
 export default function AdverseEditor({
   signedIn,
   loginError,
+  documentId,
 }: {
   signedIn: boolean;
+  documentId?: string;
   loginError?: string;
 }) {
   const [authenticated, setAuthenticated] = useState(signedIn);
@@ -139,15 +141,17 @@ export default function AdverseEditor({
       JSON.stringify(noticeSchema.parse(notice));
   const errors = sendErrors(notice);
   const rendered = renderNotice(notice);
-  async function refresh() {
-    const data = await api("notices");
+  async function refresh(selectedDocumentId?: string) {
+    const id=selectedDocumentId ?? current?.documentId;
+    if(!id){setVersions([]);setHasMore(false);return [] as Version[];}
+    const data = await api(`notices?documentId=${id}`);
     setVersions(data.versions);
     setHasMore(data.versions.length === 200);
     return data.versions as Version[];
   }
   useEffect(() => {
-    if (authenticated) refresh().catch((e) => setError(e.message));
-  }, [authenticated]);
+    if (authenticated && documentId) refresh(documentId).then(rows=>{if(rows[0])load(rows[0]);else setError("This notice was not found.");}).catch((e) => setError(e.message));
+  }, [authenticated,documentId]);
   useEffect(() => {
     const prevent = (e: BeforeUnloadEvent) => {
       if (dirty && (notice.applicantName || notice.applicantEmail)) {
@@ -182,7 +186,9 @@ export default function AdverseEditor({
       !window.confirm("Discard your unsaved edits?")
     )
       return;
+    window.history.replaceState(null,"",`/admin/adverse-actions/${v?.documentId ?? "new"}`);
     setCurrent(v);
+    if(!v){setVersions([]);setHasMore(false);}
     setNotice(v ? v.notice : blankNotice());
     setEditorKey((k) => k + 1);
     setPreview(false);
@@ -252,10 +258,11 @@ export default function AdverseEditor({
     );
   return (
     <div className="admin-shell">
+      <div className="notice-return"><a href="/admin/adverse-actions">← All adverse-action notices</a></div>
       <div className="admin-workspace">
         <aside className="notice-history">
           <div className="admin-actions">
-            <h2>Saved notices</h2>
+            <h2>Version history</h2>
             <button disabled={busy} onClick={() => load(null)}>
               New notice
             </button>
@@ -271,8 +278,7 @@ export default function AdverseEditor({
             </button>
           </div>
           <p className="small-note">
-            Every save creates a separate version. Load earlier versions below
-            when available.
+            Versions of this notice only. Every save preserves a separate revision.
           </p>
           {versions.length === 0 && <p>No saved notices yet.</p>}
           {versions.map((v) => (
@@ -295,7 +301,7 @@ export default function AdverseEditor({
               disabled={busy}
               onClick={() =>
                 perform(async () => {
-                  const data = await api(`notices?offset=${versions.length}`);
+                  const data = await api(`notices?documentId=${current?.documentId ?? documentId}&offset=${versions.length}`);
                   setVersions((v) => [...v, ...data.versions]);
                   setHasMore(data.versions.length === 200);
                 })
@@ -541,8 +547,9 @@ export default function AdverseEditor({
                       parentId: current?.id || null,
                       requestId: crypto.randomUUID(),
                     });
+                    window.history.replaceState(null,"",`/admin/adverse-actions/${result.version.documentId}`);
                     setCurrent(result.version);
-                    await refresh();
+                    await refresh(result.version.documentId);
                     setConfirmed(false);
                     setMessage(`Version ${result.version.version} saved.`);
                   })

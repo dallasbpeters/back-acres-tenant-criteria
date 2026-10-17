@@ -81,7 +81,7 @@ export function OwnerFrame({
               <a
                 href="/admin/adverse-actions"
                 aria-current={
-                  pathname === "/admin/adverse-actions" ? "page" : undefined
+                  pathname.startsWith("/admin/adverse-actions") ? "page" : undefined
                 }
               >
                 Adverse-action notices

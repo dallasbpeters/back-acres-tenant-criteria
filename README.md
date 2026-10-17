@@ -199,3 +199,10 @@ required for automated syndication. Coverage references, verified October 17,
 The photo browser integration test requires the listing-photo Blob token. It
 uploads temporary fixtures, checks privacy and export, and removes only those
 fixtures and objects afterward.
+
+Adverse-action notices open in a searchable list with one row per document and
+its latest version/status. Each row links to `/admin/adverse-actions/{documentId}`;
+that editor shows only the selected document's immutable version history. New
+notices use `/admin/adverse-actions/new`. List filters apply to the latest
+version; an earlier accepted version is flagged separately. Resend acceptance
+continues to mean provider acceptance, not confirmed inbox delivery.

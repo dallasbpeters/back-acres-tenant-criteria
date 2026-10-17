@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { and, or, ilike, isNull, sql, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { noticeVersions, noticeDeliveries } from "@/lib/db/schema";
@@ -10,6 +10,102 @@ export async function GET(request: NextRequest) {
   const denied = await guard(request);
   if (denied) return denied;
   try {
+    const database = db();
+    const documentId = request.nextUrl.searchParams.get("documentId");
+    if (documentId && !z.string().uuid().safeParse(documentId).success)
+      return reply({ error: "Invalid notice identifier." }, 400);
+    if (request.nextUrl.searchParams.get("view") === "list") {
+      const offset = Math.max(
+        0,
+        Math.min(
+          1000000,
+          Math.floor(Number(request.nextUrl.searchParams.get("offset")) || 0),
+        ),
+      );
+      const q = (request.nextUrl.searchParams.get("q") ?? "")
+        .trim()
+        .slice(0, 200);
+      const status = request.nextUrl.searchParams.get("status") ?? "all";
+      if (
+        ![
+          "all",
+          "draft",
+          "accepted",
+          "sending",
+          "unknown",
+          "rejected",
+        ].includes(status)
+      )
+        return reply({ error: "Invalid notice status." }, 400);
+      const latest = database
+        .selectDistinctOn([noticeVersions.documentId], {
+          id: noticeVersions.id,
+          documentId: noticeVersions.documentId,
+          version: noticeVersions.version,
+          applicantName:
+            sql<string>`${noticeVersions.notice}->>'applicantName'`.as(
+              "applicant_name",
+            ),
+          applicantEmail:
+            sql<string>`${noticeVersions.notice}->>'applicantEmail'`.as(
+              "applicant_email",
+            ),
+          property: sql<string>`${noticeVersions.notice}->>'property'`.as(
+            "property",
+          ),
+          action: sql<string>`${noticeVersions.notice}->>'action'`.as("action"),
+          createdAt: noticeVersions.createdAt,
+          status: noticeDeliveries.status,
+        })
+        .from(noticeVersions)
+        .leftJoin(
+          noticeDeliveries,
+          eq(noticeVersions.id, noticeDeliveries.versionId),
+        )
+        .orderBy(noticeVersions.documentId, desc(noticeVersions.version))
+        .as("latest_notices");
+      const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+      const rows = await database
+        .select({
+          id: latest.id,
+          documentId: latest.documentId,
+          version: latest.version,
+          applicantName: latest.applicantName,
+          applicantEmail: latest.applicantEmail,
+          property: latest.property,
+          action: latest.action,
+          createdAt: latest.createdAt,
+          status: latest.status,
+          lastAcceptedVersion: sql<
+            number | null
+          >`(select max(v.version) from adverse_notice_versions v join adverse_notice_deliveries d on d.version_id=v.id where v.document_id=${latest.documentId} and d.status='accepted')`,
+        })
+        .from(latest)
+        .where(
+          and(
+            q
+              ? or(
+                  ilike(latest.applicantName, pattern),
+                  ilike(latest.applicantEmail, pattern),
+                  ilike(latest.property, pattern),
+                )
+              : undefined,
+            status === "all"
+              ? undefined
+              : status === "draft"
+                ? isNull(latest.status)
+                : eq(latest.status, status),
+          ),
+        )
+        .orderBy(desc(latest.createdAt), desc(latest.documentId))
+        .limit(26)
+        .offset(offset);
+      return reply({
+        documents: rows.slice(0, 25),
+        hasMore: rows.length > 25,
+        nextOffset: offset + 25,
+      });
+    }
     const offset = Math.max(
       0,
       Math.min(
@@ -17,7 +113,7 @@ export async function GET(request: NextRequest) {
         Number(request.nextUrl.searchParams.get("offset")) || 0,
       ),
     );
-    const rows = await db()
+    const rows = await database
       .select({
         id: noticeVersions.id,
         documentId: noticeVersions.documentId,
@@ -33,7 +129,8 @@ export async function GET(request: NextRequest) {
         noticeDeliveries,
         eq(noticeVersions.id, noticeDeliveries.versionId),
       )
-      .orderBy(desc(noticeVersions.createdAt))
+      .where(documentId ? eq(noticeVersions.documentId, documentId) : undefined)
+      .orderBy(desc(noticeVersions.version), desc(noticeVersions.createdAt))
       .limit(200)
       .offset(Math.floor(offset));
     return reply({ versions: rows });

@@ -223,7 +223,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   expect((await save(2, false)).ok()).toBe(true);
   expect((await request.get(photos[0].url)).status()).toBe(404);
   await cleanup();
-  await page.goto("/admin/adverse-actions");
+  await page.goto("/admin/adverse-actions/new");
   await page
     .getByLabel("Applicant full name", { exact: true })
     .fill("Unsaved fixture");
