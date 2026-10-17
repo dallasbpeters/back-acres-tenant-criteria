@@ -70,6 +70,6 @@ export default function Page() {
         </article>
       </div>
     </div>
-    <footer><div className="layout-width footer-inner"><span>Back Acres Rental · {new Date().getFullYear()}</span><span>{POLICY.street} · {POLICY.city}</span><span>Questions? Contact the property owner.</span></div></footer>
+    <footer><div className="layout-width footer-inner"><span>Back Acres Rental · {new Date().getFullYear()}</span><span>{POLICY.street} · {POLICY.city}</span><span>Tenant criteria, acknowledgments, and private owner correspondence.</span></div></footer>
   </main>;
 }

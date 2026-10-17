@@ -228,3 +228,13 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .admin-message { padding: 1rem; background: var(--tint); margin-block-end: 1rem; }
 @media (max-width: 800px) { .admin-workspace { grid-template-columns: minmax(0,1fr); gap: 2rem; } .notice-history { border-inline-end: 0; padding: 0; max-block-size: 20rem; overflow-y: auto; } }
 @media print { body:has(.admin-shell) .admin-header, .notice-history, .notice-main > .admin-actions, .notice-fields, .notice-send, .admin-message, .admin-shell .form-error { display: none !important; } .admin-shell, .admin-workspace { display: block; padding: 0; margin: 0; } .notice-preview { border: 0; padding: 0; } }
+
+.legal-body { max-inline-size: 54rem; padding-block: var(--section-space); }
+.legal-body section { margin-block-start: 2.75rem; }
+.legal-body section h2 { margin-block-end: 1rem; }
+.legal-body section p, .legal-body li { font-family: var(--font-document); font-size: 1.0625rem; }
+.legal-body section p + p, .legal-body li + li { margin-block-start: .85rem; }
+.legal-body ul { padding-inline-start: 1.4rem; }
+.site-policy-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem 2rem; padding: 1.5rem var(--gutter); border-block-start: 1px solid var(--line); background: var(--bg); font-size: var(--text-label); }
+.site-policy-links a { display: inline-flex; align-items: center; min-block-size: 2.75rem; }
+@media print { .site-policy-links { display: none; } .legal-body { max-inline-size: none; padding-block: 1rem; } .legal-body section { break-inside: avoid; } }

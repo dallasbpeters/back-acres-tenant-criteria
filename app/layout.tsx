@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body>{children}<nav className="site-policy-links" aria-label="Site information"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/admin/adverse-actions">Owner sign-in</a></nav></body></html>;
 }
