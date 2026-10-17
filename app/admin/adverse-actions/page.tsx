@@ -5,6 +5,22 @@ export const metadata = {
   title: "Adverse Action Notices | Back Acres Rental",
   robots: { index: false, follow: false },
 };
-export default async function Page() {
-  return <AdverseEditor signedIn={await authenticated()} />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+  return (
+    <AdverseEditor
+      signedIn={await authenticated()}
+      loginError={
+        error
+          ? error === "AccessDenied"
+            ? "AccessDenied"
+            : "SignInError"
+          : undefined
+      }
+    />
+  );
 }

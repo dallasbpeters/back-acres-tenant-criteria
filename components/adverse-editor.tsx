@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { signIn, signOut } from "next-auth/react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -113,9 +114,14 @@ function Reasons({
     </div>
   );
 }
-export default function AdverseEditor({ signedIn }: { signedIn: boolean }) {
+export default function AdverseEditor({
+  signedIn,
+  loginError,
+}: {
+  signedIn: boolean;
+  loginError?: string;
+}) {
   const [authenticated, setAuthenticated] = useState(signedIn);
-  const [password, setPassword] = useState("");
   const [notice, setNotice] = useState<Notice>(blankNotice);
   const [versions, setVersions] = useState<Version[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -211,36 +217,29 @@ export default function AdverseEditor({ signedIn }: { signedIn: boolean }) {
         <p className="eyebrow">Private workspace</p>
         <h1>Adverse action notices</h1>
         <p>Sign in to prepare, save, and send applicant notices.</p>
-        <form
-          className="ack-form"
-          onSubmit={(e) => {
-            e.preventDefault();
+        <p className="small-note">
+          Use an approved Google account. Access is limited to the property’s
+          administrators.
+        </p>
+        <button
+          className="admin-primary"
+          disabled={busy}
+          onClick={() =>
             perform(async () => {
-              await api("session", "POST", { password });
-              setPassword("");
-              setAuthenticated(true);
-            });
-          }}
+              await signIn("google", { callbackUrl: "/admin/adverse-actions" });
+            })
+          }
         >
-          <label className="field">
-            Access password
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          <button className="admin-primary" disabled={busy}>
-            {busy ? "Signing in…" : "Sign in"}
-          </button>
-          {error && (
-            <p role="alert" className="form-error">
-              {error}
-            </p>
-          )}
-        </form>
+          {busy ? "Connecting to Google…" : "Continue with Google"}
+        </button>
+        {(error || loginError) && (
+          <p role="alert" className="form-error">
+            {error ||
+              (loginError === "AccessDenied"
+                ? "This Google account is not approved for access. Choose an approved account or contact the property administrator."
+                : "Google sign-in could not be completed. Try again or contact the property administrator.")}
+          </p>
+        )}
       </main>
     );
   return (
@@ -261,7 +260,7 @@ export default function AdverseEditor({ signedIn }: { signedIn: boolean }) {
             )
               return;
             perform(async () => {
-              await api("session", "DELETE");
+              await signOut({ redirect: false });
               setAuthenticated(false);
               setVersions([]);
               setCurrent(null);

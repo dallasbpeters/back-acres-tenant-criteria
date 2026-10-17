@@ -62,10 +62,30 @@ This starter is not legal advice. Review it with qualified counsel before using 
 
 ## Private adverse-action workspace
 
-Open `/admin/adverse-actions`. Sign in with the private `ADMIN_PASSWORD` (at least
-32 random characters). Sessions use an HTTP-only, same-site cookie and expire after
-8 hours. Changing the password and redeploying invalidates existing sessions.
-Applicant records and send routes require authentication; writes require the same origin.
+Open `/admin/adverse-actions` and choose **Continue with Google**. Only verified
+Google accounts matching `ADMIN_EMAILS` can sign in. If that variable is omitted,
+the allowlist uses `LANDLORD_EMAIL` and `TANDRA_EMAIL`. Set exact email addresses
+separated by commas; no wildcard domains or alias expansion are allowed. An
+explicitly empty list denies everyone. The allowlist is rechecked on each request.
+
+NextAuth handles OAuth state, PKCE, CSRF protection and encrypted session cookies.
+Sessions last up to 8 hours. The shared password and its old cookies are no longer
+accepted. Applicant records and send routes require authentication; writes also
+require the same origin. Google is used only for identity (openid, email, profile),
+not for Gmail or Drive access. No Google access or refresh tokens are stored in Neon.
+
+### Google OAuth setup
+
+Use a Google **Web application** client and register this exact production callback:
+`https://back-acres-tenant-criteria.vercel.app/api/auth/callback/google`.
+The JavaScript origin is `https://back-acres-tenant-criteria.vercel.app`.
+For local Google sign-in, also register `http://localhost:3191/api/auth/callback/google`.
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, a random `NEXTAUTH_SECRET`, and
+`NEXTAUTH_URL` in Vercel Production. Use the production origin for `NEXTAUTH_URL`;
+locally use `http://localhost:3191`. Keep preview environments separate from production
+credentials. If Google lists the app as Testing, approved accounts must also appear
+in the OAuth consent screen's test-user list. Google may require the user to complete
+consent; the automated tests do not grant consent on a user's behalf.
 
 1. Enter the applicant, decision, sender contact and actual reasons in Tiptap.
 2. Include all reporting agencies used. If a credit score influenced the decision,
@@ -89,7 +109,7 @@ version and sending again. No delivery webhook is currently configured.
 
 ### Database and development
 
-Set `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `ADMIN_PASSWORD` only in ignored
+Set `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and the Google authentication variables only in ignored
 `.env.local` / Vercel secrets. Never use `NEXT_PUBLIC_` for these values.
 Use Node 22. Run `npm ci`, `npm run db:generate` after schema edits and
 `npm run db:migrate` to apply the checked-in migration. Migration is a separate
@@ -97,8 +117,8 @@ explicit operation; builds do not mutate the database. These tables are additive
 
 `npm test` checks notice validation, safe rendering and sending failure/concurrency
 behavior. For browser tests, start a development server on port 3191 with
-`RESEND_API_KEY=test-no-email-delivery FROM_EMAIL=test@example.com npm run dev -- --port 3191`,
-then run `npm run test:e2e`. Tests use headless installed Chrome and the configured
+`ADMIN_EMAILS=admin-test@example.invalid RESEND_API_KEY=test-no-email-delivery FROM_EMAIL=test@example.com npm run dev -- --port 3191`,
+then run `ADMIN_EMAILS=admin-test@example.invalid npm run test:e2e`. Tests use headless installed Chrome and the configured
 Neon database, create explicitly labeled test records, and remove those records.
-They do not send email. Production provider delivery still needs a deliberately
+The browser tests sign local fixture sessions with NEXTAUTH_SECRET; they exercise access enforcement, not a real Google consent round-trip. They do not send email. Production provider delivery still needs a deliberately
 addressed test or an authorized real notice.

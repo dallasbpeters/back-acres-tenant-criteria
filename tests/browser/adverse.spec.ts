@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { encode } from "next-auth/jwt";
 import { loadEnvConfig } from "@next/env";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
@@ -27,16 +28,38 @@ test("private access, rich editing, durable versions, conflicts, mobile and dupl
     (
       await request.post("/api/admin/session", {
         headers: { origin: "https://example.com" },
-        data: { password: process.env.ADMIN_PASSWORD },
+        data: { password: "retired-password" },
       })
     ).status(),
-  ).toBe(403);
+  ).toBe(410);
   await page.goto("/admin/adverse-actions");
   await expect(
     page.getByRole("heading", { name: "Adverse action notices" }),
   ).toBeVisible();
-  await page.getByLabel("Access password").fill(process.env.ADMIN_PASSWORD!);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Continue with Google" }),
+  ).toBeVisible();
+  // Locally signed fixture exercises session enforcement, not Google's consent UI.
+  const email = process.env.ADMIN_EMAILS?.split(",")[0];
+  if (!email || !process.env.NEXTAUTH_SECRET)
+    throw new Error("Set a local test ADMIN_EMAILS and NEXTAUTH_SECRET.");
+  const token = await encode({
+    secret: process.env.NEXTAUTH_SECRET,
+    token: { email, sub: "test-only", googleVerified: true },
+    maxAge: 3600,
+  });
+  await page
+    .context()
+    .addCookies([
+      {
+        name: "next-auth.session-token",
+        value: token,
+        url: origin,
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+  await page.reload();
   await expect(
     page.getByRole("button", { name: "New notice", exact: true }),
   ).toBeVisible();
@@ -116,13 +139,11 @@ test("private access, rich editing, durable versions, conflicts, mobile and dupl
     page.getByRole("button", { name: "Send notice", exact: true }),
   ).toBeEnabled();
   // A durable existing claim blocks all further attempts without calling Resend.
-  await drizzle(process.env.DATABASE_URL!)
-    .insert(noticeDeliveries)
-    .values({
-      versionId: second.id,
-      status: "accepted",
-      resendId: "test-only-no-email-sent",
-    });
+  await drizzle(process.env.DATABASE_URL!).insert(noticeDeliveries).values({
+    versionId: second.id,
+    status: "accepted",
+    resendId: "test-only-no-email-sent",
+  });
   const duplicate = await page.request.post("/api/admin/notices/send", {
     headers: { origin },
     data: { versionId: second.id, confirmed: true },
@@ -143,7 +164,54 @@ test("private access, rich editing, durable versions, conflicts, mobile and dupl
     fullPage: true,
   });
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByLabel("Access password")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with Google" }),
+  ).toBeVisible();
   expect((await page.request.get("/api/admin/notices")).status()).toBe(401);
   expect(browserErrors).toEqual([]);
+});
+
+test("Google authorization uses PKCE/state and denied sessions cannot read notices", async ({
+  request,
+  browser,
+}) => {
+  const csrf = await (await request.get("/api/auth/csrf")).json();
+  const response = await request.post("/api/auth/signin/google", {
+    form: {
+      csrfToken: csrf.csrfToken,
+      callbackUrl: `${origin}/admin/adverse-actions`,
+      json: "true",
+    },
+  });
+  const data = await response.json();
+  const url = new URL(data.url);
+  expect(url.hostname).toBe("accounts.google.com");
+  expect(url.searchParams.get("redirect_uri")).toBe(
+    `${origin}/api/auth/callback/google`,
+  );
+  expect(url.searchParams.get("state")).toBeTruthy();
+  expect(url.searchParams.get("code_challenge")).toBeTruthy();
+  expect(url.searchParams.get("scope")?.split(" ").sort()).toEqual([
+    "email",
+    "openid",
+    "profile",
+  ]);
+  for (const token of [
+    { email: "outsider@example.invalid", googleVerified: true },
+    { email: process.env.ADMIN_EMAILS, googleVerified: false },
+  ]) {
+    const context = await browser.newContext();
+    const encoded = await encode({
+      secret: process.env.NEXTAUTH_SECRET!,
+      token,
+      maxAge: 3600,
+    });
+    await context.addCookies([
+      { name: "next-auth.session-token", value: encoded, url: origin },
+    ]);
+    expect(
+      (await context.request.get(`${origin}/api/admin/notices`)).status(),
+    ).toBe(401);
+    await context.close();
+  }
 });
