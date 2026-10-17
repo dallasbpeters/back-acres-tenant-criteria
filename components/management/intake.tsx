@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/select";
 import { useState } from "react";
 import type { PropertyInput } from "@/lib/management/model";
 export function IntakeForm({
@@ -143,15 +144,10 @@ export function IntakeForm({
           ) : (
             <>
               <Field name="subject" label="What needs repair?" />
-              <label className="field">
-                Priority
-                <select name="priority">
-                  <option value="routine">Routine</option>
-                  <option value="urgent">
-                    Urgent — also contact the owner
-                  </option>
-                </select>
-              </label>
+              <AppSelect label={<>Priority</>} name="priority">
+                <option value="routine">Routine</option>
+                <option value="urgent">Urgent — also contact the owner</option>
+              </AppSelect>
             </>
           )}
         </div>

@@ -36,17 +36,15 @@ test("full-width owner sidebar and tenant-authorized ACH enrollment with revocat
     },
     maxAge: 3600,
   });
-  await page
-    .context()
-    .addCookies([
-      {
-        name: "next-auth.session-token",
-        value: token,
-        url: origin,
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: "next-auth.session-token",
+      value: token,
+      url: origin,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
   const firstDate = new Date();
   firstDate.setUTCMonth(firstDate.getUTCMonth() + 1, 10);
   const data = {
@@ -82,6 +80,45 @@ test("full-width owner sidebar and tenant-authorized ACH enrollment with revocat
   await expect(
     page.getByRole("heading", { name: "Monthly rent payments" }),
   ).toBeVisible();
+  const billingForm = page.locator(".management-form").first();
+  const collection = billingForm.getByRole("button", {
+    name: /Payment collection/,
+  });
+  await collection.focus();
+  await page.keyboard.press("Space");
+  await expect(
+    page.getByRole("option", {
+      name: "Monthly invoice · tenant pays manually",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  expect(
+    await billingForm.evaluate((form) =>
+      new FormData(form as HTMLFormElement).get("collection"),
+    ),
+  ).toBe("invoice");
+  await billingForm.getByRole("button", { name: /property/i }).click();
+  await page
+    .getByRole("option", { name: "ACH TEST property", exact: true })
+    .click();
+  expect(
+    await billingForm.evaluate((form) =>
+      new FormData(form as HTMLFormElement).get("propertyId"),
+    ),
+  ).toBe(propertyId);
+  await billingForm.evaluate((form) => (form as HTMLFormElement).reset());
+  expect(
+    await billingForm.evaluate((form) =>
+      new FormData(form as HTMLFormElement).get("collection"),
+    ),
+  ).toBe("ach");
+  expect(
+    await billingForm.evaluate((form) =>
+      new FormData(form as HTMLFormElement).get("propertyId"),
+    ),
+  ).toBe("");
   expect((await page.locator(".owner-sidebar").boundingBox())!.x).toBe(0);
   await page.screenshot({
     path: "test-results/owner-sidebar-left.png",

@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { ownerSections } from "./navigation";
 import { PublishingWorkspace, type PublicationRecord } from "./publishing";
@@ -233,24 +234,22 @@ export function Dashboard() {
                     </summary>
                     <p className="document-text">{a.criteriaSnapshot}</p>
                   </details>
-                  <label className="field">
-                    Application status
-                    <select
-                      value={a.status}
-                      disabled={busy}
-                      onChange={(e) =>
-                        save({
-                          action: "applicationStatus",
-                          id: a.id,
-                          status: e.target.value,
-                        })
-                      }
-                    >
-                      {applicationStatuses.map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <AppSelect
+                    label={<>Application status</>}
+                    value={a.status}
+                    disabled={busy}
+                    onValueChange={(value) =>
+                      save({
+                        action: "applicationStatus",
+                        id: a.id,
+                        status: value,
+                      })
+                    }
+                  >
+                    {applicationStatuses.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </AppSelect>
                   <a href="/admin/adverse-actions">
                     Prepare a notice separately
                   </a>
@@ -276,7 +275,8 @@ export function Dashboard() {
                   : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
                 Use a rent schedule for monthly invoices, or a separate request
                 for a deposit, fee, or one-time rent charge. Avoid requesting
-                the same obligation twice. Automatic ACH requires the tenant’s bank authorization.
+                the same obligation twice. Automatic ACH requires the tenant’s
+                bank authorization.
               </p>
               <BillingWorkspace
                 properties={records.properties}
@@ -398,24 +398,22 @@ export function Dashboard() {
                   <p>{new Date(m.createdAt).toLocaleString()}</p>
                   <p className="document-text">{m.data.description}</p>
                   <p>Access: {m.data.accessNotes || "Contact resident"}</p>
-                  <label className="field">
-                    Request status
-                    <select
-                      value={m.status}
-                      disabled={busy}
-                      onChange={(e) =>
-                        save({
-                          action: "maintenanceStatus",
-                          id: m.id,
-                          status: e.target.value,
-                        })
-                      }
-                    >
-                      {maintenanceStatuses.map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <AppSelect
+                    label={<>Request status</>}
+                    value={m.status}
+                    disabled={busy}
+                    onValueChange={(value) =>
+                      save({
+                        action: "maintenanceStatus",
+                        id: m.id,
+                        status: value,
+                      })
+                    }
+                  >
+                    {maintenanceStatuses.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </AppSelect>
                 </details>
               ))}
             </section>
@@ -463,17 +461,19 @@ export function PropertySelect({
   properties: PropertyRecord[];
 }) {
   return (
-    <label className="field">
-      Property
-      <select name="propertyId" aria-label="Property" required>
-        <option value="">Choose a property</option>
-        {properties.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.data.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <AppSelect
+      label={<>Property</>}
+      name="propertyId"
+      aria-label="Property"
+      required
+    >
+      <option value="">Choose a property</option>
+      {properties.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.data.name}
+        </option>
+      ))}
+    </AppSelect>
   );
 }
 function CopyLink({ url }: { url: string }) {
@@ -736,15 +736,12 @@ function InvoiceForm({
           <PropertySelect properties={properties} />
           <Field name="payerName" label="Payer name" />
           <Field name="payerEmail" label="Payer email" type="email" />
-          <label className="field">
-            Payment type
-            <select name="category">
-              <option value="rent">Rent</option>
-              <option value="deposit">Deposit</option>
-              <option value="application_fee">Application fee</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
+          <AppSelect label={<>Payment type</>} name="category">
+            <option value="rent">Rent</option>
+            <option value="deposit">Deposit</option>
+            <option value="application_fee">Application fee</option>
+            <option value="other">Other</option>
+          </AppSelect>
           <Field name="description" label="Description / rent period" />
           <Field name="amount" label="Amount ($)" type="number" />
           <Field name="dueDate" label="Due date" type="date" />

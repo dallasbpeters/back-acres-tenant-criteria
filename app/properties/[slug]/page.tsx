@@ -1,4 +1,4 @@
-import { ListingGallery } from "@/components/management/photos";
+import { ListingGallery } from "@/components/management/listing-gallery";
 import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { and, asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";

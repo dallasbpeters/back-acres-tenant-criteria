@@ -48,17 +48,15 @@ test("private access, rich editing, durable versions, conflicts, mobile and dupl
     token: { email, sub: "test-only", googleVerified: true },
     maxAge: 3600,
   });
-  await page
-    .context()
-    .addCookies([
-      {
-        name: "next-auth.session-token",
-        value: token,
-        url: origin,
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: "next-auth.session-token",
+      value: token,
+      url: origin,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
   await page.goto("/admin/adverse-actions/new");
   await expect(
     page.getByRole("button", { name: "New notice", exact: true }),
@@ -71,10 +69,17 @@ test("private access, rich editing, durable versions, conflicts, mobile and dupl
   await page
     .getByRole("textbox", { name: "Reasons for the decision" })
     .fill("Verified reason for testing.");
-  await page.getByLabel("Choose reporting agency 1", { exact: true }).selectOption("experian");
-  await expect(page.getByLabel("Agency name", { exact: true })).toHaveValue("Experian Information Solutions, Inc.");
-  await expect(page.getByLabel("Mailing address", { exact: true })).toHaveValue("P.O. Box 2002, Allen, TX 75013");
-  await expect(page.getByLabel("Phone / toll-free number")).toHaveValue("1-888-397-3742");
+  await page.getByRole("button", { name: /Choose reporting agency 1/ }).click();
+  await page.getByRole("option", { name: "Experian", exact: true }).click();
+  await expect(page.getByLabel("Agency name", { exact: true })).toHaveValue(
+    "Experian Information Solutions, Inc.",
+  );
+  await expect(page.getByLabel("Mailing address", { exact: true })).toHaveValue(
+    "P.O. Box 2002, Allen, TX 75013",
+  );
+  await expect(page.getByLabel("Phone / toll-free number")).toHaveValue(
+    "1-888-397-3742",
+  );
   await page.getByLabel("Agency name", { exact: true }).fill("Test agency");
   await page.getByLabel("Mailing address", { exact: true }).fill("123 Test St");
   await page.getByLabel("Phone / toll-free number").fill("800-555-0100");

@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/select";
 import { useState } from "react";
 import { Field, PropertySelect, type PropertyRecord } from "./dashboard";
 import { dollars } from "@/lib/management/model";
@@ -93,17 +94,18 @@ export function BillingWorkspace({
       >
         <fieldset disabled={busy || !ready}>
           <div className="fields">
-            <label className="field">
-              Payment collection
-              <select name="collection" defaultValue="ach">
-                <option value="ach">
-                  Automatic ACH · tenant authorization required
-                </option>
-                <option value="invoice">
-                  Monthly invoice · tenant pays manually
-                </option>
-              </select>
-            </label>
+            <AppSelect
+              label={<>Payment collection</>}
+              name="collection"
+              defaultValue="ach"
+            >
+              <option value="ach">
+                Automatic ACH · tenant authorization required
+              </option>
+              <option value="invoice">
+                Monthly invoice · tenant pays manually
+              </option>
+            </AppSelect>
             <PropertySelect properties={properties} />
             <Field name="payerName" label="Rent payer name" />
             <Field name="payerEmail" label="Rent payer email" type="email" />

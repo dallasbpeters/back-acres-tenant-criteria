@@ -1,5 +1,109 @@
 "use client";
 import { useRef, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+function SortablePhoto({
+  photo,
+  index,
+  busy,
+  onCaption,
+  onRemove,
+}: {
+  photo: PhotoRecord;
+  index: number;
+  busy: boolean;
+  onCaption: (caption: string) => void;
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: photo.id, disabled: busy });
+  return (
+    <div
+      ref={setNodeRef}
+      data-photo-id={photo.id}
+      className={`photo-edit-item${isDragging ? " photo-dragging" : ""}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      <div className="photo-preview">
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          className="photo-drag-target"
+          disabled={busy}
+          {...attributes}
+          {...listeners}
+          aria-label={`Reorder photo ${index + 1}`}
+        >
+          <img
+            src={photo.url}
+            alt={photo.caption || `Listing photo ${index + 1}`}
+            loading="lazy"
+            draggable={false}
+          />
+          <span className="photo-drag-hint" aria-hidden="true">
+            ⠿
+          </span>
+        </button>
+        <button
+          type="button"
+          className="photo-remove"
+          disabled={busy || isDragging}
+          onClick={onRemove}
+          aria-label={`Remove photo ${index + 1}`}
+          title="Remove photo"
+        >
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <path
+              d="m4 4 8 8M12 4l-8 8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <span className="photo-number">
+        {index === 0 ? "Cover photo" : `Photo ${index + 1}`}
+      </span>
+      <label className="field">
+        Photo caption
+        <input
+          aria-label={`Caption for photo ${index + 1}`}
+          defaultValue={photo.caption}
+          maxLength={300}
+          disabled={busy}
+          onBlur={(e) => {
+            if (e.target.value !== photo.caption) onCaption(e.target.value);
+          }}
+        />
+      </label>
+    </div>
+  );
+}
 export type PhotoRecord = {
   id: string;
   propertyId: string;
@@ -44,9 +148,24 @@ export function PhotoManager({
 }) {
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const input = useRef<HTMLInputElement>(null);
-  const active = photos.filter((p) => !p.archived),
+  const savedActive = photos.filter((p) => !p.archived);
+  const active = pendingOrder
+      ? [...savedActive].sort(
+          (a, b) => pendingOrder.indexOf(a.id) - pendingOrder.indexOf(b.id),
+        )
+      : savedActive,
     removed = photos.filter((p) => p.archived);
   async function update(data: unknown) {
     setBusy(true);
@@ -60,15 +179,21 @@ export function PhotoManager({
         result = await r.json();
       if (!r.ok) throw Error(result.error);
       await onSaved();
+      setMessage("Photo changes saved.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save photos.");
     } finally {
+      setPendingOrder(null);
       setBusy(false);
     }
   }
-  function move(index: number, direction: number) {
-    const ids = active.map((p) => p.id);
-    [ids[index], ids[index + direction]] = [ids[index + direction], ids[index]];
+  function reorder(from: string, to: string) {
+    if (busy || from === to) return;
+    const oldIndex = active.findIndex((p) => p.id === from),
+      newIndex = active.findIndex((p) => p.id === to);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const ids = arrayMove(active, oldIndex, newIndex).map((p) => p.id);
+    setPendingOrder(ids);
     update({ action: "order", propertyId, ids });
   }
   return (
@@ -77,7 +202,8 @@ export function PhotoManager({
         <div>
           <h3>Listing photos</h3>
           <p className="small-note">
-            {active.length} of 24 photos · first photo is the cover
+            {active.length} of 24 photos · drag to rearrange · first photo is
+            the cover
           </p>
         </div>
         <button
@@ -137,82 +263,42 @@ export function PhotoManager({
           or WebP; up to 20 MB each before resizing.
         </p>
       )}
-      <div className="photo-edit-grid">
-        {active.map((p, i) => (
-          <div className="photo-edit-item" key={p.id}>
-            <img
-              src={p.url}
-              alt={p.caption || `Listing photo ${i + 1}`}
-              loading="lazy"
-            />
-            <span className="photo-number">
-              {i === 0 ? "Cover photo" : `Photo ${i + 1}`}
-            </span>
-            <label className="field">
-              Photo caption
-              <input
-                aria-label={`Caption for photo ${i + 1}`}
-                defaultValue={p.caption}
-                maxLength={300}
-                disabled={busy}
-                onBlur={(e) => {
-                  if (e.target.value !== p.caption)
-                    update({
-                      action: "caption",
-                      id: p.id,
-                      caption: e.target.value,
-                    });
-                }}
-              />
-            </label>
-            <div className="management-actions">
-              <button
-                type="button"
-                disabled={busy || i === 0}
-                onClick={() => move(i, -1)}
-                aria-label={`Move photo ${i + 1} earlier`}
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                disabled={busy || i === active.length - 1}
-                onClick={() => move(i, 1)}
-                aria-label={`Move photo ${i + 1} later`}
-              >
-                →
-              </button>
-              {i > 0 && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() =>
-                    update({
-                      action: "order",
-                      propertyId,
-                      ids: [
-                        p.id,
-                        ...active.filter((x) => x.id !== p.id).map((x) => x.id),
-                      ],
-                    })
-                  }
-                >
-                  Make cover
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() =>
+      <DndContext
+        id={`listing-photos-${propertyId}`}
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        accessibility={{
+          screenReaderInstructions: {
+            draggable:
+              "To reorder a photo, press Space to pick it up, use the arrow keys to move, then press Space to drop. Press Escape to cancel.",
+          },
+        }}
+        onDragEnd={({ active: dragged, over }) => {
+          if (over) reorder(String(dragged.id), String(over.id));
+        }}
+      >
+        <SortableContext
+          items={active.map((p) => p.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="photo-edit-grid">
+            {active.map((p, i) => (
+              <SortablePhoto
+                key={p.id}
+                photo={p}
+                index={i}
+                busy={busy}
+                onCaption={(caption) =>
+                  update({ action: "caption", id: p.id, caption })
+                }
+                onRemove={() =>
                   update({ action: "archive", id: p.id, archived: true })
                 }
-              >
-                Remove
-              </button>
-            </div>
+              />
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
       {!!removed.length && (
         <details>
           <summary>Removed photos ({removed.length})</summary>
@@ -240,44 +326,6 @@ export function PhotoManager({
       )}
       {message && <p role="status">{message}</p>}
       {error && <p role="alert">{error}</p>}
-    </section>
-  );
-}
-export function ListingGallery({
-  photos,
-  name,
-}: {
-  photos: Pick<PhotoRecord, "id" | "url" | "caption">[];
-  name: string;
-}) {
-  const [selected, setSelected] = useState("");
-  const current = photos.find((p) => p.id === selected) ?? photos[0];
-  if (!current) return null;
-  return (
-    <section className="listing-gallery" aria-label="Property photos">
-      <figure>
-        <img
-          className="listing-main-photo"
-          src={current.url}
-          alt={current.caption || `${name} property photo`}
-        />
-        {current.caption && <figcaption>{current.caption}</figcaption>}
-      </figure>
-      {photos.length > 1 && (
-        <div className="listing-thumbnails">
-          {photos.map((p, i) => (
-            <button
-              type="button"
-              key={p.id}
-              aria-label={`View photo ${i + 1}${p.caption ? `: ${p.caption}` : ""}`}
-              aria-pressed={current.id === p.id}
-              onClick={() => setSelected(p.id)}
-            >
-              <img src={p.url} alt="" loading="lazy" />
-            </button>
-          ))}
-        </div>
-      )}
     </section>
   );
 }

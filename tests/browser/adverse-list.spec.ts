@@ -116,13 +116,13 @@ test("notice list groups versions, searches, paginates and opens isolated histor
   const row = table.getByRole("row").filter({ hasText: propertyA });
   await expect(row).toContainText("Version 2");
   await expect(row).toContainText("Version 1 previously accepted by Resend");
+  await page.getByRole("button", { name: /Latest version status/ }).click();
   await page
-    .getByLabel("Latest version status", { exact: true })
-    .selectOption("accepted");
+    .getByRole("option", { name: "Accepted by Resend", exact: true })
+    .click();
   await expect(page.getByText("No notices match these filters.")).toBeVisible();
-  await page
-    .getByLabel("Latest version status", { exact: true })
-    .selectOption("draft");
+  await page.getByRole("button", { name: /Latest version status/ }).click();
+  await page.getByRole("option", { name: "Draft", exact: true }).click();
   await expect(table.locator("tbody tr")).toHaveCount(2);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({

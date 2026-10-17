@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { listingProviders, listingText } from "@/lib/management/listings";
 import type { PropertyRecord } from "./dashboard";
@@ -67,22 +68,21 @@ export function PublishingWorkspace({
         </p>
       ) : (
         <>
-          <label className="field publishing-property">
-            Property
-            <select
-              value={property.id}
-              onChange={(e) => {
-                setChosen(e.target.value);
-                setMessage("");
-              }}
-            >
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.data.name} · {p.data.address}
-                </option>
-              ))}
-            </select>
-          </label>
+          <AppSelect
+            className="publishing-property"
+            label={<>Property</>}
+            value={property.id}
+            onValueChange={(value) => {
+              setChosen(value);
+              setMessage("");
+            }}
+          >
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.data.name} · {p.data.address}
+              </option>
+            ))}
+          </AppSelect>
           <PhotoManager
             key={property.id}
             propertyId={property.id}
@@ -166,20 +166,18 @@ export function PublishingWorkspace({
                     <a href={provider.url} target="_blank" rel="noreferrer">
                       Open {provider.name} ↗
                     </a>
-                    <label className="field">
-                      Your reported status
-                      <select
-                        aria-label={`${provider.name} publishing status`}
-                        value={record?.status ?? "not_started"}
-                        disabled={busy}
-                        onChange={(e) => status(provider.id, e.target.value)}
-                      >
-                        <option value="not_started">Not started</option>
-                        <option value="submitted">Submitted / in review</option>
-                        <option value="live">Live — confirmed by me</option>
-                        <option value="removed">Removed / off market</option>
-                      </select>
-                    </label>
+                    <AppSelect
+                      label={<>Your reported status</>}
+                      aria-label={`${provider.name} publishing status`}
+                      value={record?.status ?? "not_started"}
+                      disabled={busy}
+                      onValueChange={(value) => status(provider.id, value)}
+                    >
+                      <option value="not_started">Not started</option>
+                      <option value="submitted">Submitted / in review</option>
+                      <option value="live">Live — confirmed by me</option>
+                      <option value="removed">Removed / off market</option>
+                    </AppSelect>
                     {outdated && (
                       <button
                         disabled={busy}

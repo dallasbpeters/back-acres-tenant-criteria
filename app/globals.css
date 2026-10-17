@@ -350,3 +350,38 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .owner-main.management-main { grid-template-columns:minmax(0,1fr); }
 .notice-table-scroll { min-inline-size:0; }
 @media(max-width:640px) { .notice-list-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+/* Listing photo sorting and contextual removal. */
+.photo-preview { position:relative; }
+.photo-manager .photo-drag-target { display:block; inline-size:100%; padding:0; border:0; cursor:grab; touch-action:manipulation; }
+.photo-drag-target img { pointer-events:none; user-select:none; }
+.photo-dragging { position:relative; z-index:5; opacity:.85; }
+.photo-dragging .photo-drag-target { cursor:grabbing; }
+.photo-drag-hint { position:absolute; inset-block-end:.4rem; inset-inline-start:.4rem; padding:0 .35rem; color:var(--ink); background:var(--paper); font-size:1.15rem; line-height:1.5; pointer-events:none; }
+.photo-manager .photo-remove { position:absolute; inset-block-start:.4rem; inset-inline-end:.4rem; display:grid; place-items:center; inline-size:2rem; block-size:2rem; min-block-size:2rem; padding:0; border:1px solid var(--line); background:var(--paper); color:var(--ink); opacity:0; pointer-events:none; cursor:pointer; }
+.photo-preview:hover .photo-remove,.photo-edit-item:focus-within .photo-remove { opacity:1; pointer-events:auto; }
+.photo-manager .photo-remove:hover { color:var(--danger); }
+.photo-dragging .photo-remove { opacity:0; pointer-events:none; }
+@media (hover:none), (pointer:coarse) { .photo-manager .photo-remove { opacity:1; pointer-events:auto; inline-size:2.75rem; block-size:2.75rem; } }
+@media (prefers-reduced-motion:reduce) { .photo-edit-item { transition:none !important; } }
+
+/* React Aria select: a shared control with readable, viewport-aware options. */
+.app-select { min-inline-size:0; inline-size:100%; }
+.app-select > label { font:inherit; }
+.app-select .app-select-trigger { display:flex; align-items:center; justify-content:space-between; gap:.75rem; inline-size:100%; min-inline-size:0; min-block-size:2.75rem; padding:.65rem .75rem; border:1px solid var(--line); border-radius:3px; background:var(--paper); color:var(--ink); font:inherit; text-align:start; cursor:pointer; }
+.app-select-trigger > svg { flex:none; color:var(--muted); }
+.app-select-value { min-inline-size:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.app-select-value[data-placeholder] { color:var(--muted); }
+.app-select-trigger[data-hovered] { border-color:var(--accent); }
+.app-select-trigger[data-focus-visible],.app-select-trigger[data-pressed] { outline:2px solid var(--accent); outline-offset:2px; }
+.app-select[data-disabled],fieldset:disabled .app-select { opacity:.6; }
+.app-select[data-invalid] .app-select-trigger { border-color:var(--danger); }
+.app-select-popover { inline-size:max(var(--trigger-width),17rem); max-inline-size:calc(100vw - 1.5rem); max-block-size:min(22rem,var(--available-height)); overflow:auto; padding:.3rem; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:var(--ink); font-family:var(--font-interface); box-shadow:0 8px 24px #18281e14; z-index:100; }
+.app-select-options { outline:none; }
+.app-select-option { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.7rem .75rem; min-block-size:2.75rem; border-radius:2px; font-size:.9rem; line-height:1.45; outline:none; cursor:pointer; }
+.app-select-option > span { min-inline-size:0; overflow-wrap:anywhere; }
+.app-select-check { flex:none; opacity:0; }
+.app-select-option[data-selected] { color:var(--accent); font-weight:600; }
+.app-select-option[data-selected] .app-select-check { opacity:1; }
+.app-select-option[data-focused] { background:var(--tint); }
+.app-select-option[data-disabled] { opacity:.5; cursor:default; }

@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/select";
 import { useState } from "react";
 import {
   generateLease,
@@ -129,44 +130,40 @@ export function LeaseWorkspace({
           }}
         >
           <div className="fields">
-            <label className="field">
-              Lease property
-              <select
-                aria-label="Lease property"
-                value={propertyId}
-                onChange={(e) => {
-                  setPropertyId(e.target.value);
-                  setBody("");
-                }}
-                required
-              >
-                <option value="">Choose property</option>
-                {properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.data.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Lease template
-              <select
-                aria-label="Lease template"
-                value={templateId}
-                onChange={(e) => {
-                  setTemplateId(e.target.value);
-                  setBody("");
-                }}
-                required
-              >
-                <option value="">Choose template</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <AppSelect
+              label={<>Lease property</>}
+              aria-label="Lease property"
+              value={propertyId}
+              onValueChange={(value) => {
+                setPropertyId(value);
+                setBody("");
+              }}
+              required
+            >
+              <option value="">Choose property</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.data.name}
+                </option>
+              ))}
+            </AppSelect>
+            <AppSelect
+              label={<>Lease template</>}
+              aria-label="Lease template"
+              value={templateId}
+              onValueChange={(value) => {
+                setTemplateId(value);
+                setBody("");
+              }}
+              required
+            >
+              <option value="">Choose template</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </AppSelect>
             <Field name="landlord_name" label="Landlord legal name" />
             <Field name="tenant_names" label="Tenant legal names" />
             <Field name="start_date" label="Lease start date" type="date" />

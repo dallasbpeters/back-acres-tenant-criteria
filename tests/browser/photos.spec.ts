@@ -146,7 +146,35 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
         ).caption,
     )
     .toBe("Fixture exterior");
-  await page.getByRole("button", { name: "Make cover", exact: true }).click();
+  const gallery = page.getByRole("region", {
+    name: "Listing photos",
+    exact: true,
+  });
+  const first = gallery.getByRole("button", {
+    name: "Reorder photo 1",
+    exact: true,
+  });
+  const second = gallery.getByRole("button", {
+    name: "Reorder photo 2",
+    exact: true,
+  });
+  await page.mouse.move(0, 0);
+  await expect(
+    gallery.getByRole("button", { name: "Remove photo 1", exact: true }),
+  ).toHaveCSS("opacity", "0");
+  await expect(first).toBeEnabled();
+  await first.hover();
+  await expect(
+    gallery.getByRole("button", { name: "Remove photo 1", exact: true }),
+  ).toHaveCSS("opacity", "1");
+  const from = (await first.boundingBox())!,
+    to = (await second.boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+    steps: 12,
+  });
+  await page.mouse.up();
   await expect
     .poll(
       async () =>
@@ -157,11 +185,109 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     )
     .toBe(photos[1].id);
   await page
-    .getByLabel("Zillow Rental Manager publishing status")
-    .selectOption("live");
+    .getByRole("button", { name: /Zillow Rental Manager publishing status/ })
+    .click();
+  await page
+    .getByRole("option", { name: "Live — confirmed by me", exact: true })
+    .click();
   await expect(
     page.getByText("Publishing status saved.", { exact: true }),
   ).toBeVisible();
+  await page.reload();
+  await expect(gallery.locator(".photo-edit-item").first()).toHaveAttribute(
+    "data-photo-id",
+    photos[1].id,
+  );
+  await page.screenshot({
+    path: "test-results/photo-before-keyboard.png",
+    fullPage: true,
+  });
+  // Keyboard users can reorder and cancel without a pointer.
+  await first.focus();
+  await page.keyboard.press("Space");
+  await expect(gallery.locator(".photo-dragging")).toHaveCount(1);
+  // Let the drag library measure the grid before sending a direction key.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(() =>
+      gallery
+        .locator(".photo-dragging")
+        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41),
+    )
+    .toBeGreaterThan(1);
+  await page.keyboard.press("Space");
+  await expect
+    .poll(
+      async () =>
+        (await records()).photos.filter(
+          (p: { propertyId: string; archived: boolean }) =>
+            p.propertyId === id && !p.archived,
+        )[0].id,
+    )
+    .toBe(photos[0].id);
+  await expect(second).toBeEnabled();
+  await second.focus();
+  await page.keyboard.press("Space");
+  await expect(gallery.locator(".photo-dragging")).toHaveCount(1);
+  // Let the drag library measure the grid before sending a direction key.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await page.keyboard.press("ArrowLeft");
+  await expect
+    .poll(() =>
+      gallery
+        .locator(".photo-dragging")
+        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41),
+    )
+    .toBeLessThan(-1);
+  await page.keyboard.press("Space");
+  await expect
+    .poll(
+      async () =>
+        (await records()).photos.filter(
+          (p: { propertyId: string; archived: boolean }) =>
+            p.propertyId === id && !p.archived,
+        )[0].id,
+    )
+    .toBe(photos[1].id);
+  await first.focus();
+  await page.keyboard.press("Space");
+  await expect(gallery.locator(".photo-dragging")).toHaveCount(1);
+  // Let the drag library measure the grid before sending a direction key.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(() =>
+      gallery
+        .locator(".photo-dragging")
+        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41),
+    )
+    .toBeGreaterThan(1);
+  await page.keyboard.press("Escape");
+  await expect(gallery.locator(".photo-edit-item").first()).toHaveAttribute(
+    "data-photo-id",
+    photos[1].id,
+  );
+  await first.hover();
+  await page.screenshot({
+    path: "test-results/photo-gallery-drag-and-drop.png",
+    fullPage: true,
+  });
   await page.getByLabel("Caption for photo 1").fill("Updated cover caption");
   await page.getByLabel("Caption for photo 1").blur();
   await expect(
@@ -182,6 +308,56 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   expect(strFromU8(files["READ-ME.txt"])).toContain(
     "Nothing has been submitted",
   );
+  await gallery
+    .getByRole("button", { name: "Remove photo 2", exact: true })
+    .focus();
+  await expect(
+    gallery.getByRole("button", { name: "Remove photo 2", exact: true }),
+  ).toHaveCSS("opacity", "1");
+  await gallery
+    .getByRole("button", { name: "Remove photo 2", exact: true })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (await records()).photos.find(
+          (p: { id: string }) => p.id === photos[0].id,
+        ).archived,
+    )
+    .toBe(true);
+  await page.getByText("Removed photos (1)", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Restore photo", exact: true })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (await records()).photos.find(
+          (p: { id: string }) => p.id === photos[0].id,
+        ).archived,
+    )
+    .toBe(false);
+  await page.emulateMedia({ media: "screen" });
+  const mobile = await page
+    .context()
+    .browser()!
+    .newContext({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+  await mobile.addCookies(await page.context().cookies());
+  const mobilePage = await mobile.newPage();
+  await mobilePage.goto(`/admin?property=${id}#publishing`);
+  await expect(
+    mobilePage.getByRole("button", { name: "Remove photo 1", exact: true }),
+  ).toHaveCSS("opacity", "1");
+  expect(
+    await mobilePage.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await mobile.close();
   expect((await save(1, true)).ok()).toBe(true);
   expect((await request.get(photos[0].url)).ok()).toBe(true);
   const property = (await records()).properties.find(

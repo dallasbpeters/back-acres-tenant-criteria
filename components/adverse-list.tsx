@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 type NoticeRow = {
   id: string;
@@ -120,16 +121,18 @@ export function AdverseList({
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        <label className="field">
-          Latest version status
-          <select aria-label="Latest version status" value={filter} onChange={(e) => setFilter(e.target.value)}>
-            {statuses.map(([value, text]) => (
-              <option value={value} key={value}>
-                {text}
-              </option>
-            ))}
-          </select>
-        </label>
+        <AppSelect
+          label={<>Latest version status</>}
+          aria-label="Latest version status"
+          value={filter}
+          onValueChange={(value) => setFilter(value)}
+        >
+          {statuses.map(([value, text]) => (
+            <option value={value} key={value}>
+              {text}
+            </option>
+          ))}
+        </AppSelect>
         <button type="submit">Search</button>
         <button
           type="button"

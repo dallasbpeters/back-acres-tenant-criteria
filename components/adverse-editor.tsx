@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { agencyPresets } from "@/lib/adverse/agencies";
 import { signIn } from "next-auth/react";
@@ -142,16 +143,26 @@ export default function AdverseEditor({
   const errors = sendErrors(notice);
   const rendered = renderNotice(notice);
   async function refresh(selectedDocumentId?: string) {
-    const id=selectedDocumentId ?? current?.documentId;
-    if(!id){setVersions([]);setHasMore(false);return [] as Version[];}
+    const id = selectedDocumentId ?? current?.documentId;
+    if (!id) {
+      setVersions([]);
+      setHasMore(false);
+      return [] as Version[];
+    }
     const data = await api(`notices?documentId=${id}`);
     setVersions(data.versions);
     setHasMore(data.versions.length === 200);
     return data.versions as Version[];
   }
   useEffect(() => {
-    if (authenticated && documentId) refresh(documentId).then(rows=>{if(rows[0])load(rows[0]);else setError("This notice was not found.");}).catch((e) => setError(e.message));
-  }, [authenticated,documentId]);
+    if (authenticated && documentId)
+      refresh(documentId)
+        .then((rows) => {
+          if (rows[0]) load(rows[0]);
+          else setError("This notice was not found.");
+        })
+        .catch((e) => setError(e.message));
+  }, [authenticated, documentId]);
   useEffect(() => {
     const prevent = (e: BeforeUnloadEvent) => {
       if (dirty && (notice.applicantName || notice.applicantEmail)) {
@@ -186,9 +197,16 @@ export default function AdverseEditor({
       !window.confirm("Discard your unsaved edits?")
     )
       return;
-    window.history.replaceState(null,"",`/admin/adverse-actions/${v?.documentId ?? "new"}`);
+    window.history.replaceState(
+      null,
+      "",
+      `/admin/adverse-actions/${v?.documentId ?? "new"}`,
+    );
     setCurrent(v);
-    if(!v){setVersions([]);setHasMore(false);}
+    if (!v) {
+      setVersions([]);
+      setHasMore(false);
+    }
     setNotice(v ? v.notice : blankNotice());
     setEditorKey((k) => k + 1);
     setPreview(false);
@@ -219,8 +237,12 @@ export default function AdverseEditor({
             : "Draft";
   useEffect(() => {
     const beforeSignOut = (event: Event) => {
-      if (dirty && (notice.applicantName || notice.applicantEmail) &&
-          !confirm("Discard unsaved edits and sign out?")) event.preventDefault();
+      if (
+        dirty &&
+        (notice.applicantName || notice.applicantEmail) &&
+        !confirm("Discard unsaved edits and sign out?")
+      )
+        event.preventDefault();
     };
     window.addEventListener("owner-sign-out", beforeSignOut);
     return () => window.removeEventListener("owner-sign-out", beforeSignOut);
@@ -258,7 +280,9 @@ export default function AdverseEditor({
     );
   return (
     <div className="admin-shell">
-      <div className="notice-return"><a href="/admin/adverse-actions">← All adverse-action notices</a></div>
+      <div className="notice-return">
+        <a href="/admin/adverse-actions">← All adverse-action notices</a>
+      </div>
       <div className="admin-workspace">
         <aside className="notice-history">
           <div className="admin-actions">
@@ -278,7 +302,8 @@ export default function AdverseEditor({
             </button>
           </div>
           <p className="small-note">
-            Versions of this notice only. Every save preserves a separate revision.
+            Versions of this notice only. Every save preserves a separate
+            revision.
           </p>
           {versions.length === 0 && <p>No saved notices yet.</p>}
           {versions.map((v) => (
@@ -301,7 +326,9 @@ export default function AdverseEditor({
               disabled={busy}
               onClick={() =>
                 perform(async () => {
-                  const data = await api(`notices?documentId=${current?.documentId ?? documentId}&offset=${versions.length}`);
+                  const data = await api(
+                    `notices?documentId=${current?.documentId ?? documentId}&offset=${versions.length}`,
+                  );
                   setVersions((v) => [...v, ...data.versions]);
                   setHasMore(data.versions.length === 200);
                 })
@@ -356,25 +383,23 @@ export default function AdverseEditor({
                   {field("property", "Property address")}
                   {field("senderName", "Sender name")}
                   {field("senderContact", "Sender contact information")}
-                  <label className="field">
-                    Action taken
-                    <select
-                      value={notice.action}
-                      onChange={(e) =>
-                        change("action", e.target.value as Notice["action"])
-                      }
-                    >
-                      {[
-                        "Application denied",
-                        "Co-signer required",
-                        "Higher security deposit required",
-                        "Higher rent required",
-                        "Other",
-                      ].map((a) => (
-                        <option key={a}>{a}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <AppSelect
+                    label={<>Action taken</>}
+                    value={notice.action}
+                    onValueChange={(value) =>
+                      change("action", value as Notice["action"])
+                    }
+                  >
+                    {[
+                      "Application denied",
+                      "Co-signer required",
+                      "Higher security deposit required",
+                      "Higher rent required",
+                      "Other",
+                    ].map((a) => (
+                      <option key={a}>{a}</option>
+                    ))}
+                  </AppSelect>
                 </div>
                 <label className="field">
                   Decision details or required terms
@@ -415,28 +440,47 @@ export default function AdverseEditor({
                   <>
                     <p className="section-intro">
                       Select each agency whose report influenced the decision.
-                      Its name, mailing address, and toll-free number fill in automatically.
-                      You can edit the details if your report lists a different contact.
+                      Its name, mailing address, and toll-free number fill in
+                      automatically. You can edit the details if your report
+                      lists a different contact.
                     </p>
                     {notice.agencies.map((a, i) => (
                       <div className="agency-fields" key={i}>
                         <h3>Reporting agency {i + 1}</h3>
-                        <label className="field">
-                          Choose reporting agency {i + 1}
-                          <select
-                            aria-label={`Choose reporting agency ${i + 1}`}
-                            value={agencyPresets.find((preset) => preset.name === a.name && preset.address === a.address && preset.phone === a.phone)?.id ?? ""}
-                            onChange={(e) => {
-                              const preset = agencyPresets.find((item) => item.id === e.target.value);
-                              if (!preset) return;
-                              const { name, address, phone } = preset;
-                              change("agencies", notice.agencies.map((row, index) => index === i ? { name, address, phone } : row));
-                            }}
-                          >
-                            <option value="">Choose an agency or enter custom details</option>
-                            {agencyPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
-                          </select>
-                        </label>
+                        <AppSelect
+                          label={<>Choose reporting agency {i + 1}</>}
+                          aria-label={`Choose reporting agency ${i + 1}`}
+                          value={
+                            agencyPresets.find(
+                              (preset) =>
+                                preset.name === a.name &&
+                                preset.address === a.address &&
+                                preset.phone === a.phone,
+                            )?.id ?? ""
+                          }
+                          onValueChange={(value) => {
+                            const preset = agencyPresets.find(
+                              (item) => item.id === value,
+                            );
+                            if (!preset) return;
+                            const { name, address, phone } = preset;
+                            change(
+                              "agencies",
+                              notice.agencies.map((row, index) =>
+                                index === i ? { name, address, phone } : row,
+                              ),
+                            );
+                          }}
+                        >
+                          <option value="">
+                            Choose an agency or enter custom details
+                          </option>
+                          {agencyPresets.map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.label}
+                            </option>
+                          ))}
+                        </AppSelect>
                         <div className="fields">
                           {(["name", "address", "phone"] as const).map((k) => (
                             <label className="field" key={k}>
@@ -547,7 +591,11 @@ export default function AdverseEditor({
                       parentId: current?.id || null,
                       requestId: crypto.randomUUID(),
                     });
-                    window.history.replaceState(null,"",`/admin/adverse-actions/${result.version.documentId}`);
+                    window.history.replaceState(
+                      null,
+                      "",
+                      `/admin/adverse-actions/${result.version.documentId}`,
+                    );
                     setCurrent(result.version);
                     await refresh(result.version.documentId);
                     setConfirmed(false);

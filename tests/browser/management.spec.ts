@@ -240,12 +240,14 @@ test("property lifecycle, private records, public applications, resident links, 
   ).toBe(true);
   await page.goto("/admin");
   await page.getByRole("link", { name: "Leases", exact: true }).click();
+  await page.getByRole("button", { name: /Lease property/ }).click();
   await page
-    .getByLabel("Lease property", { exact: true })
-    .selectOption(propertyId);
+    .getByRole("option", { name: "Test property", exact: true })
+    .click();
+  await page.getByRole("button", { name: /Lease template/ }).click();
   await page
-    .getByLabel("Lease template", { exact: true })
-    .selectOption(templateId);
+    .getByRole("option", { name: "Fixture template", exact: true })
+    .click();
   await page.getByLabel("Landlord legal name").fill("Fixture owner");
   await page.getByLabel("Tenant legal names").fill("Fixture tenant");
   await page.getByLabel("Lease start date").fill("2026-11-01");
