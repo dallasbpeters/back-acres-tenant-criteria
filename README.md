@@ -169,3 +169,33 @@ subscription_schedule.created/updated/canceled/completed/released. The webhook
 retrieves current provider records to tolerate out-of-order notifications. See
 `docs/stripe-integration-plan.md` for Billing, Invoicing, Tax, and live-payment
 requirements. No live funds or real applicant emails were used in testing.
+
+## Listing photos and publishing
+
+Owner pages share a navbar (including Sign out) and section navigation. The
+Photos & publishing section accepts JPEG/PNG/WebP photos, normalizes them to JPEG,
+removes embedded metadata, and supports captions, cover selection, ordering,
+removal, and restoration. Original upload bytes are not retained. Photo objects
+are in a private Vercel Blob store; the app serves them publicly only while the
+property is published and the photo is active. Draft and removed photos require
+owner authentication. Removal is reversible and retains the stored file.
+
+The connected Blob store provides BLOB_READ_WRITE_TOKEN as a server-only Vercel
+variable. For local work, pull Development environment values into an ignored
+file; never commit the token. Apply migration 0004 before this release.
+
+Owners can download a ZIP containing listing text, ordered JPEG photos and
+captions, then open their Zillow Rental Manager, Avail and Apartments.com
+accounts to finish publishing. Status is manually confirmed by the owner;
+changed content is flagged for updating. This does **not** automatically post or
+synchronize external listings. A provider-approved feed/API connection is still
+required for automated syndication. Coverage references, verified October 17,
+2026:
+
+- https://www.zillow.com/rentals-network/
+- https://www.realtor.com/landlords/list-rental-property
+- https://www.apartments.com/rental-manager
+
+The photo browser integration test requires the listing-photo Blob token. It
+uploads temporary fixtures, checks privacy and export, and removes only those
+fixtures and objects afterward.

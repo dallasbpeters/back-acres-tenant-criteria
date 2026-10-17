@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { signOut } from "next-auth/react";
+import { ownerSections } from "./navigation";
+import { PublishingWorkspace, type PublicationRecord } from "./publishing";
+import type { PhotoRecord } from "./photos";
 import {
   applicationStatuses,
   maintenanceStatuses,
@@ -15,6 +17,7 @@ export type PropertyRecord = {
   id: string;
   slug: string;
   revision: number;
+  publishingDigest: string;
   data: PropertyInput;
 };
 type ApplicationRecord = {
@@ -77,6 +80,8 @@ export type DraftRecord = {
   createdAt: string;
 };
 type Records = {
+  photos: PhotoRecord[];
+  publications: PublicationRecord[];
   rentSchedules: RentScheduleRecord[];
   properties: PropertyRecord[];
   applications: ApplicationRecord[];
@@ -111,8 +116,17 @@ export function Dashboard() {
     setRecords(data);
   }
   useEffect(() => {
-    if (window.location.hash === "#maintenance") setTab("Maintenance");
+    const changeSection = () => {
+      const selected = ownerSections.find(
+        (s) => s.key === window.location.hash.slice(1),
+      );
+      setTab(selected?.name ?? "Properties");
+      setMessage("");
+    };
+    changeSection();
+    window.addEventListener("hashchange", changeSection);
     load().catch((e) => setError(e.message));
+    return () => window.removeEventListener("hashchange", changeSection);
   }, []);
   async function save(body: unknown) {
     setBusy(true);
@@ -134,32 +148,6 @@ export function Dashboard() {
     records?.properties.find((p) => p.id === id)?.data.name ?? "Property";
   return (
     <>
-      <div className="management-actions">
-        <a href="/admin/adverse-actions">Prepare an adverse-action notice</a>
-        <button onClick={() => signOut({ callbackUrl: "/admin" })}>
-          Sign out
-        </button>
-      </div>
-      <nav className="management-tabs" aria-label="Workspace sections">
-        {[
-          "Properties",
-          "Applications",
-          "Leases",
-          "Payments",
-          "Maintenance",
-        ].map((t) => (
-          <button
-            key={t}
-            aria-pressed={tab === t}
-            onClick={() => {
-              setTab(t);
-              setMessage("");
-            }}
-          >
-            {t}
-          </button>
-        ))}
-      </nav>
       {error && (
         <p role="alert">
           {error}{" "}
@@ -178,6 +166,14 @@ export function Dashboard() {
               properties={records.properties}
               save={save}
               busy={busy}
+            />
+          )}
+          {tab === "Publishing" && (
+            <PublishingWorkspace
+              properties={records.properties}
+              photos={records.photos}
+              publications={records.publications}
+              onSaved={load}
             />
           )}
           {tab === "Applications" && (
@@ -516,16 +512,23 @@ function PropertyWorkspace({
   const data = editing?.data;
   return (
     <section>
-      <h2>Properties</h2>
-      <div className="management-actions">
-        <button
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          Add property
-        </button>
+      <div className="section-heading-row">
+        <div>
+          <h2>Properties</h2>
+          <p className="small-note">
+            Manage listings, availability, and applications.
+          </p>
+        </div>
+        <div className="management-actions">
+          <button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            Add property
+          </button>
+        </div>
       </div>
       {properties.map((p) => (
         <article className="record" key={p.id}>
@@ -536,7 +539,9 @@ function PropertyWorkspace({
           <p>
             {p.data.published ? "Published" : "Draft"} ·{" "}
             {p.data.acceptingApplications
-              ? "Applications open"
+              ? p.data.published
+                ? "Applications open"
+                : "Applications enabled after publishing"
               : "Applications closed"}
           </p>
           <div className="management-actions">
@@ -548,6 +553,9 @@ function PropertyWorkspace({
             >
               Edit {p.data.name}
             </button>
+            <a href={`/admin?property=${p.id}#publishing`}>
+              Photos & publishing
+            </a>
             {p.data.published && (
               <a
                 href={`/properties/${p.slug}`}
@@ -655,6 +663,9 @@ function PropertyWorkspace({
               <a href="/#criteria" target="_blank" rel="noreferrer">
                 View selection criteria
               </a>
+            </p>
+            <p className="small-note">
+              Save this property, then add its photos in Photos & publishing.
             </p>
             <label className="check-row">
               <input

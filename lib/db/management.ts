@@ -143,3 +143,31 @@ export const leaseDrafts = pgTable("lease_drafts", {
   body: text("body").notNull(),
   createdAt: createdAt(),
 });
+
+export const listingPhotos = pgTable("listing_photos", {
+  id: uuid("id").primaryKey(),
+  propertyId: uuid("property_id")
+    .notNull()
+    .references(() => properties.id),
+  blobPath: text("blob_path").notNull(),
+  caption: text("caption").notNull().default(""),
+  position: integer("position").notNull().default(0),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: createdAt(),
+});
+export const listingPublications = pgTable(
+  "listing_publications",
+  {
+    id: uuid("id").primaryKey(),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => properties.id),
+    provider: text("provider").notNull(),
+    status: text("status").notNull(),
+    contentDigest: text("content_digest").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [uniqueIndex("listing_provider_unique").on(t.propertyId, t.provider)],
+);

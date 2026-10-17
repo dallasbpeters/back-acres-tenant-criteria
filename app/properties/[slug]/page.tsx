@@ -1,8 +1,9 @@
+import { ListingGallery } from "@/components/management/photos";
 import { POLICY, selectionCriteriaText } from "@/lib/policy";
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { properties } from "@/lib/db/schema";
+import { listingPhotos, properties } from "@/lib/db/schema";
 import { ManagementShell } from "@/components/management/shell";
 import { dollars } from "@/lib/management/model";
 export const dynamic = "force-dynamic";
@@ -17,9 +18,23 @@ export default async function PropertyPage({
     .from(properties)
     .where(eq(properties.slug, slug));
   if (!p || !p.data.published) notFound();
+  const photos = await db()
+    .select({ id: listingPhotos.id, caption: listingPhotos.caption })
+    .from(listingPhotos)
+    .where(
+      and(
+        eq(listingPhotos.propertyId, p.id),
+        eq(listingPhotos.archived, false),
+      ),
+    )
+    .orderBy(asc(listingPhotos.position), asc(listingPhotos.createdAt));
   return (
     <ManagementShell title={p.data.name}>
       <p>{p.data.address}</p>
+      <ListingGallery
+        name={p.data.name}
+        photos={photos.map((p) => ({ ...p, url: `/api/photos/${p.id}` }))}
+      />
       <dl className="document-details">
         <div>
           <dt>Monthly rent</dt>

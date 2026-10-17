@@ -29,6 +29,13 @@
       "when": 1792276419984,
       "tag": "0003_funny_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792278360098,
+      "tag": "0004_curly_red_ghost",
+      "breakpoints": true
     }
   ]
 }

@@ -14,7 +14,10 @@ import {
   leaseTemplates,
   leaseDrafts,
   rentSchedules,
+  listingPhotos,
+  listingPublications,
 } from "@/lib/db/schema";
+import { listingDigest } from "@/lib/management/listing-digest";
 import { guard, readBody, reply } from "@/lib/adverse/auth";
 import { authOptions } from "@/lib/adverse/google-auth";
 import {
@@ -81,6 +84,8 @@ export async function GET(request: NextRequest) {
       templates,
       drafts,
       schedules,
+      photos,
+      publications,
     ] = await Promise.all([
       d
         .select()
@@ -118,9 +123,27 @@ export async function GET(request: NextRequest) {
         .from(rentSchedules)
         .orderBy(desc(rentSchedules.createdAt))
         .limit(200),
+      d
+        .select()
+        .from(listingPhotos)
+        .orderBy(listingPhotos.position, listingPhotos.createdAt),
+      d.select().from(listingPublications),
     ]);
     return reply({
-      properties: propertyRows,
+      photos: photos.map(({ blobPath, ...photo }) => ({
+        ...photo,
+        url: `/api/photos/${photo.id}`,
+      })),
+      publications,
+      properties: propertyRows.map((p) => ({
+        ...p,
+        publishingDigest: listingDigest(
+          p.data,
+          photos
+            .filter((photo) => photo.propertyId === p.id && !photo.archived)
+            .map(({ id, caption }) => ({ id, caption })),
+        ),
+      })),
       applications: applicationRows,
       maintenance: maintenanceRows,
       residentLinks: links.map((r) => ({

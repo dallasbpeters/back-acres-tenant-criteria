@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { agencyPresets } from "@/lib/adverse/agencies";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -211,12 +211,19 @@ export default function AdverseEditor({
           : s === "rejected"
             ? "Rejected by Resend"
             : "Draft";
+  useEffect(() => {
+    const beforeSignOut = (event: Event) => {
+      if (dirty && (notice.applicantName || notice.applicantEmail) &&
+          !confirm("Discard unsaved edits and sign out?")) event.preventDefault();
+    };
+    window.addEventListener("owner-sign-out", beforeSignOut);
+    return () => window.removeEventListener("owner-sign-out", beforeSignOut);
+  }, [dirty, notice.applicantName, notice.applicantEmail]);
   if (!authenticated)
     return (
-      <main className="admin-shell admin-login">
+      <div className="admin-shell admin-login">
         <a href="/">Back Acres Rental</a>
         <p className="eyebrow">Private workspace</p>
-        <h1>Adverse action notices</h1>
         <p>Sign in to prepare, save, and send applicant notices.</p>
         <p className="small-note">
           Use an approved Google account. Access is limited to the property’s
@@ -241,37 +248,10 @@ export default function AdverseEditor({
                 : "Google sign-in could not be completed. Try again or contact the property administrator.")}
           </p>
         )}
-      </main>
+      </div>
     );
   return (
-    <main className="admin-shell">
-      <header className="admin-header">
-        <div>
-          <a href="/">Back Acres Rental</a>
-          <p className="eyebrow">Private correspondence</p>
-          <h1>Adverse action notices</h1>
-        </div>
-        <button
-          disabled={busy}
-          onClick={() => {
-            if (
-              dirty &&
-              notice.applicantName &&
-              !confirm("Discard unsaved edits and sign out?")
-            )
-              return;
-            perform(async () => {
-              await signOut({ redirect: false });
-              setAuthenticated(false);
-              setVersions([]);
-              setCurrent(null);
-              setNotice(blankNotice());
-            });
-          }}
-        >
-          Sign out
-        </button>
-      </header>
+    <div className="admin-shell">
       <div className="admin-workspace">
         <aside className="notice-history">
           <div className="admin-actions">
@@ -659,6 +639,6 @@ export default function AdverseEditor({
           </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

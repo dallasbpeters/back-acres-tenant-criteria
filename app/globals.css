@@ -260,3 +260,76 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .management-main .submit-button { max-inline-size:34rem; text-decoration:none; }
 .management-empty { padding-block:2rem; color:var(--muted); }
 @media print { .management-nav,.management-tabs,.management-actions {display:none;} }
+
+/* Compact owner workspace, shared across operations and correspondence. */
+.owner-app { background: #fff; min-block-size: calc(100dvh - 5rem); }
+.owner-navbar { min-block-size:4.25rem; padding:.6rem clamp(1rem,3vw,2.5rem); display:flex; justify-content:space-between; align-items:center; gap:1rem; border-block-end:1px solid var(--line); background:var(--paper); }
+.owner-brand { display:flex; gap:.65rem; align-items:center; text-decoration:none; font-size:.95rem; font-weight:650; }
+.owner-brand .brand-monogram { font-size:.85rem; inline-size:2.25rem; block-size:2.25rem; }
+.owner-brand small { display:block; color:var(--muted); font-size:.72rem; font-weight:400; }
+.owner-navbar nav { display:flex; align-items:center; flex-wrap:wrap; gap:1.25rem; font-size:.85rem; }
+.owner-navbar button { padding:.5rem .8rem; min-block-size:2.5rem; background:transparent; color:var(--ink); border:1px solid var(--line); cursor:pointer; font:inherit; }
+.owner-layout { display:grid; grid-template-columns:12.5rem minmax(0,1fr); max-inline-size:96rem; margin-inline:auto; }
+.owner-sidebar { padding:1.75rem .85rem; border-inline-end:1px solid var(--line); background:var(--bg); }
+.owner-sidebar .nav-label { padding:.25rem .75rem; font-size:.7rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-block-end:.65rem; }
+.owner-sidebar nav { display:grid; gap:.3rem; }
+.owner-sidebar a { display:block; padding:.65rem .75rem; min-block-size:2.75rem; font-size:.88rem; text-decoration:none; border-inline-start:2px solid transparent; }
+.owner-sidebar a:hover { background:var(--tint); }
+.owner-sidebar a[aria-current="page"] { color:var(--accent); background:var(--tint); font-weight:650; border-inline-start-color:var(--accent); }
+.nav-divider { border-block-start:1px solid var(--line); margin:.8rem .75rem; }
+.owner-main.management-main { padding:1.75rem clamp(1rem,3vw,2.5rem) 3rem; gap:1.5rem; min-inline-size:0; align-content:start; }
+.owner-page-heading { padding-block-end:1.25rem; border-block-end:1px solid var(--line); }
+.owner-page-heading .eyebrow { margin:0 0 .4rem; font-size:.7rem; color:var(--muted); }
+.owner-main h1 { font-size:2rem; line-height:1.15; margin:0; letter-spacing:-.025em; }
+.owner-main h2 { font-size:1.4rem; line-height:1.3; margin:0; }
+.owner-main h3 { font-size:1.05rem; line-height:1.4; margin:0; }
+.owner-main h4 { font:600 .95rem var(--font-interface); margin:0; }
+.owner-main p,.owner-main label { font-size:.9rem; }
+.owner-main .small-note { font-size:.8rem; }
+.owner-main .fields { gap:1rem; }
+.owner-main .field { gap:.4rem; font-size:.82rem; }
+.owner-main .field input,.owner-main .field select,.owner-main .field textarea { padding:.6rem .7rem; min-block-size:2.6rem; font-size:.9rem; }
+.owner-main .management-form { gap:1rem; padding:1.25rem 0; }
+.owner-main .management-form fieldset { gap:1.25rem; }
+.owner-main .management-actions { gap:.5rem 1rem; }
+.owner-main button,.owner-main .submit-button { min-block-size:2.5rem; padding:.55rem .85rem; font-size:.85rem; line-height:1.35; cursor:pointer; }
+.owner-main .submit-button { inline-size:auto; justify-self:start; max-inline-size:100%; }
+.owner-main .management-actions button,.photo-manager button,.publication-list button { border:1px solid var(--line); background:var(--paper); color:var(--ink); }
+.section-heading-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-block-end:1.1rem; }
+.section-heading-row p { margin-block-start:.35rem; color:var(--muted); }
+.owner-main .record { gap:.5rem; padding:1.25rem 0; }
+.owner-main .record .management-actions { margin-block-start:.5rem; }
+.owner-main [role="status"] { font-size:.85rem; color:var(--accent); }
+.owner-main .admin-shell { margin:0; padding:0; max-inline-size:none; min-inline-size:0; }
+.owner-main .admin-login { padding-block:1rem; }
+.owner-main .admin-workspace { grid-template-columns:minmax(10rem,14rem) minmax(0,1fr); gap:1.5rem; margin-block-start:0; }
+.owner-main .notice-fields section { padding-block:1.25rem; }
+.owner-signed-out { grid-template-columns:1fr; max-inline-size:55rem; }
+.photo-manager { border-block-start:1px solid var(--line); padding-block:1.25rem; margin-block-start:1.25rem; }
+.photo-edit-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr)); gap:1.25rem; }
+.photo-edit-item { display:grid; gap:.5rem; align-content:start; min-inline-size:0; }
+.photo-edit-item img { inline-size:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--bg); }
+.photo-number { font-size:.75rem; color:var(--muted); }
+.photo-edit-item .management-actions { gap:.35rem; }
+.visually-hidden { position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.publishing-property { max-inline-size:35rem; margin-block:1.25rem; }
+.publication-list { display:grid; gap:0; }
+.publication-row { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(10rem,13rem); gap:1rem; padding:1.25rem 0; border-block-start:1px solid var(--line); align-items:center; }
+.publication-row p { margin-block-start:.4rem; font-size:.8rem; color:var(--muted); }
+.publication-row a { font-size:.85rem; }
+.listing-gallery { display:grid; gap:.8rem; }
+.listing-gallery figure { margin:0; }
+.listing-main-photo { display:block; inline-size:100%; max-block-size:36rem; aspect-ratio:3/2; object-fit:contain; background:var(--bg); }
+.listing-gallery figcaption { padding-block:.65rem; font-size:.9rem; }
+.listing-thumbnails { display:flex; gap:.6rem; overflow-x:auto; padding:.2rem; }
+.listing-thumbnails button { border:2px solid transparent; padding:2px; background:transparent; flex:0 0 6rem; cursor:pointer; }
+.listing-thumbnails button[aria-pressed="true"] { border-color:var(--accent); }
+.listing-thumbnails img { display:block; inline-size:100%; aspect-ratio:4/3; object-fit:cover; }
+.property-cover { display:block; inline-size:100%; max-block-size:28rem; aspect-ratio:16/9; object-fit:cover; }
+@media (max-width:900px) { .owner-layout { grid-template-columns:10.5rem minmax(0,1fr); } .owner-main .admin-workspace { grid-template-columns:1fr; } .owner-main .notice-history { border-inline-end:0; border-block-end:1px solid var(--line); padding:0 0 1rem; } .publication-row { grid-template-columns:1fr; } }
+@media (max-width:640px) { .owner-navbar { align-items:flex-start; flex-wrap:wrap; gap:.5rem; padding:.75rem 1rem; } .owner-navbar nav { gap:1rem; } .owner-layout { display:block; } .owner-sidebar { border-inline-end:0; border-block-end:1px solid var(--line); padding:.6rem; } .owner-sidebar .nav-label,.nav-divider { display:none; } .owner-sidebar nav { display:flex; flex-wrap:wrap; gap:.2rem; } .owner-sidebar a { font-size:.78rem; padding:.45rem .55rem; min-block-size:2.5rem; } .owner-main.management-main { padding:1.25rem 1rem 2rem; } .owner-main h1 { font-size:1.65rem; } .section-heading-row { align-items:flex-start; } }
+@media print { .owner-navbar,.owner-sidebar,.owner-page-heading { display:none; } .owner-layout { display:block; } .owner-main.management-main { padding:0; } }
+.owner-app { display:flex; flex-direction:column; }
+.owner-layout { flex:1; inline-size:100%; }
+.owner-sidebar nav { position:sticky; top:1rem; }
+@media (max-width:640px) { .owner-sidebar nav { position:static; } }

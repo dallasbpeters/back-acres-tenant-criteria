@@ -239,7 +239,7 @@ test("property lifecycle, private records, public applications, resident links, 
     ).ok(),
   ).toBe(true);
   await page.goto("/admin");
-  await page.getByRole("button", { name: "Leases", exact: true }).click();
+  await page.getByRole("link", { name: "Leases", exact: true }).click();
   await page
     .getByLabel("Lease property", { exact: true })
     .selectOption(propertyId);
@@ -408,7 +408,10 @@ test("property lifecycle, private records, public applications, resident links, 
   ).toBe(slug);
   expect((await request.get(`/properties/${slug}`)).ok()).toBe(true);
   await page.reload();
-  await page.getByRole("button", { name: "Properties", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Workspace sections" })
+    .getByRole("link", { name: "Properties", exact: true })
+    .click();
   await page.getByRole("button", { name: "Add property", exact: true }).click();
   await expect(
     page.getByLabel("Listing URL name", { exact: false }),

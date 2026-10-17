@@ -1,3 +1,4 @@
+import { OwnerFrame } from "@/components/management/owner-frame";
 import AdverseEditor from "@/components/adverse-editor";
 import { authenticated } from "@/lib/adverse/auth";
 export const dynamic = "force-dynamic";
@@ -11,16 +12,19 @@ export default async function Page({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const signedIn = await authenticated();
   return (
-    <AdverseEditor
-      signedIn={await authenticated()}
-      loginError={
-        error
-          ? error === "AccessDenied"
-            ? "AccessDenied"
-            : "SignInError"
-          : undefined
-      }
-    />
+    <OwnerFrame title="Adverse action notices" signedIn={signedIn}>
+      <AdverseEditor
+        signedIn={signedIn}
+        loginError={
+          error
+            ? error === "AccessDenied"
+              ? "AccessDenied"
+              : "SignInError"
+            : undefined
+        }
+      />
+    </OwnerFrame>
   );
 }
