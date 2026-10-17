@@ -72,3 +72,16 @@ test("empty configuration denies everyone; explicit list overrides owner default
     false,
   );
 });
+
+test("additional approved accounts preserve both owner accounts", () => {
+  const configured = {
+    LANDLORD_EMAIL: "owner@example.com",
+    TANDRA_EMAIL: "second@example.com",
+    ADDITIONAL_ADMIN_EMAILS: "dallaspeters@gmail.com",
+  };
+  assert.deepEqual(allowedEmails(configured), [
+    "owner@example.com", "second@example.com", "dallaspeters@gmail.com",
+  ]);
+  assert.equal(canSignIn("google", { email: "dallaspeters@gmail.com", email_verified: true }, configured), true);
+  assert.deepEqual(allowedEmails({ ...configured, ADMIN_EMAILS: "" }), []);
+});

@@ -4,7 +4,9 @@ type AccessEnvironment = Record<string, string | undefined>;
 export function allowedEmails(env: AccessEnvironment = process.env): string[] {
   const configured =
     env.ADMIN_EMAILS ??
-    [env.LANDLORD_EMAIL, env.TANDRA_EMAIL].filter(Boolean).join(",");
+    [env.LANDLORD_EMAIL, env.TANDRA_EMAIL, env.ADDITIONAL_ADMIN_EMAILS]
+      .filter(Boolean)
+      .join(",");
   return [
     ...new Set(
       configured
