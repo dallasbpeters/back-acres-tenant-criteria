@@ -23,7 +23,7 @@ import {
   maintenanceStatuses,
 } from "@/lib/management/model";
 import { linkToken, siteUrl } from "@/lib/management/security";
-import { paymentReady, stripe } from "@/lib/management/stripe";
+import { paymentReady, paymentMode, stripe } from "@/lib/management/stripe";
 const uuid = z.string().uuid();
 const command = z.discriminatedUnion("action", [
   z.object({
@@ -301,7 +301,7 @@ export async function POST(request: NextRequest) {
         .where(eq(invoices.id, c.id));
       if (existing) return reply({ ok: true });
       await d.batch([
-        d.insert(invoices).values({ id: c.id, ...c.data }),
+        d.insert(invoices).values({ id: c.id, ...c.data, mode:paymentMode() }),
         event(c.id, {
           amountCents: c.data.amountCents,
           category: c.data.category,

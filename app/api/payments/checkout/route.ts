@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { invoices } from "@/lib/db/schema";
 import { readBody, reply, sameOrigin } from "@/lib/adverse/auth";
 import { tokenId, siteUrl, allowIntake } from "@/lib/management/security";
-import { stripe, paymentReady } from "@/lib/management/stripe";
+import { stripe, paymentReady, paymentMode } from "@/lib/management/stripe";
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return reply({ error: "Invalid origin." }, 403);
   if (!paymentReady())
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       .from(invoices)
       .where(eq(invoices.id, id));
     if (!invoice) return reply({ error: "Payment request not found." }, 404);
+    if(invoice.mode!==paymentMode())return reply({error:"This request belongs to a different payment environment. Ask the owner for a new payment link."},409);
     if (invoice.status === "void")
       return reply({ error: "This payment request was canceled." }, 410);
     if (invoice.status === "paid")

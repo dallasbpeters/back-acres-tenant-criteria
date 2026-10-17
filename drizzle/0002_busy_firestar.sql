@@ -1,0 +1,1 @@
+ALTER TABLE "rental_invoices" ADD COLUMN "mode" text DEFAULT 'test' NOT NULL;

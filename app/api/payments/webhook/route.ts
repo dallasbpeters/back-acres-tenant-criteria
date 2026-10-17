@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       .where(eq(invoices.id, id));
     if (
       !invoice ||
+      (invoice.mode === "live") !== session.livemode ||
       session.client_reference_id !== id ||
       session.amount_total !== invoice.amountCents ||
       session.currency !== "usd" ||

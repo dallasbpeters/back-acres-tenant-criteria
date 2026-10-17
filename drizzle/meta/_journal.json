@@ -15,6 +15,13 @@
       "when": 1792274718009,
       "tag": "0001_needy_rage",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792275759472,
+      "tag": "0002_busy_firestar",
+      "breakpoints": true
     }
   ]
 }

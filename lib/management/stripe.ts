@@ -1,5 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
+export function paymentMode(): "test" | "live" { return /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "") ? "live" : "test"; }
 export function paymentReady() {
   const key = process.env.STRIPE_SECRET_KEY;
   return !!(

@@ -266,6 +266,7 @@ test("property lifecycle, private records, public applications, resident links, 
         object: {
           id: "cs_test_fixture",
           object: "checkout.session",
+          livemode:false,
           client_reference_id: invoiceId,
           metadata: { invoiceId },
           currency: "usd",

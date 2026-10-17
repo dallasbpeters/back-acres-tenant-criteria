@@ -62,6 +62,7 @@ export const maintenanceRequests = pgTable("maintenance_requests", {
   createdAt: createdAt(),
 });
 export const invoices = pgTable("rental_invoices", {
+  mode: text("mode").notNull().default("test"),
   id: uuid("id").primaryKey(),
   propertyId: uuid("property_id")
     .notNull()

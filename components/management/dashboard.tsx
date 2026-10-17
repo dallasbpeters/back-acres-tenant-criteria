@@ -49,6 +49,7 @@ type LinkRecord = {
   url: string;
 };
 type InvoiceRecord = {
+  mode: string;
   id: string;
   propertyId: string;
   payerName: string;
@@ -292,7 +293,7 @@ export function Dashboard() {
                     {propertyName(i.propertyId)}
                   </p>
                   <p>
-                    Due {i.dueDate} · {i.status}
+                    Due {i.dueDate} · {i.status} · {i.mode} mode
                   </p>
                   <a href={i.url} target="_blank" rel="noreferrer">
                     Open payment request

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { invoices, properties } from "@/lib/db/schema";
 import { tokenId } from "@/lib/management/security";
-import { paymentReady } from "@/lib/management/stripe";
+import { paymentReady, paymentMode } from "@/lib/management/stripe";
 import { dollars } from "@/lib/management/model";
 import { ManagementShell } from "@/components/management/shell";
 import { Checkout } from "@/components/management/checkout";
@@ -32,7 +32,7 @@ export default async function PaymentPage({
     .from(properties)
     .where(eq(properties.id, invoice.propertyId));
   const submitted = (await searchParams).submitted;
-  const ready = paymentReady();
+  const ready = paymentReady() && invoice.mode === paymentMode();
   return (
     <ManagementShell title="Payment request">
       <p>
@@ -56,7 +56,7 @@ export default async function PaymentPage({
           <dd>{invoice.status}</dd>
         </div>
       </dl>
-      {/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY ?? "") && (
+      {invoice.mode === "test" && (
         <p className="draft-banner">
           Test mode. No real payment will be collected.
         </p>
