@@ -31,6 +31,8 @@ Before enabling recurring billing, implement invoice.paid, invoice.payment_faile
 
 ## Tax
 
+Current live-account inspection on October 17, 2026: Tax Settings are active, but there are no Tax Registrations. The existing default category is General - Electronically Supplied Services (txcd_10000000), which must not be assumed to classify residential rental charges. Existing settings were left unchanged. Confirm rental-specific classification with the owner and tax adviser before enabling collection.
+
 Do not enable automatic_tax merely because the business requested Stripe Tax. Read existing Tax Settings and registrations first, determine which charges are taxable with the owner's tax adviser, confirm product tax codes from Stripe's current catalog, and confirm active registrations. Do not register the business or change registrations without the owner's confirmed direction. Stripe Tax is sales-tax tooling, not rental-income tax accounting or a substitute for a security-deposit ledger.
 
 When a taxable charge and registration are confirmed, test a sandbox calculation using the relevant address and inspect taxability_reason. A zero result must be explained; it is not proof of correct tax setup. Collecting tax does not automatically file all required returns.
