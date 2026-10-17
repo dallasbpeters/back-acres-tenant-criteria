@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { agencyPresets } from "@/lib/adverse/agencies";
 import { signIn, signOut } from "next-auth/react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -427,13 +428,29 @@ export default function AdverseEditor({
                 {notice.reportUsed && (
                   <>
                     <p className="section-intro">
-                      Enter every agency whose report influenced the decision.
-                      Use the contact details on the report, including a
-                      toll-free number for a nationwide agency.
+                      Select each agency whose report influenced the decision.
+                      Its name, mailing address, and toll-free number fill in automatically.
+                      You can edit the details if your report lists a different contact.
                     </p>
                     {notice.agencies.map((a, i) => (
                       <div className="agency-fields" key={i}>
                         <h3>Reporting agency {i + 1}</h3>
+                        <label className="field">
+                          Choose reporting agency {i + 1}
+                          <select
+                            aria-label={`Choose reporting agency ${i + 1}`}
+                            value={agencyPresets.find((preset) => preset.name === a.name && preset.address === a.address && preset.phone === a.phone)?.id ?? ""}
+                            onChange={(e) => {
+                              const preset = agencyPresets.find((item) => item.id === e.target.value);
+                              if (!preset) return;
+                              const { name, address, phone } = preset;
+                              change("agencies", notice.agencies.map((row, index) => index === i ? { name, address, phone } : row));
+                            }}
+                          >
+                            <option value="">Choose an agency or enter custom details</option>
+                            {agencyPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
+                          </select>
+                        </label>
                         <div className="fields">
                           {(["name", "address", "phone"] as const).map((k) => (
                             <label className="field" key={k}>
