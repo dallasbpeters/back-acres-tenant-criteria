@@ -59,3 +59,46 @@ Copy [`.env.example`](.env.example) to `.env.local` for local development (the l
 - [Resend / Vercel integration](https://resend.com/vercel)
 
 This starter is not legal advice. Review it with qualified counsel before using it as your sole statutory notice mechanism.
+
+## Private adverse-action workspace
+
+Open `/admin/adverse-actions`. Sign in with the private `ADMIN_PASSWORD` (at least
+32 random characters). Sessions use an HTTP-only, same-site cookie and expire after
+8 hours. Changing the password and redeploying invalidates existing sessions.
+Applicant records and send routes require authentication; writes require the same origin.
+
+1. Enter the applicant, decision, sender contact and actual reasons in Tiptap.
+2. Include all reporting agencies used. If a credit score influenced the decision,
+   fill in the score, range, creation date, source and ordered key factors.
+3. Save a version, preview it, confirm the recipient and click **Send notice**.
+
+Every save inserts a new Neon record through Drizzle. Prior versions are never edited.
+The stored snapshot includes the structured fields, exact email HTML and plain text.
+Concurrent edits from an older version are rejected; open the latest version first.
+Drafts may be incomplete, but sending validates the required fields. The disclosure
+structure follows the [FTC landlord guidance](https://www.ftc.gov/business-guidance/resources/using-consumer-reports-what-landlords-need-know).
+This template does not decide eligibility or resolve late criteria disclosure/refund obligations.
+
+Sending uses the existing `RESEND_API_KEY` and `FROM_EMAIL`. A database claim and
+stable provider idempotency key prevent repeat sends of the same version. `accepted`
+means Resend accepted the email, not that it reached the inbox. `sending` or `unknown`
+after a failure requires checking Resend manually before creating another version;
+there is no automatic retry that could send a duplicate legal notice. `rejected` means
+the provider rejected the request. Review the provider result before saving a corrected
+version and sending again. No delivery webhook is currently configured.
+
+### Database and development
+
+Set `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `ADMIN_PASSWORD` only in ignored
+`.env.local` / Vercel secrets. Never use `NEXT_PUBLIC_` for these values.
+Use Node 22. Run `npm ci`, `npm run db:generate` after schema edits and
+`npm run db:migrate` to apply the checked-in migration. Migration is a separate
+explicit operation; builds do not mutate the database. These tables are additive.
+
+`npm test` checks notice validation, safe rendering and sending failure/concurrency
+behavior. For browser tests, start a development server on port 3191 with
+`RESEND_API_KEY=test-no-email-delivery FROM_EMAIL=test@example.com npm run dev -- --port 3191`,
+then run `npm run test:e2e`. Tests use headless installed Chrome and the configured
+Neon database, create explicitly labeled test records, and remove those records.
+They do not send email. Production provider delivery still needs a deliberately
+addressed test or an authorized real notice.
