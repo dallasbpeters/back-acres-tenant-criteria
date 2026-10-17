@@ -1,3 +1,4 @@
+import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -41,8 +42,8 @@ export default async function PropertyPage({
       </section>
       <section className="management-section">
         <h2>Selection criteria</h2>
-        <p>{p.data.criteriaVersion}</p>
-        <p className="document-text">{p.data.criteria}</p>
+        <p>{POLICY.version}</p>
+        <p className="document-text">{selectionCriteriaText()}</p>
       </section>
       <p>Questions: {p.data.contact}</p>
       {p.data.acceptingApplications ? (

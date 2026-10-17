@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { POLICY, selectionCriteriaText } from "../policy";
 const text = (max = 300) => z.string().trim().max(max);
 const required = (max = 300) => text(max).min(1);
 export function listingSlug(address: string) {
@@ -24,12 +25,15 @@ export const propertySchema = z
     availableDate: text(10),
     contact: required(500),
     emergencyContact: text(500).optional().default(""),
-    criteria: required(20000),
-    criteriaVersion: required(100),
     published: z.boolean(),
     acceptingApplications: z.boolean(),
   })
-  .transform((data) => ({ ...data, slug: listingSlug(data.address) }));
+  .transform((data) => ({
+    ...data,
+    slug: listingSlug(data.address),
+    criteria: selectionCriteriaText(),
+    criteriaVersion: POLICY.version,
+  }));
 export type PropertyInput = z.infer<typeof propertySchema>;
 export const applicationSchema = z.object({
   name: required(),

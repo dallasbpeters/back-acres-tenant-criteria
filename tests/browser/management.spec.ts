@@ -1,3 +1,4 @@
+import { POLICY, selectionCriteriaText } from "../../lib/policy";
 import { test, expect } from "@playwright/test";
 import { loadEnvConfig } from "@next/env";
 import { encode } from "next-auth/jwt";
@@ -151,18 +152,27 @@ test("property lifecycle, private records, public applications, resident links, 
     acknowledgment: true,
     accuracy: true,
   };
-  const apply = (revision: number) =>
+  const apply = (revision: number, criteriaVersion: string = POLICY.version) =>
     request.post("/api/applications", {
       headers: { origin, "x-vercel-forwarded-for": propertyId },
-      data: { id: applicationId, propertyId, revision, website: "", data },
+      data: {
+        id: applicationId,
+        propertyId,
+        revision,
+        criteriaVersion,
+        website: "",
+        data,
+      },
     });
   expect((await apply(1)).status()).toBe(409);
+  expect((await apply(2, "stale-version")).status()).toBe(409);
   expect((await apply(2)).status()).toBe(201);
   expect((await apply(2)).status()).toBe(201);
   const rows =
     await sql`SELECT * FROM rental_applications WHERE id=${applicationId}`;
   expect(rows).toHaveLength(1);
-  expect(rows[0].criteria_snapshot).toBe(property.criteria);
+  expect(rows[0].criteria_snapshot).toBe(selectionCriteriaText());
+  expect(rows[0].criteria_version).toBe(POLICY.version);
   expect((await request.get("/api/admin/management")).status()).toBe(401);
   expect(
     (
@@ -352,6 +362,8 @@ test("property lifecycle, private records, public applications, resident links, 
   const {
     slug: ignoredSlug,
     emergencyContact: ignoredEmergencyContact,
+    criteria: ignoredCriteria,
+    criteriaVersion: ignoredCriteriaVersion,
     ...automaticProperty
   } = property;
   expect(
@@ -413,6 +425,12 @@ test("property lifecycle, private records, public applications, resident links, 
   await expect(
     page.getByRole("link", { name: "Open maintenance portal", exact: true }),
   ).toHaveAttribute("href", "/admin#maintenance");
+  await expect(
+    page.getByLabel("Selection criteria for this property", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByLabel("Criteria version", { exact: true }),
+  ).toHaveCount(0);
   const portalPage = await page.context().newPage();
   await portalPage.goto("/admin#maintenance");
   await expect(

@@ -1,3 +1,4 @@
+import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -24,8 +25,8 @@ export default async function ApplyPage({
         <IntakeForm
           kind="application"
           property={{
-            criteria: p.data.criteria,
-            criteriaVersion: p.data.criteriaVersion,
+            criteria: selectionCriteriaText(),
+            criteriaVersion: POLICY.version,
             contact: p.data.contact,
             emergencyContact: "",
           }}

@@ -56,3 +56,13 @@ export function policyRecordText(): string {
     'This acknowledgment records receipt/opportunity to review criteria; it is not a lease or an approval of the application.'
   ].join('\n\n');
 }
+
+/** Shared criteria content; property identity is supplied by each listing. */
+export function selectionCriteriaText(): string {
+  return [
+    ...POLICY.items.map(
+      (item) => `${item.number}. ${item.title}: ${item.detail}`,
+    ),
+    `ACKNOWLEDGMENT: ${POLICY.statutoryAcknowledgment}`,
+  ].join("\n\n");
+}

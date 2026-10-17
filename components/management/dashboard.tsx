@@ -582,8 +582,6 @@ function PropertyWorkspace({
                 availableDate: s("availableDate"),
                 contact: s("contact"),
                 emergencyContact: data?.emergencyContact ?? "",
-                criteria: s("criteria"),
-                criteriaVersion: s("criteriaVersion"),
                 published: f.get("published") === "on",
                 acceptingApplications: f.get("acceptingApplications") === "on",
               },
@@ -642,11 +640,6 @@ function PropertyWorkspace({
                 </a>
                 <small>Manage resident request links in a new tab.</small>
               </div>
-              <Field
-                name="criteriaVersion"
-                label="Criteria version"
-                value={data?.criteriaVersion}
-              />
             </div>
             <label className="field">
               Listing description
@@ -657,18 +650,11 @@ function PropertyWorkspace({
                 rows={5}
               />
             </label>
-            <label className="field">
-              Selection criteria for this property
-              <textarea
-                name="criteria"
-                defaultValue={data?.criteria}
-                required
-                rows={10}
-              />
-            </label>
             <p>
-              Use the criteria applicable to this property. Update the criteria
-              version whenever the terms change.
+              Selection criteria are managed centrally.{" "}
+              <a href="/#criteria" target="_blank" rel="noreferrer">
+                View selection criteria
+              </a>
             </p>
             <label className="check-row">
               <input

@@ -130,7 +130,10 @@ applications, immutable lease templates/draft versions, payment requests, and
 resident maintenance links. Public listings live at `/properties`; a published
 property can accept applications at `/properties/<slug>/apply`.
 
-Applications capture the property/criteria snapshot presented at submission.
+Listings and applications use the shared selection criteria in `lib/policy.ts`;
+property forms do not ask owners to duplicate them. Applications capture the
+property/criteria snapshot and version presented at submission and reject stale
+criteria versions.
 Applicant identity and email are self-reported. Screening is arranged separately
 with a provider such as SmartMove; this app never collects SSNs or orders reports.
 Status updates do not email decisions. Maintenance forms show emergency contact

@@ -62,6 +62,8 @@ export function IntakeForm({
             id: requestId,
             propertyId,
             revision,
+            criteriaVersion:
+              kind === "application" ? property.criteriaVersion : undefined,
             token,
             website: str("website"),
             data,

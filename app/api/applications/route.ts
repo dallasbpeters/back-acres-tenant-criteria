@@ -1,3 +1,4 @@
+import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
       id: z.string().uuid(),
       propertyId: z.string().uuid(),
       revision: z.number().int(),
+      criteriaVersion: z.string().max(100).optional(),
       website: z.literal(""),
       data: applicationSchema,
     })
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
         { error: "This property is not accepting applications." },
         409,
       );
-    if (p.revision !== b.revision)
+    if (p.revision !== b.revision || b.criteriaVersion !== POLICY.version)
       return reply(
         {
           error:
@@ -53,9 +55,13 @@ export async function POST(request: NextRequest) {
         id: b.id,
         propertyId: p.id,
         data: b.data,
-        criteriaSnapshot: p.data.criteria,
-        criteriaVersion: p.data.criteriaVersion,
-        propertySnapshot: p.data,
+        criteriaSnapshot: selectionCriteriaText(),
+        criteriaVersion: POLICY.version,
+        propertySnapshot: {
+          ...p.data,
+          criteria: selectionCriteriaText(),
+          criteriaVersion: POLICY.version,
+        },
       })
       .onConflictDoNothing();
     return reply({ receipt: b.id }, 201);
