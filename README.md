@@ -206,3 +206,11 @@ that editor shows only the selected document's immutable version history. New
 notices use `/admin/adverse-actions/new`. List filters apply to the latest
 version; an earlier accepted version is flagged separately. Resend acceptance
 continues to mean provider acceptance, not confirmed inbox delivery.
+
+### Automatic ACH rent payments
+
+In Payments, choose **Automatic ACH**, set a future first payment date (day 1–28), amount, and fixed installment count. Copy the private tenant enrollment link. The payer reviews the exact terms, verifies their US bank account in Stripe-hosted Checkout, and accepts Stripe's mandate. Only a verified SetupIntent webhook starts a charge-automatically subscription schedule; no owner-entered bank details or automatic conversion of manual invoices. A missed start date requires canceling and creating a new enrollment. The private page also lets the payer revoke future debits; cancellation does not reverse payments already initiated or cancel the lease. To change banks, cancel and create a fresh enrollment. Treat enrollment links as confidential bearer credentials.
+
+The configured Stripe sandbox remains test-only. Live collection requires a live restricted key with the required Billing, Checkout, Customer, Product, SetupIntent, Mandate, PaymentMethod and read-payment permissions, ACH enabled in Stripe, the matching live webhook secret, and deliberate PAYMENTS_LIVE_ENABLED=true activation. No live financial settings are changed by deployment. Required additional webhook events: setup_intent.succeeded, setup_intent.requires_action, setup_intent.setup_failed, setup_intent.canceled, mandate.updated, payment_intent.processing, payment_intent.succeeded, payment_intent.payment_failed, charge.failed, charge.dispute.created, charge.dispute.closed, charge.refunded. Retain all existing invoice, subscription_schedule and checkout events.
+
+Invoice reconciliation reads current Stripe payment state: ACH processing is not paid or failed; failures, refunds and disputes remain visible even after an earlier paid event. A revoked mandate stops future schedules. Provider timeouts during enrollment require owner review rather than an automatic duplicate. Stripe supplies bank mandate/verification communications; confirm live email and failed-payment retry settings in Stripe before collecting real rent.

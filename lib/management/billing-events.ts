@@ -10,6 +10,13 @@ function invoiceUuid(id: string) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 export const billingEvents = [
+  "payment_intent.processing",
+  "payment_intent.succeeded",
+  "payment_intent.payment_failed",
+  "charge.failed",
+  "charge.dispute.created",
+  "charge.dispute.closed",
+  "charge.refunded",
   "invoice.finalized",
   "invoice.paid",
   "invoice.payment_failed",
@@ -32,7 +39,7 @@ export async function handleBillingEvent(event: Stripe.Event) {
     await d
       .update(rentSchedules)
       .set({
-        status: sql`case when ${rentSchedules.status} in ('canceled','completed','released') then ${rentSchedules.status} else ${schedule.status} end`,
+        status: sql`case when ${rentSchedules.status} in ('canceled','canceling','completed','released') then ${rentSchedules.status} else ${schedule.status} end`,
         stripeScheduleId: schedule.id,
       })
       .where(
@@ -43,10 +50,42 @@ export async function handleBillingEvent(event: Stripe.Event) {
       );
     return;
   }
+  if (
+    event.type.startsWith("payment_intent.") ||
+    event.type.startsWith("charge.")
+  ) {
+    const object = event.data.object as
+      Stripe.PaymentIntent | Stripe.Charge | Stripe.Dispute;
+    let intentId: string | null = event.type.startsWith("payment_intent.")
+      ? object.id
+      : null;
+    if (!intentId && "payment_intent" in object)
+      intentId =
+        typeof object.payment_intent === "string"
+          ? object.payment_intent
+          : (object.payment_intent?.id ?? null);
+    if (!intentId) return;
+    const payments = await stripe().invoicePayments.list({
+      payment: { type: "payment_intent", payment_intent: intentId },
+      limit: 100,
+    });
+    for (const payment of payments.data) {
+      const invoice =
+        typeof payment.invoice === "string"
+          ? await stripe().invoices.retrieve(payment.invoice)
+          : payment.invoice;
+      if (!("deleted" in invoice)) await reconcileInvoice(invoice);
+    }
+    return;
+  }
   const payload = event.data.object as Stripe.Invoice;
   if (!payload.parent?.subscription_details?.metadata?.rentScheduleId) return;
   // Stripe events can arrive out of order. Reconcile the current provider record.
   const invoice = await stripe().invoices.retrieve(payload.id);
+  await reconcileInvoice(invoice);
+}
+async function reconcileInvoice(invoice: Stripe.Invoice) {
+  const d = db();
   const id = invoice.parent?.subscription_details?.metadata?.rentScheduleId;
   if (!id) return;
   const [schedule] = await d
@@ -60,16 +99,40 @@ export async function handleBillingEvent(event: Stripe.Event) {
     invoice.currency !== "usd"
   )
     return;
-  const state =
-    invoice.status === "paid"
-      ? "paid"
-      : invoice.status === "void"
-        ? "void"
-        : invoice.attempt_count > 0 && invoice.status === "open"
+  const payments = await stripe().invoicePayments.list({
+    invoice: invoice.id,
+    expand: ["data.payment.payment_intent"],
+    limit: 100,
+  });
+  const intents = payments.data
+    .map((p) => p.payment.payment_intent)
+    .filter((p): p is Stripe.PaymentIntent => !!p && typeof p !== "string");
+  const latest = intents.sort((a, b) => b.created - a.created)[0];
+  const charge = latest?.latest_charge
+    ? typeof latest.latest_charge === "string"
+      ? await stripe().charges.retrieve(latest.latest_charge)
+      : latest.latest_charge
+    : null;
+  const state = charge?.disputed
+    ? "disputed"
+    : charge?.refunded
+      ? "refunded"
+      : charge?.amount_refunded
+        ? "partially_refunded"
+        : charge?.status === "failed"
           ? "failed"
-          : invoice.status === "uncollectible"
-            ? "uncollectible"
-            : "open";
+          : latest?.status === "processing"
+            ? "processing"
+            : invoice.status === "paid"
+              ? "paid"
+              : invoice.status === "void"
+                ? "void"
+                : invoice.status === "uncollectible"
+                  ? "uncollectible"
+                  : latest?.status === "requires_payment_method" &&
+                      latest.last_payment_error
+                    ? "failed"
+                    : "open";
   const values = {
     id: invoiceUuid(invoice.id),
     propertyId: schedule.propertyId,
@@ -99,7 +162,14 @@ export async function handleBillingEvent(event: Stripe.Event) {
     .onConflictDoUpdate({
       target: invoices.stripeInvoiceId,
       set: {
-        status: sql`case when ${invoices.status} = 'paid' or ${state} = 'paid' then 'paid' when ${invoices.status} in ('void','uncollectible') then ${invoices.status} else ${state} end`,
+        // Preserve settled/returned states if an older reconciliation finishes last.
+        status: sql`case
+          when ${invoices.status} in ('disputed','refunded') then ${invoices.status}
+          when ${state} in ('disputed','refunded') then ${state}
+          when ${invoices.status} = 'partially_refunded' then ${invoices.status}
+          when ${invoices.status} = 'paid' and ${state} in ('open','processing') then 'paid'
+          when ${invoices.status} in ('void','uncollectible') and ${state} in ('open','processing','failed') then ${invoices.status}
+          else ${state} end`,
         hostedInvoiceUrl: values.hostedInvoiceUrl,
         paidAt: sql`coalesce(${invoices.paidAt},${values.paidAt})`,
       },

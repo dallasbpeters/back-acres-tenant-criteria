@@ -36,6 +36,20 @@
       "when": 1792278360098,
       "tag": "0004_curly_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792279637933,
+      "tag": "0005_flaky_serpent_society",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792279687950,
+      "tag": "0006_lumpy_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }

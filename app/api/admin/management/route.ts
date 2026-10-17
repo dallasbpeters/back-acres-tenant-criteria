@@ -156,7 +156,13 @@ export async function GET(request: NextRequest) {
       })),
       templates,
       drafts,
-      rentSchedules: schedules,
+      rentSchedules: schedules.map((r) => ({
+        ...r,
+        enrollmentUrl:
+          r.collection === "ach"
+            ? `${siteUrl()}/autopay/${linkToken("autopay", r.id)}`
+            : null,
+      })),
       paymentsReady: paymentReady(),
       paymentMode: /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "")
         ? "live"

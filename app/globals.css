@@ -269,7 +269,7 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .owner-brand small { display:block; color:var(--muted); font-size:.72rem; font-weight:400; }
 .owner-navbar nav { display:flex; align-items:center; flex-wrap:wrap; gap:1.25rem; font-size:.85rem; }
 .owner-navbar button { padding:.5rem .8rem; min-block-size:2.5rem; background:transparent; color:var(--ink); border:1px solid var(--line); cursor:pointer; font:inherit; }
-.owner-layout { display:grid; grid-template-columns:12.5rem minmax(0,1fr); max-inline-size:96rem; margin-inline:auto; }
+.owner-layout { display:grid; grid-template-columns:12.5rem minmax(0,1fr); inline-size:100%; }
 .owner-sidebar { padding:1.75rem .85rem; border-inline-end:1px solid var(--line); background:var(--bg); }
 .owner-sidebar .nav-label { padding:.25rem .75rem; font-size:.7rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-block-end:.65rem; }
 .owner-sidebar nav { display:grid; gap:.3rem; }

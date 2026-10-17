@@ -1,0 +1,1 @@
+ALTER TABLE "rent_schedules" ADD COLUMN "stripe_payment_method_id" text;

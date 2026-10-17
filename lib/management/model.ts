@@ -91,6 +91,7 @@ export function dollars(cents: number) {
 }
 
 export const rentScheduleSchema = z.object({
+  collection: z.enum(["invoice", "ach"]).default("invoice"),
   propertyId: z.string().uuid(),
   payerName: required(),
   payerEmail: z.string().trim().email().max(254).toLowerCase(),

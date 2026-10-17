@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { properties, rentSchedules } from "@/lib/db/schema";
 import { guard, readBody, reply } from "@/lib/adverse/auth";
 import { rentScheduleSchema } from "@/lib/management/model";
+import { stopAutopay } from "@/lib/management/autopay";
 import { stripe, paymentMode, paymentReady } from "@/lib/management/stripe";
 const command = z.discriminatedUnion("action", [
   z.object({
@@ -46,6 +47,10 @@ export async function POST(request: NextRequest) {
         );
       if (r.status === "canceled" || r.status === "completed")
         return reply({ ok: true });
+      if (r.collection === "ach") {
+        await stopAutopay(r.id);
+        return reply({ ok: true });
+      }
       if (!r.stripeScheduleId)
         return reply(
           { error: "This schedule needs reconciliation in Stripe." },
@@ -68,10 +73,14 @@ export async function POST(request: NextRequest) {
       !Number.isFinite(date.getTime()) ||
       date.toISOString().slice(0, 10) !== b.firstDate ||
       b.firstDate < today ||
+      (b.collection === "ach" && b.firstDate === today) ||
       date.getUTCDate() > 28
     )
       return reply(
-        { error: "Choose today or a future date on day 1–28 of the month." },
+        {
+          error:
+            "Choose day 1–28 of the month. ACH enrollment requires a future date.",
+        },
         400,
       );
     const [existing] = await d
@@ -84,7 +93,9 @@ export async function POST(request: NextRequest) {
         409,
       );
     if (existing)
-      return existing.stripeScheduleId
+      return existing.stripeScheduleId ||
+        (existing.collection === "ach" &&
+          existing.status === "awaiting_authorization")
         ? reply({ ok: true })
         : reply(
             {
@@ -106,6 +117,11 @@ export async function POST(request: NextRequest) {
             "not_started",
             "active",
             "needs_review",
+            "awaiting_authorization",
+            "creating_checkout",
+            "awaiting_verification",
+            "activating",
+            "canceling",
           ]),
         ),
       );
@@ -131,7 +147,10 @@ export async function POST(request: NextRequest) {
       firstDate: b.firstDate,
       installments: b.installments,
       mode: paymentMode(),
+      collection: b.collection,
+      status: b.collection === "ach" ? "awaiting_authorization" : "creating",
     });
+    if (b.collection === "ach") return reply({ ok: true });
     const customer = await client.customers.create(
       {
         name: b.payerName,

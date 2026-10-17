@@ -77,6 +77,12 @@ export const rentSchedules = pgTable(
     installments: integer("installments").notNull(),
     mode: text("mode").notNull(),
     status: text("status").notNull().default("creating"),
+    collection: text("collection").notNull().default("invoice"),
+    setupSessionId: text("setup_session_id"),
+    setupIntentId: text("setup_intent_id").unique(),
+    stripePaymentMethodId: text("stripe_payment_method_id"),
+    consentedAt: timestamp("consented_at", { withTimezone: true }),
+    authorizationText: text("authorization_text"),
     stripeCustomerId: text("stripe_customer_id"),
     stripeScheduleId: text("stripe_schedule_id").unique(),
     createdAt: createdAt(),
@@ -85,7 +91,7 @@ export const rentSchedules = pgTable(
     uniqueIndex("one_active_rent_schedule")
       .on(t.propertyId, t.payerEmail, t.mode)
       .where(
-        sql`${t.status} in ('creating','not_started','active','needs_review')`,
+        sql`${t.status} in ('creating','not_started','active','needs_review','awaiting_authorization','creating_checkout','awaiting_verification','activating','canceling')`,
       ),
   ],
 );

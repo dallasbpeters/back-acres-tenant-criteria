@@ -13,6 +13,8 @@ export type RentScheduleRecord = {
   mode: string;
   status: string;
   stripeScheduleId: string | null;
+  collection: string;
+  enrollmentUrl: string | null;
 };
 export function BillingWorkspace({
   properties,
@@ -54,11 +56,12 @@ export function BillingWorkspace({
   }
   return (
     <section className="management-section">
-      <h3>Recurring rent invoices</h3>
+      <h3>Monthly rent payments</h3>
       <p>
-        Stripe issues one invoice per month for the number of installments you
-        set, then stops. Tenants pay each hosted invoice themselves. This does
-        not enroll anyone in autopay or sign, renew, or cancel a lease.
+        Choose automatic ACH bank payments or invoices paid manually. For ACH,
+        share the private enrollment link with the tenant. No automatic debit is
+        scheduled until they authorize and verify their bank account with
+        Stripe. Both options stop after the agreed number of monthly payments.
       </p>
       <form
         className="management-form"
@@ -70,6 +73,7 @@ export function BillingWorkspace({
             action: "create",
             id,
             data: {
+              collection: f.get("collection"),
               propertyId: f.get("propertyId"),
               payerName: f.get("payerName"),
               payerEmail: f.get("payerEmail"),
@@ -89,11 +93,22 @@ export function BillingWorkspace({
       >
         <fieldset disabled={busy || !ready}>
           <div className="fields">
+            <label className="field">
+              Payment collection
+              <select name="collection" defaultValue="ach">
+                <option value="ach">
+                  Automatic ACH · tenant authorization required
+                </option>
+                <option value="invoice">
+                  Monthly invoice · tenant pays manually
+                </option>
+              </select>
+            </label>
             <PropertySelect properties={properties} />
             <Field name="payerName" label="Rent payer name" />
             <Field name="payerEmail" label="Rent payer email" type="email" />
             <label className="field">
-              Monthly invoice amount ($)
+              Monthly rent amount ($)
               <input
                 name="monthlyAmount"
                 type="number"
@@ -106,11 +121,11 @@ export function BillingWorkspace({
             </label>
             <Field
               name="firstDate"
-              label="First invoice date (day 1–28)"
+              label="First payment date (day 1–28; future date for ACH)"
               type="date"
             />
             <label className="field">
-              Number of monthly invoices
+              Number of monthly payments
               <input
                 type="number"
                 min="1"
@@ -127,15 +142,17 @@ export function BillingWorkspace({
             {dollars(
               Math.round(Number(amount || 0) * 100) * Number(count || 0),
             )}
-            . No automatic lease renewal. Invoices are due when issued.
+            . No automatic lease renewal. Enroll and verify the bank account
+            before the first ACH payment date. Invoices are due when issued.
           </p>
           <label className="check-row">
             <input name="authorized" type="checkbox" required />I have checked
-            the payer, amount, and agreed lease term and authorize these
-            invoices. I understand live-mode schedules can email real invoices.
+            the payer, amount, and agreed lease term and authorize these payment
+            terms. For ACH, the tenant must provide their own bank
+            authorization. Live-mode invoices and debits can collect real money.
           </label>
           <button className="submit-button" disabled={!properties.length}>
-            Create rent invoice schedule
+            Create rent payment schedule
           </button>
         </fieldset>
       </form>
@@ -146,12 +163,41 @@ export function BillingWorkspace({
             {s.payerName} · {dollars(s.monthlyCents)} / month
           </h3>
           <p>
-            {s.payerEmail} · first invoice {s.firstDate} · {s.installments}{" "}
+            {s.payerEmail} · first payment {s.firstDate} · {s.installments}{" "}
             installments
           </p>
           <p>
-            {s.status} · {s.mode} mode
+            {s.collection === "ach" ? "Automatic ACH" : "Manual invoices"} ·{" "}
+            {s.status.replaceAll("_", " ")} · {s.mode} mode
           </p>
+          {s.enrollmentUrl && (
+            <p>
+              <a href={s.enrollmentUrl} target="_blank" rel="noreferrer">
+                Open tenant enrollment and payment controls
+              </a>{" "}
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(s.enrollmentUrl!);
+                    setError(
+                      "Enrollment link copied. Share it privately with the named payer.",
+                    );
+                  } catch {
+                    setError("Open the enrollment page and copy its address.");
+                  }
+                }}
+              >
+                Copy private enrollment link
+              </button>
+            </p>
+          )}
+          {s.status === "needs_review" && (
+            <p>
+              Review this schedule in Stripe before replacing it. If bank
+              verification missed the first payment date, cancel and create a
+              new enrollment with a future date.
+            </p>
+          )}
           {s.stripeScheduleId && (
             <a
               target="_blank"
@@ -161,19 +207,27 @@ export function BillingWorkspace({
               Review schedule in Stripe
             </a>
           )}
-          {["active", "not_started"].includes(s.status) && (
+          {[
+            "active",
+            "not_started",
+            "awaiting_authorization",
+            "creating_checkout",
+            "awaiting_verification",
+            "needs_review",
+            "canceling",
+          ].includes(s.status) && (
             <button
               disabled={busy}
               onClick={() => {
                 if (
                   window.confirm(
-                    "Stop future rent invoices? This does not cancel the lease or remove invoices already issued.",
+                    "Stop future rent payments? This does not cancel the lease, reverse submitted debits, or remove invoices already issued.",
                   )
                 )
                   post({ action: "cancel", id: s.id });
               }}
             >
-              Cancel future invoices
+              Stop future payments
             </button>
           )}
         </article>

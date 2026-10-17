@@ -276,7 +276,7 @@ export function Dashboard() {
                   : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
                 Use a rent schedule for monthly invoices, or a separate request
                 for a deposit, fee, or one-time rent charge. Avoid requesting
-                the same obligation twice. Recurring autopay is not enabled.
+                the same obligation twice. Automatic ACH requires the tenant’s bank authorization.
               </p>
               <BillingWorkspace
                 properties={records.properties}

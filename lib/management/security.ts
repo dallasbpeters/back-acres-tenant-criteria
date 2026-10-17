@@ -11,10 +11,16 @@ function signature(value: string) {
     .update(value)
     .digest("hex");
 }
-export function linkToken(kind: "maintenance" | "payment", id: string) {
+export function linkToken(
+  kind: "maintenance" | "payment" | "autopay",
+  id: string,
+) {
   return `${id}.${signature(`${kind}:${id}`)}`;
 }
-export function tokenId(kind: "maintenance" | "payment", token: string) {
+export function tokenId(
+  kind: "maintenance" | "payment" | "autopay",
+  token: string,
+) {
   const [id, sig, extra] = token.split(".");
   if (
     extra ||

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { invoices } from "@/lib/db/schema";
 import { reply } from "@/lib/adverse/auth";
 import { stripe } from "@/lib/management/stripe";
+import { autopayEvents, handleAutopayEvent } from "@/lib/management/autopay";
 import type Stripe from "stripe";
 import {
   billingEvents,
@@ -19,6 +20,18 @@ export async function POST(request: NextRequest) {
     );
   } catch {
     return reply({ error: "Invalid webhook signature or configuration." }, 400);
+  }
+  if (
+    autopayEvents.includes(event.type) ||
+    (event.type === "checkout.session.completed" &&
+      (event.data.object as Stripe.Checkout.Session).mode === "setup")
+  ) {
+    try {
+      await handleAutopayEvent(event);
+      return reply({ received: true });
+    } catch {
+      return reply({ error: "Could not reconcile bank enrollment." }, 503);
+    }
   }
   if (billingEvents.includes(event.type)) {
     try {
