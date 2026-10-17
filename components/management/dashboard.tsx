@@ -573,7 +573,6 @@ function PropertyWorkspace({
               revision: editing?.revision ?? 0,
               data: {
                 name: s("name"),
-                slug: s("slug"),
                 address: s("address"),
                 description: s("description"),
                 rentCents: Math.round(Number(s("rent")) * 100),
@@ -592,14 +591,14 @@ function PropertyWorkspace({
           }}
         >
           <h3>{editing ? "Edit property" : "New property"}</h3>
+          <p>
+            {editing
+              ? `Listing link: /properties/${editing.slug}. This stays the same when you edit the property.`
+              : "Your listing link is generated automatically from the property address when you save."}
+          </p>
           <fieldset disabled={busy}>
             <div className="fields">
               <Field name="name" label="Property name" value={data?.name} />
-              <Field
-                name="slug"
-                label="Listing URL name (lowercase-with-hyphens)"
-                value={data?.slug}
-              />
               <Field
                 name="address"
                 label="Property address"

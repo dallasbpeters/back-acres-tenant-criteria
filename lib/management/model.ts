@@ -1,22 +1,35 @@
 import { z } from "zod";
 const text = (max = 300) => z.string().trim().max(max);
 const required = (max = 300) => text(max).min(1);
-export const propertySchema = z.object({
-  name: required(),
-  slug: required(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  address: required(500),
-  description: required(10000),
-  rentCents: z.number().int().min(0).max(10000000),
-  bedrooms: z.number().int().min(0).max(50),
-  bathrooms: z.number().min(0).max(50),
-  availableDate: text(10),
-  contact: required(500),
-  emergencyContact: required(500),
-  criteria: required(20000),
-  criteriaVersion: required(100),
-  published: z.boolean(),
-  acceptingApplications: z.boolean(),
-});
+export function listingSlug(address: string) {
+  return (
+    address
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 64)
+      .replace(/-$/g, "") || "property"
+  );
+}
+export const propertySchema = z
+  .object({
+    name: required(),
+    address: required(500),
+    description: required(10000),
+    rentCents: z.number().int().min(0).max(10000000),
+    bedrooms: z.number().int().min(0).max(50),
+    bathrooms: z.number().min(0).max(50),
+    availableDate: text(10),
+    contact: required(500),
+    emergencyContact: required(500),
+    criteria: required(20000),
+    criteriaVersion: required(100),
+    published: z.boolean(),
+    acceptingApplications: z.boolean(),
+  })
+  .transform((data) => ({ ...data, slug: listingSlug(data.address) }));
 export type PropertyInput = z.infer<typeof propertySchema>;
 export const applicationSchema = z.object({
   name: required(),

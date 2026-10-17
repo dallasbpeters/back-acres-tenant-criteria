@@ -9,8 +9,9 @@ const propertyId = crypto.randomUUID(),
   applicationId = crypto.randomUUID(),
   invoiceId = crypto.randomUUID(),
   templateId = crypto.randomUUID();
-const slug = `test-${propertyId}`;
+const slug = `1-test-st-unit-${propertyId.slice(0, 8)}`;
 const canceledInvoiceId = crypto.randomUUID();
+const duplicatePropertyId = crypto.randomUUID();
 let linkId = "",
   draftId = "";
 const sql = neon(process.env.DATABASE_URL!);
@@ -22,7 +23,8 @@ test.afterAll(async () => {
   await sql`DELETE FROM lease_drafts WHERE property_id=${propertyId}`;
   await sql`DELETE FROM lease_templates WHERE id=${templateId}`;
   await sql`DELETE FROM management_events WHERE entity_id IN (${propertyId},${applicationId},${invoiceId},${canceledInvoiceId},${linkId || propertyId},${draftId || propertyId})`;
-  await sql`DELETE FROM properties WHERE id=${propertyId}`;
+  await sql`DELETE FROM management_events WHERE entity_id=${duplicatePropertyId}`;
+  await sql`DELETE FROM properties WHERE id IN (${propertyId},${duplicatePropertyId})`;
 });
 test("property lifecycle, private records, public applications, resident links, drafts and signed payments", async ({
   page,
@@ -87,7 +89,7 @@ test("property lifecycle, private records, public applications, resident links, 
   const property = {
     name: "Test property",
     slug,
-    address: "1 Test St",
+    address: `1 Test St, Unit ${propertyId.slice(0, 8)}`,
     description: "A test listing",
     rentCents: 250000,
     bedrooms: 3,
@@ -243,7 +245,7 @@ test("property lifecycle, private records, public applications, resident links, 
     .getByRole("button", { name: "Generate draft", exact: true })
     .click();
   await expect(page.getByLabel("Draft text", { exact: true })).toHaveValue(
-    "Lease for Fixture tenant at 1 Test St.",
+    `Lease for Fixture tenant at ${property.address}.`,
   );
   await page.getByRole("button", { name: "Save new draft version" }).click();
   await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
@@ -347,7 +349,60 @@ test("property lifecycle, private records, public applications, resident links, 
       await sql`SELECT status FROM rental_invoices WHERE id=${invoiceId}`;
     expect(paid[0].status).toBe("paid");
   }
+  const { slug: ignoredSlug, ...automaticProperty } = property;
+  expect(
+    (
+      await send({
+        action: "property",
+        id: duplicatePropertyId,
+        revision: 0,
+        data: automaticProperty,
+      })
+    ).ok(),
+  ).toBe(true);
+  let listingRecords = await (
+    await page.request.get("/api/admin/management")
+  ).json();
+  const duplicate = listingRecords.properties.find(
+    (p: { id: string }) => p.id === duplicatePropertyId,
+  );
+  expect(duplicate.slug).toBe(
+    `${slug}-${duplicatePropertyId.replaceAll("-", "")}`,
+  );
+  expect(
+    (
+      await send({
+        action: "property",
+        id: propertyId,
+        revision: 2,
+        data: {
+          ...automaticProperty,
+          address: "Corrected address",
+          published: true,
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  listingRecords = await (
+    await page.request.get("/api/admin/management")
+  ).json();
+  expect(
+    listingRecords.properties.find((p: { id: string }) => p.id === propertyId)
+      .slug,
+  ).toBe(slug);
+  expect((await request.get(`/properties/${slug}`)).ok()).toBe(true);
+  await page.reload();
   await page.getByRole("button", { name: "Properties", exact: true }).click();
+  await page.getByRole("button", { name: "Add property", exact: true }).click();
+  await expect(
+    page.getByLabel("Listing URL name", { exact: false }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Your listing link is generated automatically from the property address when you save.",
+    ),
+  ).toBeVisible();
+
   await page.screenshot({
     path: "test-results/property-workspace.png",
     fullPage: true,

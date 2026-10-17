@@ -192,16 +192,38 @@ export async function POST(request: NextRequest) {
         .onConflictDoNothing();
     } else if (c.action === "property") {
       if (c.revision === 0) {
-        await d.batch([
-          d
+        let saved;
+        for (const slug of [
+          c.data.slug,
+          `${c.data.slug}-${c.id.replaceAll("-", "")}`,
+        ]) {
+          [saved] = await d
             .insert(properties)
-            .values({ id: c.id, slug: c.data.slug, data: c.data }),
-          event(c.id, c.data),
-        ]);
+            .values({ id: c.id, slug, data: { ...c.data, slug } })
+            .onConflictDoNothing()
+            .returning();
+          if (saved) break;
+        }
+        if (!saved)
+          return reply(
+            {
+              error:
+                "This property was already saved. Reload to see its listing link.",
+            },
+            409,
+          );
+        await event(c.id, saved.data);
       } else {
+        const [existing] = await d
+          .select()
+          .from(properties)
+          .where(eq(properties.id, c.id));
+        if (!existing) return reply({ error: "Property not found." }, 404);
+        // Keep shared listing and application links working after address corrections.
+        const data = { ...c.data, slug: existing.slug };
         const [result] = await d
           .update(properties)
-          .set({ slug: c.data.slug, data: c.data, revision: c.revision + 1 })
+          .set({ data, revision: c.revision + 1 })
           .where(
             and(eq(properties.id, c.id), eq(properties.revision, c.revision)),
           )
@@ -214,7 +236,7 @@ export async function POST(request: NextRequest) {
             },
             409,
           );
-        await event(c.id, c.data);
+        await event(c.id, data);
       }
     } else if (
       c.action === "applicationStatus" ||
