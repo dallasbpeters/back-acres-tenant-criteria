@@ -1,10 +1,10 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { authorizationReceipts } from "@/lib/db/schema";
+import { authorizationReceipts, invoices } from "@/lib/db/schema";
 import { requireValue } from "@/lib/required";
 import { authorizationReceiptText } from "./authorization-receipt";
 import { billingEvents, handleBillingEvent } from "./billing-events";
@@ -123,6 +123,19 @@ async function recoverEvent(
     event.data.object.object === "checkout.session" &&
     event.data.object.mode === "payment"
   ) {
+    const id = event.data.object.metadata?.invoiceId;
+    if (!(id && z.string().uuid().safeParse(id).success)) {
+      return 0;
+    }
+    // Account-wide Stripe events can refer to another app or an older database.
+    // Recover only known invoices; a mismatch for a known invoice still fails.
+    const [known] = await db()
+      .select({ id: invoices.id })
+      .from(invoices)
+      .where(and(eq(invoices.id, id), eq(invoices.mode, mode)));
+    if (!known) {
+      return 0;
+    }
     const session = await client.checkout.sessions.retrieve(
       event.data.object.id
     );

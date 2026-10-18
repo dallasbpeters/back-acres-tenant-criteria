@@ -327,6 +327,27 @@ describe("bounded read-only Stripe recovery", () => {
     const [payment] = await state.database.select().from(invoices);
     expect(payment.status).toBe("open");
   });
+  it("ignores unknown invoice references from older or unrelated account activity", async () => {
+    client.events.list.mockResolvedValue({
+      data: [
+        event("checkout.session.completed", {
+          ...session(),
+          object: "checkout.session",
+        }),
+        event("checkout.session.completed", {
+          ...session({ metadata: {} }),
+          object: "checkout.session",
+        }),
+        event("checkout.session.completed", {
+          ...session({ metadata: { invoiceId: "invalid" } }),
+          object: "checkout.session",
+        }),
+      ],
+      has_more: false,
+    });
+    expect(await reconcileRecentPayments()).toBe(0);
+    expect(client.checkout.sessions.retrieve).not.toHaveBeenCalled();
+  });
   it("does not activate a Checkout bank setup during payment recovery", async () => {
     client.events.list.mockResolvedValue({
       data: [
