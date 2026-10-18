@@ -54,14 +54,15 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   const data = {
     name: "Photo workflow verification",
     address: `1 Test St Unit ${id}`,
-    description: "Temporary test fixture — not a rental offer.",
+    description:
+      "Temporary test fixture — not a rental offer.\n\nFull description ends here; this paragraph must remain visible.",
     rentCents: 100000,
     bedrooms: 2,
     bathrooms: 1,
     availableDate: "",
     contact: "fixture@example.invalid",
     published: false,
-    acceptingApplications: false,
+    acceptingApplications: true,
   };
   const save = (revision: number, published: boolean) =>
     page.request.post("/api/admin/management", {
@@ -373,12 +374,57 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await expect(
     page.getByRole("img", { name: "Fixture exterior", exact: true }),
   ).toBeVisible();
+  const viewer = page.getByRole("dialog", { name: `${data.name} · Photos` });
+  await expect(viewer).toBeVisible();
+  await expect(viewer.getByText("Photo 2 of 2", { exact: true })).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(viewer.getByText("Photo 1 of 2", { exact: true })).toBeVisible();
+  await viewer
+    .getByRole("button", { name: "Previous photo", exact: true })
+    .click();
+  await expect(viewer.getByText("Photo 2 of 2", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
+      () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(viewer).not.toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "View photo 2: Fixture exterior" }),
+  ).toBeFocused();
+  await expect(
+    page.getByText(
+      "Full description ends here; this paragraph must remain visible.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  for (const mode of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: mode });
+    const apply = page.getByRole("link", {
+      name: "Apply for this property",
+      exact: true,
+    });
+    const ink = await apply.evaluate((e) => getComputedStyle(e).color);
+    await apply.hover();
+    await page.waitForTimeout(180);
+    expect(await apply.evaluate((e) => getComputedStyle(e).color)).toBe(ink);
+  }
+  await page.goto("/properties");
+  await expect(
+    page.getByText(
+      "Full description ends here; this paragraph must remain visible.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Owner workspace", exact: true }),
+  ).toBeVisible();
+  const visitor = await request.get("/properties");
+  expect(await visitor.text()).not.toContain('href="/admin"');
+  const signedOutAdmin = await request.get("/admin");
+  expect(await signedOutAdmin.text()).not.toContain(">Workspace</a>");
   expect(
     (
       await page.request.patch("/api/admin/photos", {

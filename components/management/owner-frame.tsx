@@ -38,7 +38,7 @@ export function OwnerFrame({
           </span>
         </a>
         <nav aria-label="Account navigation">
-          <a href="/admin">Workspace</a>
+          {signedIn && <a href="/admin">Workspace</a>}
           <a href="/properties" target="_blank" rel="noreferrer">
             View site ↗
           </a>

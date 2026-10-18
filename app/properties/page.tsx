@@ -1,3 +1,5 @@
+import { ListingGallery } from "@/components/management/listing-gallery";
+import { PropertyDescription } from "@/components/management/property-description";
 import { notRemoved } from "@/lib/management/not-removed";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -12,7 +14,11 @@ export default async function PropertiesPage() {
     .from(properties)
     .where(notRemoved(properties.id));
   const photos = await db()
-    .select({ id: listingPhotos.id, propertyId: listingPhotos.propertyId })
+    .select({
+      id: listingPhotos.id,
+      propertyId: listingPhotos.propertyId,
+      caption: listingPhotos.caption,
+    })
     .from(listingPhotos)
     .where(eq(listingPhotos.archived, false))
     .orderBy(asc(listingPhotos.position), asc(listingPhotos.createdAt));
@@ -26,20 +32,15 @@ export default async function PropertiesPage() {
         {published.length ? (
           published.map((p) => (
             <article key={p.id}>
-              {photos.find((photo) => photo.propertyId === p.id) && (
-                <a
-                  href={`/properties/${p.slug}`}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                >
-                  <img
-                    className="property-cover"
-                    src={`/api/photos/${photos.find((photo) => photo.propertyId === p.id)!.id}`}
-                    alt=""
-                    loading="lazy"
-                  />
-                </a>
-              )}
+              <ListingGallery
+                name={p.data.name}
+                photos={photos
+                  .filter((photo) => photo.propertyId === p.id)
+                  .map((photo) => ({
+                    ...photo,
+                    url: `/api/photos/${photo.id}`,
+                  }))}
+              />
               <h2>
                 <a href={`/properties/${p.slug}`}>{p.data.name}</a>
               </h2>
@@ -53,6 +54,16 @@ export default async function PropertiesPage() {
                   ? "Accepting applications"
                   : "Applications closed"}
               </p>
+              <section className="property-about">
+                <h3>About this property</h3>
+                <PropertyDescription text={p.data.description} />
+              </section>
+              <a
+                className="property-details-link"
+                href={`/properties/${p.slug}`}
+              >
+                View property details →
+              </a>
             </article>
           ))
         ) : (

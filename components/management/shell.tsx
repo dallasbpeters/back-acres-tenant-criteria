@@ -5,10 +5,12 @@ export function ManagementShell({
   title,
   children,
   owner = false,
+  hideHeading = false,
 }: {
   title: string;
   children: ReactNode;
   owner?: boolean;
+  hideHeading?: boolean;
 }) {
   return (
     <>
@@ -34,7 +36,7 @@ export function ManagementShell({
         </div>
       </header>
       <main className="layout-width management-main">
-        <h1>{title}</h1>
+        {!hideHeading && <h1>{title}</h1>}
         {children}
       </main>
     </>

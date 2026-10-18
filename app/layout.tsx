@@ -1,3 +1,4 @@
+import { authenticated } from "@/lib/adverse/auth";
 import { ThemeProvider } from "@/components/ui/theme";
 import { themeBootstrap } from "@/lib/theme";
 import type { Metadata } from "next";
@@ -12,11 +13,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const signedIn = await authenticated();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -29,7 +31,7 @@ export default function RootLayout({
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
             <a href="/properties">Properties</a>
-            <a href="/admin">Owner workspace</a>
+            {signedIn && <a href="/admin">Owner workspace</a>}
           </nav>
         </ThemeProvider>
       </body>
