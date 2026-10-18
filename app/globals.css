@@ -11,7 +11,7 @@
   --accent: var(--primary);
   --on-action: #fffefa;
   /* One neutral color for every visible border and keyboard outline. */
-  --border: #ebeae4;
+  --border: #eff1ea;
   --tint: color-mix(in oklch, var(--primary) 12%, var(--paper));
   --danger: oklch(43% 0.12 30);
   --warning: oklch(42% 0.065 75);
