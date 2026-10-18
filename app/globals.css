@@ -538,13 +538,13 @@ button.remove-record-button,
 :root[data-theme="dark"] {
   color-scheme: dark;
   --primary: #9BCBB1;
-  --ink: #F2F2E8;
+  --ink: #FFFEFA;
   --secondary: #B8BE57;
   --actions: #8DBAFF;
-  --surface: #171C15;
+  --surface: #0E1005;
   --paper: var(--surface);
-  --bg: #10160F;
-  --muted: #B6BDB0;
+  --bg: var(--surface);
+  --muted: color-mix(in oklch, var(--ink) 70%, var(--surface));
   --accent: var(--primary);
   --on-action: #0E1005;
   --border: #A3A3A3;
