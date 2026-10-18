@@ -1,4 +1,9 @@
 "use client";
+import {
+  RemoveButton,
+  RemovedWorkspace,
+  type RemovedRecord,
+} from "./remove-button";
 import { AppSelect } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { ownerSections } from "./navigation";
@@ -82,6 +87,7 @@ export type DraftRecord = {
   createdAt: string;
 };
 type Records = {
+  removed: RemovedRecord[];
   photos: PhotoRecord[];
   publications: PublicationRecord[];
   rentSchedules: RentScheduleRecord[];
@@ -147,7 +153,10 @@ export function Dashboard() {
     }
   }
   const propertyName = (id: string) =>
-    records?.properties.find((p) => p.id === id)?.data.name ?? "Property";
+    records?.properties.find((p) => p.id === id)?.data.name ??
+    records?.removed.find((r) => r.entityId === id && r.kind === "property")
+      ?.label ??
+    "Property";
   return (
     <>
       {error && (
@@ -163,11 +172,15 @@ export function Dashboard() {
         <p>Loading property records…</p>
       ) : (
         <>
+          {tab === "Removed" && (
+            <RemovedWorkspace records={records.removed} onSaved={load} />
+          )}
           {tab === "Properties" && (
             <PropertyWorkspace
               properties={records.properties}
               save={save}
               busy={busy}
+              onRemoved={load}
             />
           )}
           {tab === "Publishing" && (
@@ -251,6 +264,13 @@ export function Dashboard() {
                       <option key={s}>{s}</option>
                     ))}
                   </AppSelect>
+                  <RemoveButton
+                    kind="application"
+                    id={a.id}
+                    name={a.data.name}
+                    onRemoved={load}
+                    disabled={busy}
+                  />
                   <a href="/admin/adverse-actions">
                     Prepare a notice separately
                   </a>
@@ -270,6 +290,7 @@ export function Dashboard() {
               }))}
               save={save}
               busy={busy}
+              onRemoved={load}
             />
           </div>
           {tab === "Payments" && (
@@ -311,6 +332,14 @@ export function Dashboard() {
                     Open payment request
                   </a>
                   <CopyLink url={i.url} />
+                  <RemoveButton
+                    kind="invoice"
+                    id={i.id}
+                    name={i.description}
+                    onRemoved={load}
+                    disabled={busy}
+                    cancelFirst={i.status === "open"}
+                  />
                   {i.status === "open" && (
                     <div className="management-actions">
                       <button
@@ -368,6 +397,13 @@ export function Dashboard() {
                       ? "Revoked"
                       : `Expires ${new Date(l.expiresAt).toLocaleDateString()}`}
                   </p>
+                  <RemoveButton
+                    kind="residentLink"
+                    id={l.id}
+                    name={l.residentName}
+                    onRemoved={load}
+                    disabled={busy}
+                  />
                   {!l.revoked && (
                     <>
                       <CopyLink url={l.url} />
@@ -420,6 +456,13 @@ export function Dashboard() {
                       <option key={s}>{s}</option>
                     ))}
                   </AppSelect>
+                  <RemoveButton
+                    kind="maintenance"
+                    id={m.id}
+                    name={m.data.subject}
+                    onRemoved={load}
+                    disabled={busy}
+                  />
                 </details>
               ))}
             </section>
@@ -508,10 +551,12 @@ function PropertyWorkspace({
   properties,
   save,
   busy,
+  onRemoved,
 }: {
   properties: PropertyRecord[];
   save: Save;
   busy: boolean;
+  onRemoved: () => Promise<void>;
 }) {
   const [editing, setEditing] = useState<PropertyRecord | null>(null),
     [open, setOpen] = useState(false);
@@ -559,6 +604,19 @@ function PropertyWorkspace({
             >
               Edit {p.data.name}
             </button>
+            <RemoveButton
+              kind="property"
+              id={p.id}
+              name={p.data.name}
+              disabled={busy}
+              onRemoved={async () => {
+                if (editing?.id === p.id) {
+                  setEditing(null);
+                  setOpen(false);
+                }
+                await onRemoved();
+              }}
+            />
             <a href={`/admin?property=${p.id}#publishing`}>
               Photos & publishing
             </a>

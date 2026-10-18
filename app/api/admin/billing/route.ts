@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { NextRequest } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
     const [property] = await d
       .select()
       .from(properties)
-      .where(eq(properties.id, b.propertyId));
+      .where(and(eq(properties.id, b.propertyId), notRemoved(properties.id)));
     if (!property) return reply({ error: "Property not found." }, 404);
     await d.insert(rentSchedules).values({
       id: c.id,

@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { NextRequest } from "next/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     const [invoice] = await d
       .select()
       .from(invoices)
-      .where(eq(invoices.id, id));
+      .where(and(eq(invoices.id, id), notRemoved(invoices.id)));
     if (!invoice) return reply({ error: "Payment request not found." }, 404);
     if (invoice.mode !== paymentMode())
       return reply(

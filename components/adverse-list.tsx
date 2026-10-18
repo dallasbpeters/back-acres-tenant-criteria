@@ -1,4 +1,5 @@
 "use client";
+import { RemoveButton } from "./management/remove-button";
 import { AppSelect } from "@/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 type NoticeRow = {
@@ -202,6 +203,13 @@ export function AdverseList({
                     >
                       Open notice →
                     </a>
+                    <RemoveButton
+                      kind="notice"
+                      id={row.documentId}
+                      name={row.applicantName || "Untitled notice"}
+                      onRemoved={() => setRefresh((n) => n + 1)}
+                      disabled={loading}
+                    />
                   </td>
                 </tr>
               ))}

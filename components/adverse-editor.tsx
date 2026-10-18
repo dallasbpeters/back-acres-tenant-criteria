@@ -1,6 +1,7 @@
 "use client";
+import { RemoveButton } from "./management/remove-button";
 import { AppSelect } from "@/components/ui/select";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { agencyPresets } from "@/lib/adverse/agencies";
 import { signIn } from "next-auth/react";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -125,6 +126,7 @@ export default function AdverseEditor({
   documentId?: string;
   loginError?: string;
 }) {
+  const removedNotice = useRef(false);
   const [authenticated, setAuthenticated] = useState(signedIn);
   const [notice, setNotice] = useState<Notice>(blankNotice);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -165,7 +167,11 @@ export default function AdverseEditor({
   }, [authenticated, documentId]);
   useEffect(() => {
     const prevent = (e: BeforeUnloadEvent) => {
-      if (dirty && (notice.applicantName || notice.applicantEmail)) {
+      if (
+        !removedNotice.current &&
+        dirty &&
+        (notice.applicantName || notice.applicantEmail)
+      ) {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -282,6 +288,18 @@ export default function AdverseEditor({
     <div className="admin-shell">
       <div className="notice-return">
         <a href="/admin/adverse-actions">← All adverse-action notices</a>
+        {versions[0] && (
+          <RemoveButton
+            kind="notice"
+            id={versions[0].documentId}
+            name={versions[0].notice.applicantName || "Untitled notice"}
+            disabled={busy}
+            onRemoved={() => {
+              removedNotice.current = true;
+              window.location.href = "/admin/adverse-actions";
+            }}
+          />
+        )}
       </div>
       <div className="admin-workspace">
         <aside className="notice-history">

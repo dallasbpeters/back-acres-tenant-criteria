@@ -1,5 +1,6 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { guard, reply } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import { leaseDrafts } from "@/lib/db/schema";
@@ -16,7 +17,7 @@ export async function GET(
     const [draft] = await db()
       .select()
       .from(leaseDrafts)
-      .where(eq(leaseDrafts.id, id));
+      .where(and(eq(leaseDrafts.id, id), notRemoved(leaseDrafts.id)));
     if (!draft) return reply({ error: "Not found." }, 404);
     const bytes = await leasePdf(draft.body, id);
     return new NextResponse(Buffer.from(bytes), {

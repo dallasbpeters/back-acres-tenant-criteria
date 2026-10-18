@@ -5,4 +5,5 @@ export const ownerSections = [
   { name: "Payments", key: "payments", label: "Payments" },
   { name: "Maintenance", key: "maintenance", label: "Maintenance" },
   { name: "Publishing", key: "publishing", label: "Photos & publishing" },
+  { name: "Removed", key: "removed", label: "Removed items" },
 ] as const;

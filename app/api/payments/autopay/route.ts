@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { randomBytes } from "node:crypto";
 import { NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     const [r] = await d
       .select()
       .from(rentSchedules)
-      .where(eq(rentSchedules.id, id));
+      .where(and(eq(rentSchedules.id, id), notRemoved(rentSchedules.id)));
     if (!r || r.collection !== "ach" || r.mode !== paymentMode())
       return reply(
         { error: "Enrollment not available in this environment." },
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
     await d
       .update(rentSchedules)
       .set({ stripeCustomerId: customer.id })
-      .where(eq(rentSchedules.id, id));
+      .where(and(eq(rentSchedules.id, id), notRemoved(rentSchedules.id)));
     const session = await client.checkout.sessions.create(
       {
         mode: "setup",

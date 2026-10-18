@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
 import { and, or, ilike, isNull, sql, desc, eq } from "drizzle-orm";
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
           noticeDeliveries,
           eq(noticeVersions.id, noticeDeliveries.versionId),
         )
+        .where(notRemoved(noticeVersions.documentId))
         .orderBy(noticeVersions.documentId, desc(noticeVersions.version))
         .as("latest_notices");
       const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
@@ -129,7 +131,12 @@ export async function GET(request: NextRequest) {
         noticeDeliveries,
         eq(noticeVersions.id, noticeDeliveries.versionId),
       )
-      .where(documentId ? eq(noticeVersions.documentId, documentId) : undefined)
+      .where(
+        and(
+          notRemoved(noticeVersions.documentId),
+          documentId ? eq(noticeVersions.documentId, documentId) : undefined,
+        ),
+      )
       .orderBy(desc(noticeVersions.version), desc(noticeVersions.createdAt))
       .limit(200)
       .offset(Math.floor(offset));
@@ -164,7 +171,12 @@ export async function POST(request: NextRequest) {
     const existing = await database
       .select()
       .from(noticeVersions)
-      .where(eq(noticeVersions.id, data.requestId));
+      .where(
+        and(
+          eq(noticeVersions.id, data.requestId),
+          notRemoved(noticeVersions.documentId),
+        ),
+      );
     if (existing[0]) return reply({ version: existing[0] });
     let documentId: string = randomUUID();
     let version = 1;
@@ -172,7 +184,12 @@ export async function POST(request: NextRequest) {
       const [parent] = await database
         .select()
         .from(noticeVersions)
-        .where(eq(noticeVersions.id, data.parentId));
+        .where(
+          and(
+            eq(noticeVersions.id, data.parentId),
+            notRemoved(noticeVersions.documentId),
+          ),
+        );
       if (!parent)
         return reply({ error: "The previous version no longer exists." }, 404);
       const [latest] = await database

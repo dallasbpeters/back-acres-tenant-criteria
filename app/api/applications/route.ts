@@ -1,6 +1,7 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { applications, properties } from "@/lib/db/schema";
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     const [p] = await d
       .select()
       .from(properties)
-      .where(eq(properties.id, b.propertyId));
+      .where(and(eq(properties.id, b.propertyId), notRemoved(properties.id)));
     if (!p || !p.data.published || !p.data.acceptingApplications)
       return reply(
         { error: "This property is not accepting applications." },

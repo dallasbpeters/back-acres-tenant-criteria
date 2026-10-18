@@ -1,5 +1,6 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { POLICY, selectionCriteriaText } from "@/lib/policy";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { properties } from "@/lib/db/schema";
@@ -16,7 +17,7 @@ export default async function ApplyPage({
   const [p] = await db()
     .select()
     .from(properties)
-    .where(eq(properties.slug, slug));
+    .where(and(eq(properties.slug, slug), notRemoved(properties.id)));
   if (!p || !p.data.published) notFound();
   return (
     <ManagementShell title={`Apply · ${p.data.name}`}>

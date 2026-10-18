@@ -1,4 +1,5 @@
 "use client";
+import { RemoveButton } from "./remove-button";
 import { useEffect, useRef, useState } from "react";
 import { AppSelect } from "@/components/ui/select";
 import {
@@ -51,6 +52,7 @@ export function LeaseWorkspace({
   applicants = [],
   save,
   busy,
+  onRemoved,
 }: {
   properties: PropertyRecord[];
   templates: TemplateRecord[];
@@ -58,6 +60,7 @@ export function LeaseWorkspace({
   applicants?: Applicant[];
   save: Save;
   busy: boolean;
+  onRemoved: () => Promise<void>;
 }) {
   const preferred =
     templates.find((t) => t.id === "91268531-0000-4000-8000-000000000001") ??
@@ -91,6 +94,32 @@ export function LeaseWorkspace({
   const template = templates.find((t) => t.id === templateId),
     property = properties.find((p) => p.id === propertyId);
   const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (
+      !parentId &&
+      templateId &&
+      !templates.some((t) => t.id === templateId)
+    ) {
+      setTemplateId(preferred?.id ?? "");
+      setWordingOpen(false);
+      setWordingDirty(false);
+    }
+    if (
+      !parentId &&
+      propertyId &&
+      !properties.some((p) => p.id === propertyId)
+    ) {
+      setPropertyId("");
+      setValues({});
+      setDirty(false);
+      setParentId(null);
+      setSavedId("");
+      setBody("");
+      setStep(0);
+      setFurthest(0);
+    }
+  }, [templates, properties, templateId, propertyId, preferred?.id, parentId]);
+
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (dirty || wordingDirty) {
@@ -336,6 +365,24 @@ export function LeaseWorkspace({
                 </option>
               ))}
             </AppSelect>
+          )}
+          {wordingSourceId && (
+            <div className="management-actions">
+              <RemoveButton
+                kind="leaseTemplate"
+                id={wordingSourceId}
+                name={
+                  templates.find((t) => t.id === wordingSourceId)?.name ??
+                  "Lease document"
+                }
+                onRemoved={async () => {
+                  setWordingOpen(false);
+                  setWordingDirty(false);
+                  await onRemoved();
+                }}
+                disabled={busy}
+              />
+            </div>
           )}
           <label className="field">
             Document name
@@ -803,6 +850,35 @@ export function LeaseWorkspace({
                       >
                         Open lease
                       </button>
+                      <RemoveButton
+                        kind="leaseDraft"
+                        id={d.id}
+                        name={d.tenantName}
+                        disabled={busy}
+                        onRemoved={async () => {
+                          // Only reset if the removed lease is open in the editor.
+                          const family = [
+                            d.id,
+                            ...earlierVersions(d).map((v) => v.id),
+                          ];
+                          if (
+                            family.includes(savedId) ||
+                            (parentId && family.includes(parentId))
+                          ) {
+                            setParentId(null);
+                            setSavedId("");
+                            setBody("");
+                            setBodyEdited(false);
+                            setValues(initialLeaseValues(property?.data));
+                            setTenantName("");
+                            setDirty(false);
+                            setStep(0);
+                            setFurthest(0);
+                            setDraftId(crypto.randomUUID());
+                          }
+                          await onRemoved();
+                        }}
+                      />
                       <a
                         href={`/api/admin/leases/${d.id}/pdf`}
                         target="_blank"

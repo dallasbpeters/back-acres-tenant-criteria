@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { listingPhotos, properties } from "@/lib/db/schema";
@@ -6,7 +7,10 @@ import { dollars } from "@/lib/management/model";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Available properties | Back Acres" };
 export default async function PropertiesPage() {
-  const rows = await db().select().from(properties);
+  const rows = await db()
+    .select()
+    .from(properties)
+    .where(notRemoved(properties.id));
   const photos = await db()
     .select({ id: listingPhotos.id, propertyId: listingPhotos.propertyId })
     .from(listingPhotos)

@@ -1,5 +1,6 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { residentLinks, maintenanceRequests } from "@/lib/db/schema";
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const [link] = await d
       .select()
       .from(residentLinks)
-      .where(eq(residentLinks.id, id));
+      .where(and(eq(residentLinks.id, id), notRemoved(residentLinks.id)));
     if (!link || link.revoked || link.expiresAt.getTime() < Date.now())
       return reply(
         { error: "This link has expired. Contact the property owner." },

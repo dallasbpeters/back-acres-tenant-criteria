@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { NextRequest } from "next/server";
 import { and, eq, asc } from "drizzle-orm";
 import { z } from "zod";
@@ -24,7 +25,7 @@ export async function GET(
       [property] = await d
         .select()
         .from(properties)
-        .where(eq(properties.id, id));
+        .where(and(eq(properties.id, id), notRemoved(properties.id)));
     if (!property) return reply({ error: "Property not found." }, 404);
     const photos = await d
       .select()

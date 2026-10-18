@@ -179,3 +179,15 @@ export const listingPublications = pgTable(
   },
   (t) => [uniqueIndex("listing_provider_unique").on(t.propertyId, t.provider)],
 );
+
+// Reversible workspace removal. Keep source records and their references intact.
+export const removedRecords = pgTable("removed_records", {
+  entityId: uuid("entity_id").primaryKey(),
+  groupId: uuid("group_id").notNull(),
+  kind: text("kind").notNull(),
+  label: text("label").notNull(),
+  actor: text("actor").notNull(),
+  removedAt: timestamp("removed_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});

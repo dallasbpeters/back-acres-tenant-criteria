@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { notRemoved } from "@/lib/management/not-removed";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { rentSchedules, properties } from "@/lib/db/schema";
@@ -25,7 +26,7 @@ export default async function AutopayPage({
   const [r] = await db()
     .select()
     .from(rentSchedules)
-    .where(eq(rentSchedules.id, id));
+    .where(and(eq(rentSchedules.id, id), notRemoved(rentSchedules.id)));
   if (!r || r.collection !== "ach") notFound();
   const [p] = await db()
     .select()

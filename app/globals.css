@@ -430,3 +430,81 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 @media(max-width:640px) { .lease-progress { display:grid; grid-template-columns:1fr 1fr; } .lease-progress button { font-size:.8rem; } .lease-form .lease-fields { grid-template-columns:minmax(0,1fr); } .lease-summary dl { grid-template-columns:minmax(0,1fr); gap:.5rem; } .lease-summary dl div { display:flex; justify-content:space-between; gap:1rem; } .lease-summary dd { text-align:end; } .lease-document { padding:1rem; } .lease-wording-tools,.lease-saved-row { flex-wrap:wrap; } }
 @media print { .lease-progress,.lease-summary,.lease-saved,.lease-review-actions,.lease-review-note,.lease-review-checks { display:none; } .lease-flow { display:block; } .lease-document { border:0; padding:0; max-inline-size:none; } }
 .lease-history-row { display:flex; align-items:center; flex-wrap:wrap; gap:1rem; padding-block:.5rem; font-size:.85rem; }
+
+/* Reversible removal uses the same document-like controls throughout the workspace. */
+button.remove-record-button,
+.owner-main button.remove-record-button {
+  color: #853b32;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: .55rem .85rem;
+  min-block-size: 2.5rem;
+  cursor: pointer;
+}
+.removed-item button {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+.remove-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(20 30 24 / 42%);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+.remove-modal {
+  width: min(100%, 36rem);
+  max-height: calc(100dvh - 2.5rem);
+  overflow-y: auto;
+  background: var(--paper, #fff);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid #a6b2aa;
+}
+.remove-modal [role="dialog"] {
+  outline: none;
+}
+.remove-modal h2 {
+  font-size: 1.6rem;
+  margin-bottom: 0.75rem;
+}
+.remove-item-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.remove-modal p {
+  margin-block: 0.8rem;
+}
+.remove-modal button { min-block-size: 2.75rem; }
+.remove-modal .management-actions {
+  margin-top: 1.5rem;
+}
+.remove-modal .remove-confirm-button {
+  background: #853b32;
+  color: #fff;
+  border-color: #853b32;
+}
+.removed-item {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.removed-item h3 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .removed-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media print {
+  .remove-overlay,
+  .remove-record-button {
+    display: none;
+  }
+}

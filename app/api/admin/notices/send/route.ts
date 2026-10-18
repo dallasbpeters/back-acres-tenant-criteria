@@ -1,5 +1,6 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { noticeVersions, noticeDeliveries } from "@/lib/db/schema";
@@ -27,7 +28,9 @@ export async function POST(request: NextRequest) {
     const [version] = await database
       .select()
       .from(noticeVersions)
-      .where(eq(noticeVersions.id, id));
+      .where(
+        and(eq(noticeVersions.id, id), notRemoved(noticeVersions.documentId)),
+      );
     if (!version) return reply({ error: "Notice not found." }, 404);
     const errors = sendErrors(version.notice);
     if (errors.length) return reply({ error: errors.join(" ") }, 400);

@@ -1,7 +1,8 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -16,6 +17,7 @@ import {
   rentSchedules,
   listingPhotos,
   listingPublications,
+  removedRecords,
 } from "@/lib/db/schema";
 import { listingDigest } from "@/lib/management/listing-digest";
 import { guard, readBody, reply } from "@/lib/adverse/auth";
@@ -84,6 +86,11 @@ export async function GET(request: NextRequest) {
   if (denied) return denied;
   try {
     const d = db();
+    const removedGroups = d
+      .selectDistinctOn([removedRecords.groupId])
+      .from(removedRecords)
+      .orderBy(removedRecords.groupId)
+      .as("removed_groups");
     const [
       propertyRows,
       applicationRows,
@@ -95,41 +102,54 @@ export async function GET(request: NextRequest) {
       schedules,
       photos,
       publications,
+      removed,
     ] = await Promise.all([
       d
         .select()
         .from(properties)
+        .where(notRemoved(properties.id))
         .orderBy(desc(properties.createdAt))
         .limit(200),
       d
         .select()
         .from(applications)
+        .where(notRemoved(applications.id))
         .orderBy(desc(applications.createdAt))
         .limit(200),
       d
         .select()
         .from(maintenanceRequests)
+        .where(notRemoved(maintenanceRequests.id))
         .orderBy(desc(maintenanceRequests.createdAt))
         .limit(200),
       d
         .select()
         .from(residentLinks)
+        .where(notRemoved(residentLinks.id))
         .orderBy(desc(residentLinks.createdAt))
         .limit(200),
-      d.select().from(invoices).orderBy(desc(invoices.createdAt)).limit(200),
+      d
+        .select()
+        .from(invoices)
+        .where(notRemoved(invoices.id))
+        .orderBy(desc(invoices.createdAt))
+        .limit(200),
       d
         .select()
         .from(leaseTemplates)
+        .where(notRemoved(leaseTemplates.id))
         .orderBy(desc(leaseTemplates.createdAt))
         .limit(50),
       d
         .select()
         .from(leaseDrafts)
+        .where(notRemoved(leaseDrafts.id))
         .orderBy(desc(leaseDrafts.createdAt))
         .limit(200),
       d
         .select()
         .from(rentSchedules)
+        .where(notRemoved(rentSchedules.id))
         .orderBy(desc(rentSchedules.createdAt))
         .limit(200),
       d
@@ -137,8 +157,14 @@ export async function GET(request: NextRequest) {
         .from(listingPhotos)
         .orderBy(listingPhotos.position, listingPhotos.createdAt),
       d.select().from(listingPublications),
+      d
+        .select()
+        .from(removedGroups)
+        .orderBy(desc(removedGroups.removedAt))
+        .limit(500),
     ]);
     return reply({
+      removed,
       photos: photos.map(({ blobPath, ...photo }) => ({
         ...photo,
         url: `/api/photos/${photo.id}`,
@@ -199,6 +225,31 @@ export async function POST(request: NextRequest) {
       detail,
     });
   try {
+    const referencedIds = [
+      "id" in c ? c.id : null,
+      "propertyId" in c
+        ? c.propertyId
+        : c.action === "invoice"
+          ? c.data.propertyId
+          : null,
+      "templateId" in c ? c.templateId : null,
+      "parentId" in c ? c.parentId : null,
+    ].filter((id): id is string => !!id);
+    if (referencedIds.length) {
+      const removed = await d
+        .select({ id: removedRecords.entityId })
+        .from(removedRecords)
+        .where(inArray(removedRecords.entityId, referencedIds))
+        .limit(1);
+      if (removed.length)
+        return reply(
+          {
+            error:
+              "This item or its property/document was removed. Restore it in Removed items before making changes.",
+          },
+          409,
+        );
+    }
     if (c.action === "leaseTemplate") {
       await d
         .insert(leaseTemplates)

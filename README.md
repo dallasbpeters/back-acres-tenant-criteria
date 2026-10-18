@@ -220,3 +220,20 @@ Invoice reconciliation reads current Stripe payment state: ACH processing is not
 The Leases workspace opens a guided flow using the supplied Avail document by default. It fills the property address and rent, supports choosing an existing applicant, groups people, payment terms and disclosures into separate steps, and presents a readable document before saving. Draft versions store their entered values so they can reopen for revision; older drafts without values remain editable as documents. Switching workspace sections preserves the in-progress form for the current page session.
 
 Lease wording changes live in a separate Tiptap editor. Automatic details appear as named inline chips and are inserted from a picker; owners do not author template syntax. Saving wording creates a new immutable document. The stored text format remains compatible with existing generation and PDF export. Apply migration 0007 before deploying.
+
+### Removing workspace items
+
+Properties, applications, lease documents and complete lease version families,
+payment requests, rent schedules, resident links, maintenance requests, and
+adverse-action notice families have a **Remove** action. Photos retain their
+existing remove/restore controls. **Removed items** in the sidebar restores
+records without destroying source data, references, or delivery/payment evidence.
+Apply migration `0008` before deploying this release.
+
+Removing a property unpublishes its listing, closes applications, and revokes
+resident links. Related records stay in their own sections. Restored properties
+stay unpublished and links stay revoked. External listing sites must be updated
+separately. Active rent schedules block property removal; schedule removal first
+stops future payments, and open payment requests are canceled before removal.
+Pending payments must reconcile before removal. Restoring payment records never
+restarts collection or refunds a payment.

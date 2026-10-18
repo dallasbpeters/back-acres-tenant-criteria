@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { notRemoved } from "@/lib/management/not-removed";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { properties, residentLinks } from "@/lib/db/schema";
@@ -21,13 +22,13 @@ export default async function MaintenancePage({
   const [link] = await db()
     .select()
     .from(residentLinks)
-    .where(eq(residentLinks.id, id));
+    .where(and(eq(residentLinks.id, id), notRemoved(residentLinks.id)));
   if (!link || link.revoked || link.expiresAt.getTime() < Date.now())
     notFound();
   const [p] = await db()
     .select()
     .from(properties)
-    .where(eq(properties.id, link.propertyId));
+    .where(and(eq(properties.id, link.propertyId), notRemoved(properties.id)));
   if (!p) notFound();
   return (
     <ManagementShell title="Request maintenance">

@@ -95,6 +95,7 @@ test("private access, rich editing, durable versions, conflicts, mobile and dupl
   ).toBeVisible();
   await page.reload();
   await page
+    .locator(".notice-history")
     .getByRole("button", { name: /E2E Test Applicant/ })
     .first()
     .click();

@@ -1,4 +1,6 @@
 "use client";
+import { RemoveButton } from "./remove-button";
+import { terminalSchedules } from "@/lib/management/removal";
 import { AppSelect } from "@/components/ui/select";
 import { useState } from "react";
 import { Field, PropertySelect, type PropertyRecord } from "./dashboard";
@@ -172,6 +174,14 @@ export function BillingWorkspace({
             {s.collection === "ach" ? "Automatic ACH" : "Manual invoices"} ·{" "}
             {s.status.replaceAll("_", " ")} · {s.mode} mode
           </p>
+          <RemoveButton
+            kind="rentSchedule"
+            id={s.id}
+            name={s.payerName}
+            onRemoved={onSaved}
+            disabled={busy}
+            cancelFirst={!terminalSchedules.includes(s.status)}
+          />
           {s.enrollmentUrl && (
             <p>
               <a href={s.enrollmentUrl} target="_blank" rel="noreferrer">

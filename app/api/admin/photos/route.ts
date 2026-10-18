@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { and, eq, asc } from "drizzle-orm";
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       [property] = await d
         .select()
         .from(properties)
-        .where(eq(properties.id, propertyId));
+        .where(and(eq(properties.id, propertyId), notRemoved(properties.id)));
     if (!property)
       return reply({ error: "Save the property before adding photos." }, 404);
     const photos = await d

@@ -1,3 +1,4 @@
+import { notRemoved } from "@/lib/management/not-removed";
 import { ListingGallery } from "@/components/management/listing-gallery";
 import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { and, asc, eq } from "drizzle-orm";
@@ -16,7 +17,7 @@ export default async function PropertyPage({
   const [p] = await db()
     .select()
     .from(properties)
-    .where(eq(properties.slug, slug));
+    .where(and(eq(properties.slug, slug), notRemoved(properties.id)));
   if (!p || !p.data.published) notFound();
   const photos = await db()
     .select({ id: listingPhotos.id, caption: listingPhotos.caption })

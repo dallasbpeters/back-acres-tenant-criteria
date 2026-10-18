@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { notRemoved } from "@/lib/management/not-removed";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { invoices, properties } from "@/lib/db/schema";
@@ -25,7 +26,7 @@ export default async function PaymentPage({
   const [invoice] = await db()
     .select()
     .from(invoices)
-    .where(eq(invoices.id, id));
+    .where(and(eq(invoices.id, id), notRemoved(invoices.id)));
   if (!invoice) notFound();
   const [p] = await db()
     .select()
