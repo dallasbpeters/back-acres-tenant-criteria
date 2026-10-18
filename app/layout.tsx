@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/ui/theme";
 import { authenticated } from "@/lib/adverse/auth";
+import { currentBrandColorCss } from "@/lib/brand-theme";
 import { themeBootstrap } from "@/lib/theme";
 import "@fontsource-variable/source-serif-4/index.css";
 import "@fontsource-variable/public-sans/index.css";
@@ -18,12 +19,20 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const signedIn = await authenticated();
+  const [signedIn, brandCss] = await Promise.all([
+    authenticated(),
+    currentBrandColorCss(),
+  ]);
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: This bootstrap is a static application-owned string; no user content is interpolated. */}
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        <style
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: brandColorCss only emits fixed token names and values that passed the strict oklch(L% C H) pattern.
+          dangerouslySetInnerHTML={{ __html: brandCss }}
+          id="brand-colors"
+        />
       </head>
       <body>
         <ThemeProvider>

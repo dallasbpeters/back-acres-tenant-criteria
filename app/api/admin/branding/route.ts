@@ -5,6 +5,11 @@ import { randomUUID } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { guard, reply } from "@/lib/adverse/auth";
+import {
+  type BrandColors,
+  brandColorsSchema,
+  resolveBrandColors,
+} from "@/lib/brand-colors";
 import { db } from "@/lib/db";
 import { brandVersions } from "@/lib/db/schema";
 import { logoPng } from "@/lib/leases/branding";
@@ -20,9 +25,12 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(brandVersions.createdAt))
       .limit(20);
     return reply({
-      current: rows[0] ?? null,
-      history: rows.map(({ logoPng: logoPngLocal, ...r }) => ({
+      current: rows[0]
+        ? { ...rows[0], colors: resolveBrandColors(rows[0].colors) }
+        : null,
+      history: rows.map(({ colors, logoPng: logoPngLocal, ...r }) => ({
         ...r,
+        hasColors: !!colors,
         hasLogo: !!logoPngLocal,
       })),
     });
@@ -55,6 +63,7 @@ export async function POST(request: NextRequest) {
         .orderBy(desc(brandVersions.createdAt))
         .limit(1);
     let png = previous?.logoPng ?? null;
+    let colors: BrandColors | null = previous?.colors ?? null;
     const restore = String(form.get("restore") ?? "");
     if (restore) {
       if (!pattern1.test(restore)) {
@@ -67,7 +76,24 @@ export async function POST(request: NextRequest) {
       if (!r) {
         return reply({ error: "Brand version not found." }, 404);
       }
-      png = r.logoPng;
+      ({ colors, logoPng: png } = r);
+    }
+    const submittedColors = form.get("colors");
+    if (typeof submittedColors === "string" && submittedColors) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(submittedColors);
+      } catch {
+        return reply({ error: "Brand colors could not be read." }, 400);
+      }
+      const result = brandColorsSchema.safeParse(parsed);
+      if (!result.success) {
+        return reply(
+          { error: "Each brand color must be an oklch(L% C H) value." },
+          400
+        );
+      }
+      colors = result.data;
     }
     if (form.get("remove") === "true") {
       png = null;
@@ -83,7 +109,7 @@ export async function POST(request: NextRequest) {
     }
     await d
       .insert(brandVersions)
-      .values({ id: randomUUID(), logoPng: png, name });
+      .values({ colors, id: randomUUID(), logoPng: png, name });
     return reply({ ok: true });
   } catch (e) {
     return reply(

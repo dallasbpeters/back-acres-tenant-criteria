@@ -1,14 +1,18 @@
 import { sql } from "drizzle-orm";
 import {
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { BrandColors } from "@/lib/brand-colors";
 import { leaseDrafts } from "./management";
 export const brandVersions = pgTable("brand_versions", {
+  // Light and dark OKLCH palettes; null keeps the application defaults.
+  colors: jsonb("colors").$type<BrandColors>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
