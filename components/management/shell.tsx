@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeControl } from "@/components/ui/theme";
 import type { ReactNode } from "react";
 export function ManagementShell({
@@ -14,7 +15,7 @@ export function ManagementShell({
       <header className="masthead">
         <div className="layout-width masthead-inner">
           <a className="brand" href="/properties">
-            <span className="brand-monogram">BA</span>
+            <BrandLogo />
             <span>
               <strong>Back Acres</strong>
               <small>Property management</small>

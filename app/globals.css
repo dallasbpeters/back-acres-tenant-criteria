@@ -173,14 +173,6 @@ a:active {
   text-decoration: none;
   min-block-size: 2.75rem;
 }
-.brand-monogram {
-  font-family: var(--font-document);
-  font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: -0.09em;
-  padding-inline-end: 0.2em;
-  color: var(--accent);
-}
 .brand strong,
 .brand small {
   display: block;
@@ -1150,11 +1142,6 @@ footer {
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 650;
-}
-.owner-brand .brand-monogram {
-  font-size: 0.85rem;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
 }
 .owner-brand small {
   display: block;
@@ -2373,11 +2360,11 @@ textarea::placeholder {
   background: #fff;
   border: 1px solid var(--border);
 }
-.owner-logo {
+.brand-logo {
   inline-size: 3rem;
   block-size: 3rem;
   object-fit: contain;
-  padding: 0.2rem;
+  flex: none;
 }
 .lease-signing-admin {
   margin-block-start: 1rem;

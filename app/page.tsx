@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeControl } from "@/components/ui/theme";
 import { POLICY } from '@/lib/policy';
 import { canAcceptAcknowledgments } from '@/lib/ready';
@@ -13,7 +14,7 @@ export default function Page() {
     <a className="skip-link" href="#criteria">Skip to selection criteria</a>
     <header className="masthead">
       <div className="layout-width masthead-inner">
-        <a href="#top" className="brand"><span className="brand-monogram" aria-hidden="true">BA</span><span><strong>Back Acres</strong><small>Rental property · Amarillo, Texas</small></span></a>
+        <a href="#top" className="brand"><BrandLogo /><span><strong>Back Acres</strong><small>Rental property · Amarillo, Texas</small></span></a>
         <div className="masthead-actions"><span className="location-top">Applicant documents <span aria-hidden="true">/</span> 01</span><ThemeControl /></div>
       </div>
     </header>

@@ -1,4 +1,5 @@
 "use client";
+import { BrandLogoImage, useBranding } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 
 import { ThemeControl } from "@/components/ui/theme";
@@ -18,21 +19,7 @@ export function OwnerFrame({
   const pathname = usePathname(),
     [section, setSection] = useState("properties"),
     [leaving, setLeaving] = useState(false),
-    [brand, setBrand] = useState({
-      name: "Back Acres",
-      hasLogo: false,
-      revision: "",
-    });
-  useEffect(() => {
-    const load = () =>
-      fetch("/api/branding")
-        .then((r) => r.json())
-        .then(setBrand)
-        .catch(() => {});
-    void load();
-    window.addEventListener("branding-updated", load);
-    return () => window.removeEventListener("branding-updated", load);
-  }, []);
+    brand = useBranding();
   useEffect(() => {
     const update = () =>
       setSection(window.location.hash.slice(1) || "properties");
@@ -44,15 +31,7 @@ export function OwnerFrame({
     <div className="owner-app">
       <header className="owner-navbar">
         <a className="owner-brand" href="/admin">
-          {brand.hasLogo ? (
-            <img
-              className="owner-logo"
-              src={`/api/branding/logo?v=${brand.revision}`}
-              alt={`${brand.name} logo`}
-            />
-          ) : (
-            <span className="brand-monogram">BA</span>
-          )}
+          <BrandLogoImage brand={brand} />
           <span>
             {brand.name}
             <small>Property management</small>
