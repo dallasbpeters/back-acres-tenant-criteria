@@ -1,9 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "installCommand": "npm ci",
+  "buildCommand": "npx --yes pnpm@11.20.0 run build",
+  "installCommand": "npx --yes pnpm@11.20.0 install --frozen-lockfile",
   "crons": [
-    { "path": "/api/internal/payment-recovery", "schedule": "0 5 * * *" }
+    {
+      "path": "/api/internal/payment-recovery",
+      "schedule": "0 5 * * *"
+    }
   ]
 }
