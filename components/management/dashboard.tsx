@@ -72,6 +72,7 @@ export type TemplateRecord = {
   createdAt: string;
 };
 export type DraftRecord = {
+  values: import("@/lib/management/leases").LeaseValues | null;
   id: string;
   propertyId: string;
   templateId: string;
@@ -257,15 +258,20 @@ export function Dashboard() {
               ))}
             </section>
           )}
-          {tab === "Leases" && (
+          <div hidden={tab !== "Leases"}>
             <LeaseWorkspace
               properties={records.properties}
               templates={records.templates}
               drafts={records.drafts}
+              applicants={records.applications.map((a) => ({
+                id: a.id,
+                propertyId: a.propertyId,
+                name: a.data.name,
+              }))}
               save={save}
               busy={busy}
             />
-          )}
+          </div>
           {tab === "Payments" && (
             <section>
               <h2>Payment requests</h2>

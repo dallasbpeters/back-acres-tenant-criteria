@@ -240,27 +240,36 @@ test("property lifecycle, private records, public applications, resident links, 
   ).toBe(true);
   await page.goto("/admin");
   await page.getByRole("link", { name: "Leases", exact: true }).click();
-  await page.getByRole("button", { name: /Lease property/ }).click();
   await page
-    .getByRole("option", { name: "Test property", exact: true })
+    .locator(".lease-form")
+    .getByRole("button", { name: /property/i })
     .click();
-  await page.getByRole("button", { name: /Lease template/ }).click();
+  await page
+    .getByRole("option", {
+      name: new RegExp(`Test property.*${propertyId.slice(0, 8)}`),
+    })
+    .click();
+  await page.getByRole("button", { name: /Lease document/ }).click();
   await page
     .getByRole("option", { name: "Fixture template", exact: true })
     .click();
   await page.getByLabel("Landlord legal name").fill("Fixture owner");
   await page.getByLabel("Tenant legal names").fill("Fixture tenant");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByLabel("Lease start date").fill("2026-11-01");
   await page.getByLabel("Lease end date").fill("2027-10-31");
-  await page.getByLabel("Security deposit (formatted amount)").fill("$2,500");
+  await page.getByLabel("Security deposit ($)", { exact: true }).fill("2500");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Review lease", exact: true }).click();
+  await expect(
+    page.getByRole("article", { name: "Lease draft preview" }),
+  ).toContainText(`Lease for Fixture tenant at ${property.address}.`);
   await page
-    .getByRole("button", { name: "Generate draft", exact: true })
+    .getByRole("button", { name: "Save lease draft", exact: true })
     .click();
-  await expect(page.getByLabel("Draft text", { exact: true })).toHaveValue(
-    `Lease for Fixture tenant at ${property.address}.`,
-  );
-  await page.getByRole("button", { name: "Save new draft version" }).click();
-  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Draft saved", exact: true }),
+  ).toBeVisible();
   records = await (await page.request.get("/api/admin/management")).json();
   draftId = records.drafts.find(
     (d: { propertyId: string }) => d.propertyId === propertyId,

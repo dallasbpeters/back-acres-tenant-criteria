@@ -9,6 +9,7 @@ import {
   boolean,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { LeaseValues } from "../management/leases";
 import type { PropertyInput, ApplicationInput } from "../management/model";
 const createdAt = () =>
   timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
@@ -146,6 +147,7 @@ export const leaseDrafts = pgTable("lease_drafts", {
     .references(() => leaseTemplates.id),
   parentId: uuid("parent_id"),
   tenantName: text("tenant_name").notNull(),
+  values: jsonb("values").$type<LeaseValues>(),
   body: text("body").notNull(),
   createdAt: createdAt(),
 });

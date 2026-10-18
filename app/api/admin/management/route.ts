@@ -28,6 +28,7 @@ import {
 } from "@/lib/management/model";
 import { linkToken, siteUrl } from "@/lib/management/security";
 import { paymentReady, paymentMode, stripe } from "@/lib/management/stripe";
+import { leaseFields } from "@/lib/management/leases";
 const uuid = z.string().uuid();
 const command = z.discriminatedUnion("action", [
   z.object({
@@ -43,6 +44,14 @@ const command = z.discriminatedUnion("action", [
     templateId: uuid,
     parentId: uuid.nullable(),
     tenantName: z.string().trim().min(1).max(300),
+    values: z
+      .record(z.string(), z.string().max(3000))
+      .refine((v) =>
+        Object.keys(v).every((k) =>
+          leaseFields.includes(k as (typeof leaseFields)[number]),
+        ),
+      )
+      .optional(),
     body: z.string().trim().min(1).max(45000),
   }),
   z.object({
@@ -216,6 +225,7 @@ export async function POST(request: NextRequest) {
           templateId: c.templateId,
           parentId: c.parentId,
           tenantName: c.tenantName,
+          values: c.values ?? null,
           body: c.body,
         })
         .onConflictDoNothing();

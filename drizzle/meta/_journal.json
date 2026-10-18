@@ -50,6 +50,13 @@
       "when": 1792279687950,
       "tag": "0006_lumpy_thaddeus_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792281113280,
+      "tag": "0007_tough_lifeguard",
+      "breakpoints": true
     }
   ]
 }

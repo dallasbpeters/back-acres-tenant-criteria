@@ -385,3 +385,48 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .app-select-option[data-selected] .app-select-check { opacity:1; }
 .app-select-option[data-focused] { background:var(--tint); }
 .app-select-option[data-disabled] { opacity:.5; cursor:default; }
+
+/* Guided lease preparation. */
+.lease-workspace { min-inline-size:0; }
+.lease-workspace > .section-heading-row { align-items:flex-start; }
+.lease-workspace .section-heading-row p { max-inline-size:65ch; }
+.lease-progress { list-style:none; padding:0; margin:1.5rem 0; display:flex; border-block-end:1px solid var(--line); }
+.lease-progress li { flex:1; min-inline-size:0; }
+.lease-progress button { display:flex; align-items:center; gap:.5rem; border:0; border-block-end:2px solid transparent; background:transparent; color:var(--muted); inline-size:100%; text-align:start; padding:.75rem .5rem; }
+.lease-progress button span { font-variant-numeric:tabular-nums; }
+.lease-progress [aria-current="step"] button { color:var(--accent); border-block-end-color:var(--accent); font-weight:650; }
+.lease-progress button:disabled { cursor:default; }
+.lease-flow { display:grid; grid-template-columns:minmax(0,1fr) 17rem; gap:3rem; align-items:start; }
+.lease-questions { min-inline-size:0; }
+.lease-step-heading { scroll-margin-block-start:1.5rem; }
+.lease-step-heading:focus { outline:0; }
+.lease-form .lease-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.lease-wide { grid-column:1/-1; }
+.lease-wide textarea { min-block-size:5rem; }
+.lease-step-actions { display:flex; justify-content:flex-end; gap:1rem; border-block-start:1px solid var(--line); padding-block-start:1.25rem; }
+.lease-summary { position:sticky; top:1.5rem; border-inline-start:1px solid var(--line); padding-inline-start:1.5rem; display:grid; gap:1rem; }
+.lease-summary .eyebrow { font-size:.7rem; }
+.lease-summary dl { display:grid; gap:1rem; }
+.lease-summary dt { color:var(--muted); font-size:.75rem; }
+.lease-summary dd { font-size:.9rem; white-space:pre-line; }
+.lease-summary .small-note { color:var(--muted); }
+.lease-review-note { margin-block:1rem; color:var(--muted); }
+.lease-review-checks { padding:.75rem 0; border-block:1px solid var(--line); }
+.lease-review-checks p { max-inline-size:70ch; margin-block:.75rem; }
+.lease-review-actions { margin-block:1.25rem; flex-wrap:wrap; }
+.lease-document { max-inline-size:75ch; padding:2rem; border:1px solid var(--line); background:#fff; display:grid; gap:1rem; }
+.owner-main .lease-document p { font-family:var(--font-document); font-size:1rem; white-space:pre-wrap; overflow-wrap:anywhere; }
+.lease-document-heading { font-weight:650; }
+.lease-saved { margin-block-start:2.5rem; padding-block-start:1.5rem; border-block-start:1px solid var(--line); }
+.lease-saved-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.lease-wording-panel { max-inline-size:70rem; display:grid; gap:1.25rem; padding-block:1rem; }
+.lease-wording-tools { display:flex; gap:1rem; align-items:flex-end; padding:.75rem; background:var(--bg); border:1px solid var(--line); }
+.lease-wording-tools .app-select { max-inline-size:22rem; }
+.lease-wording-editor > .small-note { margin-block:.65rem; }
+.lease-wording-content { min-block-size:18rem; max-block-size:34rem; overflow:auto; border:1px solid var(--line); padding:1.25rem; font-family:var(--font-document); white-space:pre-wrap; }
+.lease-wording-content p { margin-block-end:.5rem; }
+.lease-detail-chip { display:inline; padding:.1rem .25rem; border:1px solid var(--line); background:var(--tint); color:var(--accent); font-family:var(--font-interface); font-size:.8em; white-space:normal; }
+@media(max-width:1050px) { .lease-flow { grid-template-columns:minmax(0,1fr); gap:1.25rem; } .lease-summary { position:static; grid-row:1; border-inline-start:0; border-block-end:1px solid var(--line); padding:0 0 1rem; } .lease-summary dl { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:640px) { .lease-progress { display:grid; grid-template-columns:1fr 1fr; } .lease-progress button { font-size:.8rem; } .lease-form .lease-fields { grid-template-columns:minmax(0,1fr); } .lease-summary dl { grid-template-columns:minmax(0,1fr); gap:.5rem; } .lease-summary dl div { display:flex; justify-content:space-between; gap:1rem; } .lease-summary dd { text-align:end; } .lease-document { padding:1rem; } .lease-wording-tools,.lease-saved-row { flex-wrap:wrap; } }
+@media print { .lease-progress,.lease-summary,.lease-saved,.lease-review-actions,.lease-review-note,.lease-review-checks { display:none; } .lease-flow { display:block; } .lease-document { border:0; padding:0; max-inline-size:none; } }
+.lease-history-row { display:flex; align-items:center; flex-wrap:wrap; gap:1rem; padding-block:.5rem; font-size:.85rem; }

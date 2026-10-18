@@ -1,0 +1,1 @@
+ALTER TABLE "lease_drafts" ADD COLUMN "values" jsonb;

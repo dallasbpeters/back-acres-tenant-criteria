@@ -80,7 +80,7 @@ test("full-width owner sidebar and tenant-authorized ACH enrollment with revocat
   await expect(
     page.getByRole("heading", { name: "Monthly rent payments" }),
   ).toBeVisible();
-  const billingForm = page.locator(".management-form").first();
+  const billingForm = page.locator(".management-form:visible").first();
   const collection = billingForm.getByRole("button", {
     name: /Payment collection/,
   });
