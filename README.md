@@ -77,8 +77,8 @@ not for Gmail or Drive access. No Google access or refresh tokens are stored in 
 ### Google OAuth setup
 
 Use a Google **Web application** client and register this exact production callback:
-`https://back-acres-tenant-criteria.vercel.app/api/auth/callback/google`.
-The JavaScript origin is `https://back-acres-tenant-criteria.vercel.app`.
+`https://back-acres.vercel.app/api/auth/callback/google`.
+The JavaScript origin is `https://back-acres.vercel.app`.
 For local Google sign-in, also register `http://localhost:3191/api/auth/callback/google`.
 Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, a random `NEXTAUTH_SECRET`, and
 `NEXTAUTH_URL` in Vercel Production. Use the production origin for `NEXTAUTH_URL`;

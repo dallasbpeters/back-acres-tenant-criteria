@@ -66,7 +66,7 @@ this suite.
 
 A read-only check on October 18, 2026 confirmed that the saved Stripe sandbox
 credential could read the enabled webhook at
-`https://back-acres-tenant-criteria.vercel.app/api/payments/webhook`, subscribed to
+`https://back-acres.vercel.app/api/payments/webhook`, subscribed to
 all 25 event types handled by this app, using API version `2026-09-30.endive`.
 Vercel confirms the production Stripe key and webhook secret are configured;
 it redacts their values when downloading environment settings.
