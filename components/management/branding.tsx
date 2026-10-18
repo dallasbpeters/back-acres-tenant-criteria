@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { EmailTest } from "./email-test";
 
 interface Brand {
   createdAt: string;
@@ -130,6 +131,7 @@ export function BrandingWorkspace() {
           )}
         </div>
       </form>
+      <EmailTest />
       {!!(history.length > 1) && (
         <details>
           <summary>Previous branding</summary>
