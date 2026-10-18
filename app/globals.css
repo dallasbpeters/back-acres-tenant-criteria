@@ -1348,6 +1348,7 @@ footer {
 .photo-edit-item img {
   display: block;
   inline-size: 100%;
+  block-size: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: var(--bg);
@@ -1554,6 +1555,7 @@ footer {
 .listing-photo-thumb img {
   display: block;
   inline-size: 100%;
+  block-size: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
 }

@@ -5,7 +5,7 @@ const pattern1 = /Zillow Rental Manager publishing status/;
 
 import { neon } from "@neondatabase/serverless";
 import { loadEnvConfig } from "@next/env";
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { del } from "@vercel/blob";
 import { strFromU8, unzipSync } from "fflate";
 import { encode } from "next-auth/jwt";
@@ -17,6 +17,20 @@ const origin = "http://localhost:3191",
   sql = neon(
     requireValue(process.env.DATABASE_URL, "Expected process.env.DATABASE_URL")
   );
+async function expectThumbnailSizing(images: Locator) {
+  await expect(images.first()).toBeVisible();
+  const sizes = await images.evaluateAll((elements) =>
+    elements.map((element) => {
+      const { width, height } = element.getBoundingClientRect();
+      return { height, width };
+    })
+  );
+  for (const { width, height } of sizes) {
+    expect(width).toBeGreaterThan(20);
+    expect(height).toBeCloseTo(width * 0.75, 0);
+  }
+}
+
 async function cleanup() {
   const photos =
     await sql`SELECT blob_path FROM listing_photos WHERE property_id=${id}`;
@@ -155,13 +169,18 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     .withMetadata()
     .jpeg()
     .toBuffer();
+  const portraitImage = await sharp({
+    create: { background: "#7a9c93", channels: 3, height: 3000, width: 1800 },
+  })
+    .jpeg()
+    .toBuffer();
   await page.goto(`/admin?property=${id}#publishing`);
   await expect(
     page.getByRole("heading", { exact: true, name: "Photos & publishing" })
   ).toBeVisible();
   await page.getByLabel("Upload listing photos").setInputFiles([
     { buffer: image, mimeType: "image/jpeg", name: "one.jpg" },
-    { buffer: image, mimeType: "image/jpeg", name: "two.jpg" },
+    { buffer: portraitImage, mimeType: "image/jpeg", name: "two.jpg" },
   ]);
   await expect(page.getByText("Photos uploaded.", { exact: true })).toBeVisible(
     { timeout: 45_000 }
@@ -200,6 +219,16 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     exact: true,
     name: "Reorder photo 2",
   });
+  // Intrinsic image attributes must not turn the responsive thumbnails into tall strips.
+  await expect
+    .poll(() =>
+      second.locator("img").evaluate((element) => {
+        const photo = element as HTMLImageElement;
+        return photo.naturalHeight > photo.naturalWidth;
+      })
+    )
+    .toBe(true);
+  await expectThumbnailSizing(gallery.locator(".photo-edit-item img"));
   await page.mouse.move(0, 0);
   await expect(
     gallery.getByRole("button", { exact: true, name: "Remove photo 1" })
@@ -373,6 +402,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     )
     .toBe(true);
   await page.getByText("Removed photos (1)", { exact: true }).click();
+  await expectThumbnailSizing(gallery.locator(".photo-edit-item img"));
   await page
     .getByRole("button", { exact: true, name: "Restore photo" })
     .click();
@@ -404,6 +434,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
       () => document.documentElement.scrollWidth <= window.innerWidth
     )
   ).toBe(true);
+  await expectThumbnailSizing(mobilePage.locator(".photo-edit-item img"));
   await mobile.close();
   expect((await save(2, true)).ok()).toBe(true);
   expect((await request.get(photos[0].url)).ok()).toBe(true);
@@ -435,6 +466,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   ).toBeVisible();
   const viewer = page.getByRole("dialog", { name: `${data.name} · Photos` });
   await expect(viewer).toBeVisible();
+  await expectThumbnailSizing(viewer.locator(".listing-photo-thumb img"));
   const closePhotos = viewer.getByRole("button", {
     exact: true,
     name: "Close photos",
@@ -456,6 +488,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
       () => document.documentElement.scrollWidth <= innerWidth
     )
   ).toBe(true);
+  await expectThumbnailSizing(viewer.locator(".listing-photo-thumb img"));
   await page.keyboard.press("Escape");
   await expect(viewer).not.toBeVisible();
   await expect(
