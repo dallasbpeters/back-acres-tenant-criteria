@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { AppSelect } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { listingProviders, listingText } from "@/lib/management/listings";
@@ -103,7 +105,7 @@ export function PublishingWorkspace({
               >
                 Download listing & photos
               </a>
-              <button
+              <Button
                 type="button"
                 onClick={async () => {
                   try {
@@ -123,7 +125,7 @@ export function PublishingWorkspace({
                 }}
               >
                 Copy listing text
-              </button>
+              </Button>
               {property.data.published && (
                 <a
                   href={`/properties/${property.slug}`}
@@ -179,12 +181,13 @@ export function PublishingWorkspace({
                       <option value="removed">Removed / off market</option>
                     </AppSelect>
                     {outdated && (
-                      <button
+                      <Button
+                        type="submit"
                         disabled={busy}
                         onClick={() => status(provider.id, record.status)}
                       >
                         I updated this listing
-                      </button>
+                      </Button>
                     )}
                   </article>
                 );

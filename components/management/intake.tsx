@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { AppSelect } from "@/components/ui/select";
 import { useState } from "react";
 import type { PropertyInput } from "@/lib/management/model";
@@ -205,13 +207,18 @@ export function IntakeForm({
           medical information. See our <a href="/privacy">Privacy Policy</a>.
         </p>
         {error && <p role="alert">{error}</p>}
-        <button className="submit-button" disabled={busy}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="submit-button"
+          disabled={busy}
+        >
           {busy
             ? "Saving…"
             : kind === "application"
               ? "Submit application"
               : "Submit maintenance request"}
-        </button>
+        </Button>
       </fieldset>
     </form>
   );

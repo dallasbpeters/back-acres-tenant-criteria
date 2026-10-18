@@ -1,12 +1,8 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { useState } from "react";
-import {
-  Button,
-  Dialog,
-  Heading,
-  Modal,
-  ModalOverlay,
-} from "react-aria-components";
+import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { removalLabels, type RemovalKind } from "@/lib/management/removal";
 export async function removalCommand(body: unknown) {
   const response = await fetch("/api/admin/removed", {
@@ -38,7 +34,7 @@ export function RemoveButton({
   const label = removalLabels[kind].toLowerCase();
   return (
     <>
-      <button
+      <Button
         type="button"
         className="remove-record-button"
         disabled={disabled}
@@ -49,7 +45,7 @@ export function RemoveButton({
         }}
       >
         Remove
-      </button>
+      </Button>
       <ModalOverlay
         className="remove-overlay"
         isOpen={open}
@@ -219,7 +215,8 @@ export function RemovedWorkspace({
                 {new Date(r.removedAt).toLocaleDateString()}
               </p>
             </div>
-            <button
+            <Button
+              type="submit"
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -237,7 +234,7 @@ export function RemovedWorkspace({
               }}
             >
               Restore {removalLabels[r.kind].toLowerCase()}
-            </button>
+            </Button>
           </article>
         ))}
     </section>

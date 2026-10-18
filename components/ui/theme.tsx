@@ -82,6 +82,7 @@ export function ThemeControl() {
     <MenuTrigger>
       <Button className="theme-control" aria-label={`Color theme: ${label}`}>
         <svg
+          className="theme-control__icon"
           width="16"
           height="16"
           viewBox="0 0 24 24"

@@ -261,3 +261,17 @@ between tabs. The device setting follows operating-system changes. An early
 page script applies the preference before paint; editors, native form controls,
 and portalled menus/dialogs share theme tokens. Printed documents stay light;
 PDF export is independent of the screen theme.
+
+### Lease signatures and branding
+
+In **Branding**, save the business name and a PNG or SVG logo (maximum 2 MB). SVG artwork is restricted to safe vector elements and rasterized to PNG; export text as paths for consistent rendering. Removing a logo preserves previous branding versions, which can be restored. Draft PDFs use current branding. Signing packets freeze their original branding and PDF bytes.
+
+Under **Leases → Saved leases → Signatures**, list every adult tenant and the landlord, review the saved lease and attachments, and create a signing packet. Existing application and lease email details prefill where available. Send each person their own signing link. Links expire in 30 days while awaiting signatures; a replacement lease version cannot have a second pending packet in the same lease history. Cancel the previous pending request first.
+
+Each signer verifies mailbox access using a six-digit code sent through the existing `RESEND_API_KEY` and `FROM_EMAIL` configuration. Codes expire in 10 minutes, allow five verification attempts, and are single use. Verification sessions last 30 minutes. The signer downloads the exact PDF, draws or types a signature, confirms their name and affirmative electronic-signature consent, and submits for themselves. The timestamp comes from the server, never the browser. This records consent and mailbox access, not government identity verification or notarization.
+
+Neon stores the frozen document, signature PNGs, consent wording/version, verification and signing times, request metadata, and SHA-256 fingerprints. Once all required people sign, a completed PDF is saved with signature/audit pages and attachments containing the original PDF and structured audit evidence. Subsequent downloads return those exact saved bytes. Editing a lease creates a different version; it never changes the signed document. Canceling pending requests or removing workspace records retains evidence and closes the affected signing links. Fully signed packets cannot be canceled through this flow.
+
+The additive migration is `0010_conscious_romulus.sql`. No new service keys are required. Review the actual lease terms and required disclosures before inviting signers; software timestamps alone do not establish enforceability or constitute a certified digital signature. Relevant sources: [Texas UETA](https://tcss.legis.texas.gov/resources/BC/htm/BC.322.htm) and [FTC electronic-record consent guidance](https://www.ftc.gov/legal-library/browse/advisory-opinions/informal-staff-advisory-opinion-03-5).
+
+Run `npm run test:signing` with the local test environment configured and port 3191 free. It starts a local server with a test-only mail transport, captures messages only for `@example.invalid` recipients, exercises invitations, code delivery, and signing, and removes its scoped fixtures. Ordinary browser-suite runs seed the mailbox-verification fixture without external email. `LEASE_SIGNING_TEST_BRANDING=1 npm run test:signing` additionally exercises logo upload/removal/restoration and frozen PDF branding; use this only against an isolated test database with an empty branding table. The test refuses to replace existing branding.

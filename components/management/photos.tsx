@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import {
   DndContext,
@@ -67,7 +68,7 @@ function SortablePhoto({
             ⠿
           </span>
         </button>
-        <button
+        <Button
           type="button"
           className="photo-remove"
           disabled={busy || isDragging}
@@ -84,7 +85,7 @@ function SortablePhoto({
               strokeLinecap="round"
             />
           </svg>
-        </button>
+        </Button>
       </div>
       <span className="photo-number">
         {index === 0 ? "Cover photo" : `Photo ${index + 1}`}
@@ -206,13 +207,13 @@ export function PhotoManager({
             the cover
           </p>
         </div>
-        <button
+        <Button
           type="button"
           disabled={busy || active.length >= 24}
           onClick={() => input.current?.click()}
         >
           Add photos
-        </button>
+        </Button>
       </div>
       <input
         ref={input}
@@ -310,7 +311,7 @@ export function PhotoManager({
                   alt={p.caption || "Removed listing photo"}
                   loading="lazy"
                 />
-                <button
+                <Button
                   type="button"
                   disabled={busy}
                   onClick={() =>
@@ -318,7 +319,7 @@ export function PhotoManager({
                   }
                 >
                   Restore photo
-                </button>
+                </Button>
               </div>
             ))}
           </div>

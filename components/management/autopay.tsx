@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { useState } from "react";
 export function AutopayControls({
   token,
@@ -43,14 +45,15 @@ export function AutopayControls({
               accept the payment authorization above. I will authorize and
               verify my own bank account with Stripe.
             </label>
-            <button className="submit-button">
+            <Button type="submit" variant="primary" className="submit-button">
               {busy ? "Opening…" : "Continue to secure bank authorization"}
-            </button>
+            </Button>
           </fieldset>
         </form>
       )}
       {stop && (
-        <button
+        <Button
+          type="submit"
           disabled={busy}
           onClick={() => {
             if (
@@ -62,7 +65,7 @@ export function AutopayControls({
           }}
         >
           Stop future automatic payments
-        </button>
+        </Button>
       )}
       {error && <p role="alert">{error}</p>}
     </>

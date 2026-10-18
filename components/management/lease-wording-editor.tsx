@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { LeaseDetail, wordingDocument } from "@/lib/leases/wording";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -64,7 +66,7 @@ export function LeaseWordingEditor({
             </option>
           ))}
         </AppSelect>
-        <button
+        <Button
           type="button"
           disabled={!editor || disabled}
           onClick={() =>
@@ -76,7 +78,7 @@ export function LeaseWordingEditor({
           }
         >
           Insert detail
-        </button>
+        </Button>
       </div>
       <p className="small-note">
         Highlighted details fill in from the lease questions. Click where a

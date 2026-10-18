@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { AppSelect } from "@/components/ui/select";
@@ -58,13 +60,13 @@ export function LeaseDisclosures({
           >
             <div className="section-heading-row">
               <h4>{fieldLabel(key)}</h4>
-              <button
+              <Button
                 type="button"
                 disabled={busy}
                 onClick={() => setEditing(editing === key ? null : key)}
               >
                 {editing === key ? "Done editing" : "Edit wording"}
-              </button>
+              </Button>
             </div>
             {key === "enclosures" ? (
               <>
@@ -72,12 +74,12 @@ export function LeaseDisclosures({
                   Select the documents you will include. Listed attachments are
                   not automatically included in the downloaded PDF.
                 </p>
-                <button
+                <Button
                   type="button"
                   onClick={() => onChange(key, "No additional enclosures.")}
                 >
                   No additional attachments
-                </button>
+                </Button>
                 <div className="lease-attachment-options">
                   {[...new Set([...suggested, ...attachments])].map((name) => (
                     <label className="check-row" key={name}>
@@ -171,17 +173,17 @@ export function LeaseDisclosures({
         signing.
       </label>
       <div className="management-actions">
-        <button
+        <Button
           type="button"
           disabled={busy || !reviewed}
           onClick={onSaveDefaults}
         >
           Save disclosures for this property
-        </button>
+        </Button>
         {hasDefaults && (
-          <button type="button" disabled={busy} onClick={onClearDefaults}>
+          <Button type="button" disabled={busy} onClick={onClearDefaults}>
             Clear saved disclosures
-          </button>
+          </Button>
         )}
       </div>
     </div>

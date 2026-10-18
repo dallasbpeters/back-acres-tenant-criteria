@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { useState } from "react";
 import type { PhotoRecord } from "./photos";
 export function ListingGallery({
@@ -24,7 +26,7 @@ export function ListingGallery({
       {photos.length > 1 && (
         <div className="listing-thumbnails">
           {photos.map((p, i) => (
-            <button
+            <Button
               type="button"
               key={p.id}
               aria-label={`View photo ${i + 1}${p.caption ? `: ${p.caption}` : ""}`}
@@ -32,7 +34,7 @@ export function ListingGallery({
               onClick={() => setSelected(p.id)}
             >
               <img src={p.url} alt="" loading="lazy" />
-            </button>
+            </Button>
           ))}
         </div>
       )}

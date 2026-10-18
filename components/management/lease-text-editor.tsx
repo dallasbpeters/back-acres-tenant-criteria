@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { useEffect, type ReactNode } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -66,23 +68,23 @@ export function LeaseTextEditor({
       >
         {!plain && (
           <>
-            <button
+            <Button
               type="button"
               disabled={!editor || disabled}
               aria-pressed={editor?.isActive("bold") ?? false}
               onClick={() => editor?.chain().focus().toggleBold().run()}
             >
               Bold
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={!editor || disabled}
               aria-pressed={editor?.isActive("italic") ?? false}
               onClick={() => editor?.chain().focus().toggleItalic().run()}
             >
               Italic
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={!editor || disabled}
               onClick={() =>
@@ -90,37 +92,37 @@ export function LeaseTextEditor({
               }
             >
               Heading
-            </button>
+            </Button>
           </>
         )}
-        <button
+        <Button
           type="button"
           disabled={!editor || disabled}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
           Bullets
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={!editor || disabled}
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
         >
           Numbered list
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={!editor || disabled}
           onClick={() => editor?.chain().focus().undo().run()}
         >
           Undo
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={!editor || disabled}
           onClick={() => editor?.chain().focus().redo().run()}
         >
           Redo
-        </button>
+        </Button>
       </div>
       <EditorContent editor={editor} />
     </div>

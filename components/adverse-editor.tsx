@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { RemoveButton } from "./management/remove-button";
 import { AppSelect } from "@/components/ui/select";
 import { useEffect, useRef, useState } from "react";
@@ -76,42 +78,42 @@ function Reasons({
         role="toolbar"
         aria-label="Reason formatting"
       >
-        <button
+        <Button
           type="button"
           onClick={() => editor?.chain().focus().toggleBold().run()}
         >
           Bold
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
           Italic
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
           Bullets
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
         >
           Numbered list
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => editor?.chain().focus().undo().run()}
         >
           Undo
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => editor?.chain().focus().redo().run()}
         >
           Redo
-        </button>
+        </Button>
       </div>
       <EditorContent editor={editor} />
     </div>
@@ -263,7 +265,8 @@ export default function AdverseEditor({
           Use an approved Google account. Access is limited to the property’s
           administrators.
         </p>
-        <button
+        <Button
+          type="submit"
           className="admin-primary"
           disabled={busy}
           onClick={() =>
@@ -273,7 +276,7 @@ export default function AdverseEditor({
           }
         >
           {busy ? "Connecting to Google…" : "Continue with Google"}
-        </button>
+        </Button>
         {(error || loginError) && (
           <p role="alert" className="form-error">
             {error ||
@@ -305,10 +308,11 @@ export default function AdverseEditor({
         <aside className="notice-history">
           <div className="admin-actions">
             <h2>Version history</h2>
-            <button disabled={busy} onClick={() => load(null)}>
+            <Button type="submit" disabled={busy} onClick={() => load(null)}>
               New notice
-            </button>
-            <button
+            </Button>
+            <Button
+              type="submit"
               disabled={busy}
               onClick={() =>
                 perform(async () => {
@@ -317,7 +321,7 @@ export default function AdverseEditor({
               }
             >
               Refresh
-            </button>
+            </Button>
           </div>
           <p className="small-note">
             Versions of this notice only. Every save preserves a separate
@@ -325,7 +329,8 @@ export default function AdverseEditor({
           </p>
           {versions.length === 0 && <p>No saved notices yet.</p>}
           {versions.map((v) => (
-            <button
+            <Button
+              type="submit"
               disabled={busy}
               className="version-item"
               key={v.id}
@@ -337,10 +342,11 @@ export default function AdverseEditor({
                 Version {v.version} · {status(v.status)}
               </span>
               <span>{new Date(v.createdAt).toLocaleString()}</span>
-            </button>
+            </Button>
           ))}
           {hasMore && (
-            <button
+            <Button
+              type="submit"
               disabled={busy}
               onClick={() =>
                 perform(async () => {
@@ -353,7 +359,7 @@ export default function AdverseEditor({
               }
             >
               Load earlier versions
-            </button>
+            </Button>
           )}
         </aside>
         <div className="notice-main">
@@ -362,7 +368,8 @@ export default function AdverseEditor({
               {current ? `Version ${current.version}` : "New notice"}
               {dirty ? " · Unsaved edits" : " · Saved"}
             </p>
-            <button
+            <Button
+              type="submit"
               disabled={busy}
               onClick={() => {
                 setPreview(!preview);
@@ -370,7 +377,7 @@ export default function AdverseEditor({
               }}
             >
               {preview ? "Edit notice" : "Preview notice"}
-            </button>
+            </Button>
           </div>
           {error && (
             <p className="form-error" role="alert">
@@ -525,7 +532,7 @@ export default function AdverseEditor({
                           ))}
                         </div>
                         {notice.agencies.length > 1 && (
-                          <button
+                          <Button
                             type="button"
                             onClick={() =>
                               change(
@@ -537,11 +544,11 @@ export default function AdverseEditor({
                             }
                           >
                             Remove agency {i + 1}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     ))}
-                    <button
+                    <Button
                       type="button"
                       disabled={notice.agencies.length >= 10}
                       onClick={() =>
@@ -552,7 +559,7 @@ export default function AdverseEditor({
                       }
                     >
                       Add reporting agency
-                    </button>
+                    </Button>
                     <p className="small-note">
                       The notice automatically includes the agency’s
                       non-involvement in the decision, the right to dispute, and
@@ -599,7 +606,8 @@ export default function AdverseEditor({
           )}
           <section className="notice-send">
             <div className="admin-actions">
-              <button
+              <Button
+                type="submit"
                 className="admin-primary"
                 disabled={busy || !dirty}
                 onClick={() =>
@@ -622,9 +630,11 @@ export default function AdverseEditor({
                 }
               >
                 {busy ? "Working…" : "Save new version"}
-              </button>
+              </Button>
               {preview && (
-                <button onClick={() => window.print()}>Print notice</button>
+                <Button type="submit" onClick={() => window.print()}>
+                  Print notice
+                </Button>
               )}
             </div>
             {errors.length > 0 && (
@@ -660,7 +670,8 @@ export default function AdverseEditor({
                   I reviewed this saved version and confirm sending it to{" "}
                   {notice.applicantEmail || "the applicant"}.
                 </label>
-                <button
+                <Button
+                  type="submit"
                   className="admin-primary"
                   disabled={
                     busy ||
@@ -696,7 +707,7 @@ export default function AdverseEditor({
                   }
                 >
                   Send notice
-                </button>
+                </Button>
               </>
             )}
             <p className="small-note">

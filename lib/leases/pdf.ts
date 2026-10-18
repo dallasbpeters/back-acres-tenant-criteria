@@ -4,16 +4,26 @@ export async function leasePdf(
   body: string,
   reference: string,
   document?: LeaseNode | null,
+  branding?: { name: string; logoPng: string | null; forSigning?: boolean },
 ) {
   const pdf = await PDFDocument.create();
-  pdf.setTitle("Residential lease draft");
-  pdf.setSubject("Owner review required before execution");
+  pdf.setTitle(
+    branding?.forSigning ? "Residential lease" : "Residential lease draft",
+  );
+  pdf.setSubject(
+    branding?.forSigning
+      ? "Lease prepared for electronic signature"
+      : "Owner review required before execution",
+  );
+  const logo = branding?.logoPng
+    ? await pdf.embedPng(Buffer.from(branding.logoPng, "base64"))
+    : null;
   const normal = await pdf.embedFont(StandardFonts.TimesRoman),
     bold = await pdf.embedFont(StandardFonts.TimesRomanBold),
     italic = await pdf.embedFont(StandardFonts.TimesRomanItalic),
     boldItalic = await pdf.embedFont(StandardFonts.TimesRomanBoldItalic);
   let page = pdf.addPage([612, 792]),
-    y = 728;
+    y = branding ? 686 : 728;
   const sanitize = (text: string) =>
     text.replace(
       /[^\x20-\x7e\u00a0-\u00ff\u2013\u2014\u2018\u2019\u201c\u201d\u2022]/g,
@@ -21,7 +31,7 @@ export async function leasePdf(
     );
   function newPage() {
     page = pdf.addPage([612, 792]);
-    y = 728;
+    y = branding ? 686 : 728;
   }
   const lines = document
     ? documentLines(document)
@@ -90,13 +100,55 @@ export async function leasePdf(
   }
   const pages = pdf.getPages();
   for (let i = 0; i < pages.length; i++) {
-    pages[i].drawText("DRAFT - REVIEW BEFORE SIGNING", {
-      x: 48,
-      y: 760,
-      size: 9,
-      font: bold,
-      color: rgb(0.3, 0.3, 0.3),
-    });
+    if (branding) {
+      if (logo) {
+        const d = logo.scaleToFit(120, 42);
+        pages[i].drawImage(logo, {
+          x: 48,
+          y: 728,
+          width: d.width,
+          height: d.height,
+        });
+      }
+      const x = logo ? 184 : 48,
+        available = 564 - x,
+        name = sanitize(branding.name);
+      let size = 12,
+        rows: string[] = [];
+      do {
+        rows = [];
+        let row = "";
+        for (const character of name) {
+          if (bold.widthOfTextAtSize(row + character, size) > available) {
+            rows.push(row.trimEnd());
+            row = "";
+          }
+          row += character;
+        }
+        if (row) rows.push(row.trim());
+        if (rows.length > 3) size -= 0.5;
+      } while (rows.length > 3 && size > 6);
+      pages[i].drawText(rows.join("\n"), {
+        x,
+        y: 756,
+        size,
+        lineHeight: 12,
+        font: bold,
+        color: rgb(0.16, 0.3, 0.22),
+      });
+    }
+    pages[i].drawText(
+      branding?.forSigning
+        ? "LEASE - SIGNATURES ATTACHED IN AUDIT RECORD"
+        : "DRAFT - REVIEW BEFORE SIGNING",
+      {
+        x: 48,
+        y: branding ? 710 : 760,
+        size: 9,
+        font: bold,
+        color: rgb(0.3, 0.3, 0.3),
+      },
+    );
     pages[i].drawText(
       `${reference.slice(0, 8)} | Page ${i + 1} of ${pages.length}`,
       { x: 48, y: 30, size: 9, font: normal, color: rgb(0.3, 0.3, 0.3) },

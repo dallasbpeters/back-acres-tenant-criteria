@@ -1,4 +1,7 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
+import { LeaseSigning } from "./lease-signing";
 import { LeaseDisclosures, disclosureDefaults } from "./lease-disclosures";
 import { sourceDisclosures } from "@/lib/leases/disclosures";
 import { textDocument, type LeaseNode } from "@/lib/leases/document";
@@ -41,7 +44,12 @@ import type {
   DraftRecord,
   Save,
 } from "./dashboard";
-type Applicant = { id: string; propertyId: string; name: string };
+type Applicant = {
+  id: string;
+  propertyId: string;
+  name: string;
+  email?: string;
+};
 const longAnswers: LeaseField[] = [
   "tenant_names",
   "landlord_notice_address",
@@ -355,12 +363,12 @@ export function LeaseWorkspace({
           </p>
         </div>
         <div className="management-actions">
-          <button type="button" disabled={busy} onClick={startNew}>
+          <Button type="button" disabled={busy} onClick={startNew}>
             New lease
-          </button>
-          <button type="button" disabled={busy} onClick={openWording}>
+          </Button>
+          <Button type="button" disabled={busy} onClick={openWording}>
             Lease wording
-          </button>
+          </Button>
         </div>
       </div>
       {wordingOpen ? (
@@ -440,7 +448,7 @@ export function LeaseWorkspace({
             disabled={busy}
           />
           <div className="management-actions">
-            <button
+            <Button
               type="button"
               className="submit-button"
               disabled={
@@ -471,8 +479,8 @@ export function LeaseWorkspace({
               }}
             >
               Save as a new document
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={busy}
               onClick={() => {
@@ -486,7 +494,7 @@ export function LeaseWorkspace({
               }}
             >
               Back to lease
-            </button>
+            </Button>
           </div>
         </section>
       ) : (
@@ -494,14 +502,14 @@ export function LeaseWorkspace({
           <ol className="lease-progress" aria-label="Lease progress">
             {leaseSteps.map((label, i) => (
               <li key={label} aria-current={step === i ? "step" : undefined}>
-                <button
+                <Button
                   type="button"
                   disabled={busy || i > furthest || (i === 3 && step !== 3)}
                   onClick={() => go(i)}
                 >
                   <span>{i + 1}</span>
                   {label}
-                </button>
+                </Button>
               </li>
             ))}
           </ol>
@@ -734,23 +742,26 @@ export function LeaseWorkspace({
                       )}
                     <div className="lease-step-actions">
                       {step > 0 && (
-                        <button type="button" onClick={() => go(step - 1)}>
+                        <Button type="button" onClick={() => go(step - 1)}>
                           Back
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        type="submit"
+                        variant="primary"
                         className="submit-button"
                         disabled={!template || !properties.length}
                       >
                         {step === 2 ? "Review lease" : "Continue"}
-                      </button>
+                      </Button>
                     </div>
                   </fieldset>
                 </form>
               ) : (
                 <>
                   <p className="lease-review-note">
-                    Draft for review. No signatures have been collected.
+                    Editor copy for review. See Signatures under Saved leases
+                    for signing status.
                   </p>
                   <details className="lease-review-checks">
                     <summary>Before signing</summary>
@@ -759,11 +770,13 @@ export function LeaseWorkspace({
                       statutory notices, animal accommodations, liability terms,
                       and required attachments. The supplied PDF listed
                       enclosures but did not include them. This workspace does
-                      not execute or electronically sign a lease.
+                      not collect signatures while you are editing. After
+                      saving, use Signatures under Saved leases to prepare a
+                      separate signing packet.
                     </p>
                   </details>
                   <div className="management-actions lease-review-actions">
-                    <button
+                    <Button
                       type="button"
                       className="submit-button"
                       disabled={busy || (!dirty && !!savedId)}
@@ -774,7 +787,7 @@ export function LeaseWorkspace({
                         : parentId
                           ? "Save new version"
                           : "Save lease draft"}
-                    </button>
+                    </Button>
                     {savedId && (
                       <a
                         href={`/api/admin/leases/${savedId}/pdf`}
@@ -784,15 +797,15 @@ export function LeaseWorkspace({
                         Download draft PDF
                       </a>
                     )}
-                    <button
+                    <Button
                       type="button"
                       onClick={() => {
                         setEditingDocument((v) => !v);
                       }}
                     >
                       {editingDocument ? "Read document" : "Edit document text"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       onClick={() => {
                         const url = URL.createObjectURL(
@@ -809,11 +822,11 @@ export function LeaseWorkspace({
                       }}
                     >
                       Download text
-                    </button>
+                    </Button>
                     {values.tenant_names && (
-                      <button type="button" onClick={() => go(0)}>
+                      <Button type="button" onClick={() => go(0)}>
                         Edit lease details
-                      </button>
+                      </Button>
                     )}
                   </div>
                   {editingDocument ? (
@@ -907,17 +920,18 @@ export function LeaseWorkspace({
                           properties.find((p) => p.id === d.propertyId)?.data
                             .name
                         }{" "}
-                        · Draft · {new Date(d.createdAt).toLocaleDateString()}
+                        · Saved version ·{" "}
+                        {new Date(d.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="management-actions">
-                      <button
+                      <Button
                         type="button"
                         disabled={busy}
                         onClick={() => openDraft(d)}
                       >
                         Open lease
-                      </button>
+                      </Button>
                       <RemoveButton
                         kind="leaseDraft"
                         id={d.id}
@@ -965,6 +979,19 @@ export function LeaseWorkspace({
                       </a>
                     </div>
                   </div>
+                  <LeaseSigning
+                    draftId={d.id}
+                    tenantName={d.tenantName}
+                    landlordName={d.values?.landlord_name ?? ""}
+                    landlordEmail={d.values?.landlord_email ?? ""}
+                    tenantEmail={
+                      applicants.find(
+                        (a) =>
+                          a.propertyId === d.propertyId &&
+                          a.name === d.tenantName,
+                      )?.email ?? ""
+                    }
+                  />
                   {earlierVersions(d).length > 0 && (
                     <details>
                       <summary>
@@ -973,9 +1000,9 @@ export function LeaseWorkspace({
                       {earlierVersions(d).map((v) => (
                         <div className="lease-history-row" key={v.id}>
                           <span>{new Date(v.createdAt).toLocaleString()}</span>
-                          <button type="button" onClick={() => openDraft(v)}>
+                          <Button type="button" onClick={() => openDraft(v)}>
                             Open earlier version
-                          </button>
+                          </Button>
                           <a
                             href={`/api/admin/leases/${v.id}/pdf`}
                             target="_blank"
@@ -983,6 +1010,19 @@ export function LeaseWorkspace({
                           >
                             PDF
                           </a>
+                          <LeaseSigning
+                            draftId={v.id}
+                            tenantName={v.tenantName}
+                            landlordName={v.values?.landlord_name ?? ""}
+                            landlordEmail={v.values?.landlord_email ?? ""}
+                            tenantEmail={
+                              applicants.find(
+                                (a) =>
+                                  a.propertyId === v.propertyId &&
+                                  a.name === v.tenantName,
+                              )?.email ?? ""
+                            }
+                          />
                         </div>
                       ))}
                     </details>

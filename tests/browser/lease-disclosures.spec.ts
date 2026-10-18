@@ -30,17 +30,15 @@ test("supplied disclosures, reusable property defaults, visible Tiptap and forma
     },
     maxAge: 3600,
   });
-  await page
-    .context()
-    .addCookies([
-      {
-        name: "next-auth.session-token",
-        value: token,
-        url: origin,
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: "next-auth.session-token",
+      value: token,
+      url: origin,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
   await page.setViewportSize({ width: 1440, height: 1050 });
   async function toDisclosures() {
     await page
@@ -170,7 +168,11 @@ test("supplied disclosures, reusable property defaults, visible Tiptap and forma
     );
   expect(draft.body.length).toBeGreaterThan(42000);
   expect(JSON.stringify(draft.document)).toContain('"bold"');
-  await page.getByRole("button", { name: "Open lease", exact: true }).click();
+  await page
+    .locator(".lease-saved .record")
+    .filter({ has: page.getByRole("heading", { name, exact: true }) })
+    .getByRole("button", { name: "Open lease", exact: true })
+    .click();
   await expect(editor.locator("strong")).toContainText(
     "BOLD lease fixture note",
   );

@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { RemoveButton } from "./remove-button";
 import { terminalSchedules } from "@/lib/management/removal";
 import { AppSelect } from "@/components/ui/select";
@@ -155,9 +157,14 @@ export function BillingWorkspace({
             terms. For ACH, the tenant must provide their own bank
             authorization. Live-mode invoices and debits can collect real money.
           </label>
-          <button className="submit-button" disabled={!properties.length}>
+          <Button
+            type="submit"
+            variant="primary"
+            className="submit-button"
+            disabled={!properties.length}
+          >
             Create rent payment schedule
-          </button>
+          </Button>
         </fieldset>
       </form>
       {error && <p role="alert">{error}</p>}
@@ -187,7 +194,8 @@ export function BillingWorkspace({
               <a href={s.enrollmentUrl} target="_blank" rel="noreferrer">
                 Open tenant enrollment and payment controls
               </a>{" "}
-              <button
+              <Button
+                type="submit"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(s.enrollmentUrl!);
@@ -200,7 +208,7 @@ export function BillingWorkspace({
                 }}
               >
                 Copy private enrollment link
-              </button>
+              </Button>
             </p>
           )}
           {s.status === "needs_review" && (
@@ -228,7 +236,8 @@ export function BillingWorkspace({
             "needs_review",
             "canceling",
           ].includes(s.status) && (
-            <button
+            <Button
+              type="submit"
               disabled={busy}
               onClick={() => {
                 if (
@@ -240,7 +249,7 @@ export function BillingWorkspace({
               }}
             >
               Stop future payments
-            </button>
+            </Button>
           )}
         </article>
       ))}

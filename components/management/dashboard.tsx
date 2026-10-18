@@ -1,4 +1,7 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
+import { BrandingWorkspace } from "./branding";
 import {
   RemoveButton,
   RemovedWorkspace,
@@ -164,9 +167,12 @@ export function Dashboard() {
       {error && (
         <p role="alert">
           {error}{" "}
-          <button onClick={() => load().catch((e) => setError(e.message))}>
+          <Button
+            type="submit"
+            onClick={() => load().catch((e) => setError(e.message))}
+          >
             Reload records
-          </button>
+          </Button>
         </p>
       )}
       {message && <p role="status">{message}</p>}
@@ -174,6 +180,7 @@ export function Dashboard() {
         <p>Loading property records…</p>
       ) : (
         <>
+          {tab === "Branding" && <BrandingWorkspace />}
           {tab === "Removed" && (
             <RemovedWorkspace records={records.removed} onSaved={load} />
           )}
@@ -289,6 +296,7 @@ export function Dashboard() {
                 id: a.id,
                 propertyId: a.propertyId,
                 name: a.data.name,
+                email: a.data.email,
               }))}
               save={save}
               busy={busy}
@@ -344,14 +352,15 @@ export function Dashboard() {
                   />
                   {i.status === "open" && (
                     <div className="management-actions">
-                      <button
+                      <Button
+                        type="submit"
                         disabled={busy}
                         onClick={() =>
                           save({ action: "voidInvoice", id: i.id })
                         }
                       >
                         Cancel payment request
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </article>
@@ -382,12 +391,14 @@ export function Dashboard() {
                   <PropertySelect properties={records.properties} />
                   <Field name="residentName" label="Resident name" />
                 </div>
-                <button
+                <Button
+                  type="submit"
+                  variant="primary"
                   className="submit-button"
                   disabled={busy || !records.properties.length}
                 >
                   Create resident link
-                </button>
+                </Button>
               </form>
               {records.residentLinks.map((l) => (
                 <article className="record" key={l.id}>
@@ -413,14 +424,15 @@ export function Dashboard() {
                         <a href={l.url} target="_blank" rel="noreferrer">
                           Open request form
                         </a>
-                        <button
+                        <Button
+                          type="submit"
                           disabled={busy}
                           onClick={() =>
                             save({ action: "revokeLink", id: l.id })
                           }
                         >
                           Revoke link
-                        </button>
+                        </Button>
                       </div>
                     </>
                   )}
@@ -531,7 +543,7 @@ function CopyLink({ url }: { url: string }) {
   const [message, setMessage] = useState("");
   return (
     <div className="management-actions">
-      <button
+      <Button
         type="button"
         onClick={() =>
           navigator.clipboard
@@ -541,7 +553,7 @@ function CopyLink({ url }: { url: string }) {
         }
       >
         Copy private link
-      </button>
+      </Button>
       <span role="status">{message}</span>
       {message === "Copy the link below." && (
         <input aria-label="Private link" readOnly value={url} />
@@ -573,14 +585,15 @@ function PropertyWorkspace({
           </p>
         </div>
         <div className="management-actions">
-          <button
+          <Button
+            type="submit"
             onClick={() => {
               setEditing(null);
               setOpen(true);
             }}
           >
             Add property
-          </button>
+          </Button>
         </div>
       </div>
       {properties.map((p) => (
@@ -598,14 +611,15 @@ function PropertyWorkspace({
               : "Applications closed"}
           </p>
           <div className="management-actions">
-            <button
+            <Button
+              type="submit"
               onClick={() => {
                 setEditing(p);
                 setOpen(true);
               }}
             >
               Edit {p.data.name}
-            </button>
+            </Button>
             <RemoveButton
               kind="property"
               id={p.id}
@@ -749,7 +763,9 @@ function PropertyWorkspace({
               />
               Accept applications
             </label>
-            <button className="submit-button">Save property</button>
+            <Button type="submit" variant="primary" className="submit-button">
+              Save property
+            </Button>
           </fieldset>
         </form>
       )}
@@ -816,9 +832,14 @@ function InvoiceForm({
           Confirm the amount and recipient. Requests are immutable once created.
           No email is sent; copy and share the private link.
         </p>
-        <button className="submit-button" disabled={!properties.length}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="submit-button"
+          disabled={!properties.length}
+        >
           Create payment request
-        </button>
+        </Button>
       </fieldset>
     </form>
   );

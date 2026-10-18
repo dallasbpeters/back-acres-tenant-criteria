@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { ThemeControl } from "@/components/ui/theme";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
@@ -15,7 +17,22 @@ export function OwnerFrame({
 }) {
   const pathname = usePathname(),
     [section, setSection] = useState("properties"),
-    [leaving, setLeaving] = useState(false);
+    [leaving, setLeaving] = useState(false),
+    [brand, setBrand] = useState({
+      name: "Back Acres",
+      hasLogo: false,
+      revision: "",
+    });
+  useEffect(() => {
+    const load = () =>
+      fetch("/api/branding")
+        .then((r) => r.json())
+        .then(setBrand)
+        .catch(() => {});
+    void load();
+    window.addEventListener("branding-updated", load);
+    return () => window.removeEventListener("branding-updated", load);
+  }, []);
   useEffect(() => {
     const update = () =>
       setSection(window.location.hash.slice(1) || "properties");
@@ -27,9 +44,18 @@ export function OwnerFrame({
     <div className="owner-app">
       <header className="owner-navbar">
         <a className="owner-brand" href="/admin">
-          <span className="brand-monogram">BA</span>
+          {brand.hasLogo ? (
+            <img
+              className="owner-logo"
+              src={`/api/branding/logo?v=${brand.revision}`}
+              alt={`${brand.name} logo`}
+            />
+          ) : (
+            <span className="brand-monogram">BA</span>
+          )}
           <span>
-            Back Acres<small>Property management</small>
+            {brand.name}
+            <small>Property management</small>
           </span>
         </a>
         <nav aria-label="Account navigation">
@@ -39,7 +65,8 @@ export function OwnerFrame({
           </a>
           <ThemeControl />
           {signedIn && (
-            <button
+            <Button
+              type="submit"
               disabled={leaving}
               onClick={async () => {
                 if (
@@ -57,7 +84,7 @@ export function OwnerFrame({
               }}
             >
               {leaving ? "Signing out…" : "Sign out"}
-            </button>
+            </Button>
           )}
         </nav>
       </header>

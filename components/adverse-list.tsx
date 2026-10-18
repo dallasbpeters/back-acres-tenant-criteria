@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { RemoveButton } from "./management/remove-button";
 import { AppSelect } from "@/components/ui/select";
 import { useEffect, useRef, useState } from "react";
@@ -134,14 +136,14 @@ export function AdverseList({
             </option>
           ))}
         </AppSelect>
-        <button type="submit">Search</button>
-        <button
+        <Button type="submit">Search</Button>
+        <Button
           type="button"
           disabled={loading}
           onClick={() => setRefresh((n) => n + 1)}
         >
           Refresh
-        </button>
+        </Button>
       </form>
       {error && <p role="alert">{error}</p>}
       {loading && !rows.length ? (
@@ -224,7 +226,8 @@ export function AdverseList({
             acceptance does not confirm inbox delivery.
           </p>
           {more && (
-            <button
+            <Button
+              type="submit"
               disabled={loading}
               onClick={async () => {
                 const request = generation.current;
@@ -258,7 +261,7 @@ export function AdverseList({
               }}
             >
               {loading ? "Loading…" : "Load more notices"}
-            </button>
+            </Button>
           )}
         </div>
       )}

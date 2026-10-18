@@ -1,11 +1,14 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
 import { useState } from "react";
 export function Checkout({ token }: { token: string }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
     <>
-      <button
+      <Button
+        type="submit"
         className="submit-button"
         disabled={busy}
         onClick={async () => {
@@ -29,7 +32,7 @@ export function Checkout({ token }: { token: string }) {
         }}
       >
         {busy ? "Opening secure checkout…" : "Pay securely with Stripe"}
-      </button>
+      </Button>
       {error && <p role="alert">{error}</p>}
     </>
   );
