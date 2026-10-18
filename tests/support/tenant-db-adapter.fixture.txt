@@ -1,0 +1,18 @@
+import 'server-only';
+import { drizzle } from 'drizzle-orm/pglite';
+import * as schema from './schema';
+async function send(body) {
+  const response = await fetch(process.env.TENANT_TEST_SERVICE + '/database', {
+    method: 'POST', cache: 'no-store',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + process.env.TENANT_TEST_CONTROL },
+    body: JSON.stringify(body),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error);
+  return result;
+}
+export function db() {
+  const database = drizzle({ query: (query, params, options) => send({ query, params, rowMode: options?.rowMode }) }, { schema });
+  database.batch = queries => send({ queries: queries.map(query => query.toSQL()) });
+  return database;
+}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import middleware, { config } from "../../middleware";
+import middleware, { config } from "../../proxy";
 
 const state = vi.hoisted(() => ({ options: vi.fn(), secret: vi.fn() }));
 vi.mock("@/lib/tenant/credentials", () => ({ clerkSecretKey: state.secret }));

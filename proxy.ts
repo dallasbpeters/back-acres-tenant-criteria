@@ -8,7 +8,7 @@ import { tenantAuthReady, usesClerkConnect } from "@/lib/tenant/config";
 import { clerkSecretKey } from "@/lib/tenant/credentials";
 
 const clerk = clerkMiddleware();
-export default async function middleware(
+export default async function proxy(
   request: NextRequest,
   event: NextFetchEvent
 ) {

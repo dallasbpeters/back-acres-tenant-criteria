@@ -12,12 +12,12 @@ const nextConfig: NextConfig = {
           // allowances. This is a baseline policy, not nonce-based XSS protection.
           value: [
             "default-src 'self'",
-            `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} https://clerk.backacresrentals.com https://*.clerk.accounts.dev https://*.stripe.com https://challenges.cloudflare.com`,
+            `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} https://clerk.backacresrentals.com https://*.clerk.accounts.dev https://*.stripe.com https://challenges.cloudflare.com https://*.protect.clerk.com https://*.posthog.com`,
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob: https://img.clerk.com https://*.googleusercontent.com https://*.stripe.com",
             "font-src 'self' data:",
-            "connect-src 'self' https://clerk.backacresrentals.com https://*.clerk.accounts.dev https://*.clerk.com https://*.stripe.com",
-            "frame-src 'self' blob: https://*.stripe.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+            "connect-src 'self' https://clerk.backacresrentals.com https://*.clerk.accounts.dev https://*.clerk.com https://*.stripe.com https://*.protect.clerk.com:* https://*.posthog.com",
+            "frame-src 'self' blob: https://*.stripe.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.protect.clerk.com",
             "worker-src 'self' blob:",
             "base-uri 'self'",
             "object-src 'none'",

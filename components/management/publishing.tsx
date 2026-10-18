@@ -1,5 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
@@ -53,6 +54,10 @@ export function PublishingWorkspace({
         throw new Error(result.error);
       }
       await onSaved();
+      posthog.capture("listing_publication_status_updated", {
+        provider,
+        status: value,
+      });
       setMessage("Publishing status saved.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not save status.");

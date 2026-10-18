@@ -1,5 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
@@ -93,6 +94,9 @@ export function BillingWorkspace({
             id,
           });
           if (ok) {
+            posthog.capture("rent_payment_schedule_created", {
+              collection: String(f.get("collection")),
+            });
             setId(crypto.randomUUID());
             form.reset();
             setAmount("");

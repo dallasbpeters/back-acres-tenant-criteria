@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native form callbacks capture current tenant input and pending state.
 "use client";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 export function TenantRequestForm({
@@ -47,6 +48,9 @@ export function TenantRequestForm({
       if (!response.ok) {
         throw new Error(result.error || "Could not submit the request.");
       }
+      posthog.capture("tenant_maintenance_request_submitted", {
+        priority: values.get("urgent") === "on" ? "urgent" : "routine",
+      });
       form.reset();
       setMessage(`Request received. Reference: ${result.receipt}`);
       router.refresh();

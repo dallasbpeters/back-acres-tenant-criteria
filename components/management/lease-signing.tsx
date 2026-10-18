@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
 import dynamic from "next/dynamic";
+import posthog from "posthog-js";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
@@ -129,6 +130,11 @@ export function LeaseSigning({
           await new Promise((resolve) => setTimeout(resolve, 600));
         }
       }
+      if (accepted) {
+        posthog.capture("lease_signing_invitations_sent", {
+          recipient_count: accepted,
+        });
+      }
       setMessage(
         `${accepted} signing email${accepted === 1 ? "" : "s"} accepted by the email provider. Each recipient receives their own private signing link.`
       );
@@ -163,6 +169,7 @@ export function LeaseSigning({
     try {
       await post({ action: "void", packetId: id });
       await load();
+      posthog.capture("lease_signing_request_cancelled");
       setReviewed(false);
       setMessage("Signing request canceled.");
     } catch (e) {

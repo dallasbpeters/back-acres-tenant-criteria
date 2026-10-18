@@ -1,5 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
@@ -77,6 +78,11 @@ export function IntakeForm({
       if (!r.ok) {
         throw new Error(result.error);
       }
+      posthog.capture(
+        kind === "application"
+          ? "application_submitted"
+          : "public_maintenance_request_submitted"
+      );
       setReceipt(result.receipt);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to submit.");

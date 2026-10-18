@@ -1,0 +1,25 @@
+export const dynamic = "force-dynamic";
+export default async function Demo() {
+  const fs = await import("node:fs/promises");
+  const links = JSON.parse(await fs.readFile(process.env.TENANT_TEST_LINKS, "utf8"));
+  const response = await fetch(process.env.TENANT_TEST_SERVICE + "/state", {
+    method: "POST", cache: "no-store",
+    headers: { authorization: "Bearer " + process.env.TENANT_TEST_CONTROL },
+  });
+  const { mail } = await response.json();
+  return <main style={{ maxWidth: "60rem", margin: "3rem auto", padding: "1rem" }}>
+    <h1>Back Acres test tenant walkthrough</h1>
+    <p>LOCAL DEMO ONLY. Synthetic lease, isolated database, captured emails and simulated Stripe. No real contract, bank verification, email delivery or money movement.</p>
+    <p>Sign in with <strong>{links.email}</strong> and the development code <strong>424242</strong>. If asked, select “Back Acres TEST household.”</p>
+    <ol>
+      <li><a href="/sign-in">Sign in</a> and <a href="/tenant">open the tenant portal</a></li>
+      <li><a href={links.lease}>Review and sign the fresh test lease</a>. The six-digit mailbox code appears below after you request it. Refresh this page to see new mail.</li>
+      <li><a href={links.payment}>Pay the fresh test invoice</a> through the explicitly simulated checkout.</li>
+      <li><a href={links.enrollment}>Set up or stop fresh automatic payments</a> through the simulated bank verification.</li>
+      <li><a href="/tenant/settings">Update account and contact settings</a>; submit a maintenance request from the portal.</li>
+    </ol>
+    <p>The completed automated run also leaves a paid invoice and maintenance request in the portal. New checkout submissions remain processing until a simulated settlement event is sent by the automated test.</p>
+    <h2>Captured test mailbox</h2><p>Refresh after requesting a lease verification code. These messages were never emailed.</p>
+    {[...mail].reverse().map((message, index) => <details key={index}><summary>{message.to.join(", ")} — {message.subject}</summary><pre style={{ whiteSpace: "pre-wrap" }}>{message.text}</pre></details>)}
+  </main>;
+}

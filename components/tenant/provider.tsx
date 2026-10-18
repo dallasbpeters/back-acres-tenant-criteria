@@ -1,6 +1,46 @@
 "use client";
-import { ClerkProvider } from "@clerk/nextjs";
-import type { ReactNode } from "react";
+import { ClerkProvider, useUser } from "@clerk/nextjs";
+import posthog from "posthog-js";
+import { type ReactNode, useEffect, useRef } from "react";
+
+const posthogConfigured = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
+
+function TenantPostHogIdentity() {
+  const { isLoaded, user } = useUser();
+  const identifiedUserId = useRef<string | null>(null);
+  const userId = user?.id;
+  const email = user?.primaryEmailAddress?.emailAddress;
+
+  useEffect(() => {
+    if (!(isLoaded && posthogConfigured)) {
+      return;
+    }
+
+    if (!userId) {
+      if (identifiedUserId.current) {
+        posthog.reset();
+        identifiedUserId.current = null;
+      }
+      return;
+    }
+
+    if (identifiedUserId.current === userId) {
+      return;
+    }
+
+    if (identifiedUserId.current) {
+      posthog.reset();
+    }
+
+    posthog.identify(userId, email ? { email } : undefined);
+    identifiedUserId.current = userId;
+  }, [email, isLoaded, userId]);
+
+  return null;
+}
+
 export function TenantProvider({ children }: { children: ReactNode }) {
   return (
     <ClerkProvider
@@ -40,6 +80,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       signUpFallbackRedirectUrl="/tenant"
       signUpUrl="/sign-up"
     >
+      <TenantPostHogIdentity />
       {children}
     </ClerkProvider>
   );

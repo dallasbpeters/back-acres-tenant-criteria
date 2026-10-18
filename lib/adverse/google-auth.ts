@@ -24,6 +24,9 @@ export const authOptions: NextAuthOptions = {
         session.user = undefined;
       } else if (session.user) {
         session.user.email = token.email;
+        if (typeof token.sub === "string") {
+          Object.assign(session.user, { id: token.sub });
+        }
       }
       return session;
     },

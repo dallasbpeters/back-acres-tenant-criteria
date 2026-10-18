@@ -1,5 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: The native form callback captures current tenant input and pending state.
 "use client";
+import posthog from "posthog-js";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 export function TenantContactForm({
@@ -32,6 +33,7 @@ export function TenantContactForm({
       if (!response.ok) {
         throw new Error(result.error || "Could not save contact details.");
       }
+      posthog.capture("tenant_contact_phone_saved");
       setMessage("Contact phone saved.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Please try again.");

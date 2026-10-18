@@ -2,12 +2,22 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { type ReactNode, useEffect, useState } from "react";
+import posthog from "posthog-js";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { BrandLogoImage, useBranding } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ThemeControl } from "@/components/ui/theme";
 import { ownerSections } from "./navigation";
+
+interface OwnerSession {
+  user?: { id?: unknown };
+}
+
+const posthogConfigured =
+  !!process.env.NEXT_PUBLIC_POSTHOG_KEY &&
+  !!process.env.NEXT_PUBLIC_POSTHOG_HOST;
+
 export function OwnerFrame({
   title,
   signedIn,
@@ -20,7 +30,8 @@ export function OwnerFrame({
   const pathname = usePathname(),
     [section, setSection] = useState("properties"),
     [leaving, setLeaving] = useState(false),
-    brand = useBranding();
+    brand = useBranding(),
+    identifiedOwnerId = useRef<string | null>(null);
   useEffect(() => {
     const update = () =>
       setSection(window.location.hash.slice(1) || "properties");
@@ -28,6 +39,44 @@ export function OwnerFrame({
     window.addEventListener("hashchange", update);
     return () => window.removeEventListener("hashchange", update);
   }, []);
+  useEffect(() => {
+    if (!posthogConfigured) {
+      return;
+    }
+    if (!signedIn) {
+      if (identifiedOwnerId.current) {
+        posthog.reset();
+        identifiedOwnerId.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const session = (await response.json()) as OwnerSession;
+        const userId = session.user?.id;
+        if (typeof userId !== "string" || cancelled) {
+          return;
+        }
+        if (identifiedOwnerId.current === userId) {
+          return;
+        }
+        if (identifiedOwnerId.current) {
+          posthog.reset();
+        }
+        posthog.identify(userId);
+        identifiedOwnerId.current = userId;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn]);
 
   return (
     <div className="owner-app">
@@ -62,6 +111,10 @@ export function OwnerFrame({
                   return;
                 }
                 setLeaving(true);
+                if (posthogConfigured && identifiedOwnerId.current) {
+                  posthog.reset();
+                  identifiedOwnerId.current = null;
+                }
                 try {
                   await signOut({ callbackUrl: "/admin" });
                 } catch {

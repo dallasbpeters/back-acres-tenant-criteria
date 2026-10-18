@@ -1,5 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 export function Checkout({ token }: { token: string }) {
@@ -24,6 +25,7 @@ export function Checkout({ token }: { token: string }) {
             if (!r.ok) {
               throw new Error(data.error);
             }
+            posthog.capture("checkout_started");
             window.location.assign(data.url);
           } catch (e) {
             setError(

@@ -1,5 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 export function AutopayControls({
@@ -26,6 +27,11 @@ export function AutopayControls({
       if (!response.ok) {
         throw new Error(result.error);
       }
+      posthog.capture(
+        action === "enroll"
+          ? "autopay_enrollment_started"
+          : "autopay_stop_requested"
+      );
       window.location.assign(result.url || window.location.pathname);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to update autopay.");

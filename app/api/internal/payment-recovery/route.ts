@@ -1,6 +1,6 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { reply } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import { paymentRecoveryRuns } from "@/lib/db/schema";
@@ -8,6 +8,7 @@ import {
   deliverAuthorizationReceipts,
   reconcileRecentPayments,
 } from "@/lib/management/payment-recovery";
+import { flushPosthogLogs, logPaymentRecovery } from "@/lib/posthog-logs";
 
 export const maxDuration = 60;
 export async function GET(request: NextRequest) {
@@ -43,6 +44,9 @@ export async function GET(request: NextRequest) {
         status: "complete",
       })
       .where(eq(paymentRecoveryRuns.id, runId));
+    if (logPaymentRecovery("completed")) {
+      after(flushPosthogLogs);
+    }
     return reply({
       acceptedReceipts: receipts.value,
       reconciled: payments.value,
@@ -56,8 +60,10 @@ export async function GET(request: NextRequest) {
     } catch {
       // A database outage can leave the run marked running; the owner view flags it.
     }
-    // No provider bodies, emails, tokens, or applicant records go into logs.
     console.error("payment_recovery_failed");
+    if (logPaymentRecovery("failed")) {
+      after(flushPosthogLogs);
+    }
     return reply({ error: "Payment recovery needs owner review." }, 503);
   }
 }
