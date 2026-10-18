@@ -358,8 +358,8 @@ export function LeaseWorkspace({
         <div>
           <h2>Prepare a lease</h2>
           <p>
-            Fill in the rental details, then review and download your lease
-            draft.
+            Preview and send a saved lease, or prepare a new lease from your
+            rental details.
           </p>
         </div>
         <div className="management-actions">
@@ -371,6 +371,131 @@ export function LeaseWorkspace({
           </Button>
         </div>
       </div>
+      {!wordingOpen && (
+        <section className="lease-saved">
+          <h3>Saved leases</h3>
+          {!drafts.length ? (
+            <p className="management-empty">
+              Your saved lease drafts will appear here.
+            </p>
+          ) : (
+            drafts
+              .filter((d) => !drafts.some((child) => child.parentId === d.id))
+              .map((d) => (
+                <article className="record" key={d.id}>
+                  <div className="lease-saved-row">
+                    <div>
+                      <h4>{d.tenantName}</h4>
+                      <p>
+                        {
+                          properties.find((p) => p.id === d.propertyId)?.data
+                            .name
+                        }{" "}
+                        · Saved version ·{" "}
+                        {new Date(d.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="management-actions">
+                      <Button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => openDraft(d)}
+                      >
+                        Open lease
+                      </Button>
+                      <RemoveButton
+                        kind="leaseDraft"
+                        id={d.id}
+                        name={d.tenantName}
+                        disabled={busy}
+                        onRemoved={async () => {
+                          // Only reset if the removed lease is open in the editor.
+                          const family = [
+                            d.id,
+                            ...earlierVersions(d).map((v) => v.id),
+                          ];
+                          if (
+                            family.includes(savedId) ||
+                            (parentId && family.includes(parentId))
+                          ) {
+                            setParentId(null);
+                            setSavedId("");
+                            setBody("");
+                            setBodyEdited(false);
+                            setValues({
+                              ...initialLeaseValues(property?.data),
+                              ...sourceDisclosures(
+                                property?.data.address ?? "",
+                              ),
+                              ...property?.leaseDefaults,
+                            });
+                            setDisclosuresReviewed(false);
+                            setDisclosureMessage("");
+                            setDocument(null);
+                            setTenantName("");
+                            setDirty(false);
+                            setStep(0);
+                            setFurthest(0);
+                            setDraftId(crypto.randomUUID());
+                          }
+                          await onRemoved();
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <LeaseSigning
+                    draftId={d.id}
+                    tenantName={d.tenantName}
+                    landlordName={d.values?.landlord_name ?? ""}
+                    landlordEmail={d.values?.landlord_email ?? ""}
+                    tenantEmail={
+                      applicants.find(
+                        (a) =>
+                          a.propertyId === d.propertyId &&
+                          a.name === d.tenantName,
+                      )?.email ?? ""
+                    }
+                  />
+                  {earlierVersions(d).length > 0 && (
+                    <details>
+                      <summary>
+                        Earlier versions ({earlierVersions(d).length})
+                      </summary>
+                      {earlierVersions(d).map((v) => (
+                        <div className="lease-history-row" key={v.id}>
+                          <span>{new Date(v.createdAt).toLocaleString()}</span>
+                          <Button type="button" onClick={() => openDraft(v)}>
+                            Open earlier version
+                          </Button>
+                          <a
+                            href={`/api/admin/leases/${v.id}/pdf`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            PDF
+                          </a>
+                          <LeaseSigning
+                            draftId={v.id}
+                            tenantName={v.tenantName}
+                            landlordName={v.values?.landlord_name ?? ""}
+                            landlordEmail={v.values?.landlord_email ?? ""}
+                            tenantEmail={
+                              applicants.find(
+                                (a) =>
+                                  a.propertyId === v.propertyId &&
+                                  a.name === v.tenantName,
+                              )?.email ?? ""
+                            }
+                          />
+                        </div>
+                      ))}
+                    </details>
+                  )}
+                </article>
+              ))
+          )}
+        </section>
+      )}
       {wordingOpen ? (
         <section
           className="lease-wording-panel"
@@ -760,8 +885,8 @@ export function LeaseWorkspace({
               ) : (
                 <>
                   <p className="lease-review-note">
-                    Editor copy for review. See Signatures under Saved leases
-                    for signing status.
+                    Review the document, save your changes, then preview the PDF
+                    or send it for signature.
                   </p>
                   <details className="lease-review-checks">
                     <summary>Before signing</summary>
@@ -771,8 +896,8 @@ export function LeaseWorkspace({
                       and required attachments. The supplied PDF listed
                       enclosures but did not include them. This workspace does
                       not collect signatures while you are editing. After
-                      saving, use Signatures under Saved leases to prepare a
-                      separate signing packet.
+                      saving, use Send lease to email each signer a private
+                      review and signing link.
                     </p>
                   </details>
                   <div className="management-actions lease-review-actions">
@@ -788,15 +913,7 @@ export function LeaseWorkspace({
                           ? "Save new version"
                           : "Save lease draft"}
                     </Button>
-                    {savedId && (
-                      <a
-                        href={`/api/admin/leases/${savedId}/pdf`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download draft PDF
-                      </a>
-                    )}
+
                     <Button
                       type="button"
                       onClick={() => {
@@ -829,6 +946,23 @@ export function LeaseWorkspace({
                       </Button>
                     )}
                   </div>
+                  {savedId && !dirty && (
+                    <LeaseSigning
+                      key={savedId}
+                      draftId={savedId}
+                      tenantName={tenantName}
+                      landlordName={values.landlord_name ?? ""}
+                      landlordEmail={values.landlord_email ?? ""}
+                      tenantEmail={
+                        applicants.find(
+                          (a) =>
+                            a.propertyId === propertyId &&
+                            a.name === tenantName,
+                        )?.email ?? ""
+                      }
+                    />
+                  )}
+
                   {editingDocument ? (
                     <LeaseTextEditor
                       key={documentEditorKey}
@@ -899,138 +1033,6 @@ export function LeaseWorkspace({
             </aside>
           </div>
         </>
-      )}
-      {!wordingOpen && (
-        <section className="lease-saved">
-          <h3>Saved leases</h3>
-          {!drafts.length ? (
-            <p className="management-empty">
-              Your saved lease drafts will appear here.
-            </p>
-          ) : (
-            drafts
-              .filter((d) => !drafts.some((child) => child.parentId === d.id))
-              .map((d) => (
-                <article className="record" key={d.id}>
-                  <div className="lease-saved-row">
-                    <div>
-                      <h4>{d.tenantName}</h4>
-                      <p>
-                        {
-                          properties.find((p) => p.id === d.propertyId)?.data
-                            .name
-                        }{" "}
-                        · Saved version ·{" "}
-                        {new Date(d.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="management-actions">
-                      <Button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => openDraft(d)}
-                      >
-                        Open lease
-                      </Button>
-                      <RemoveButton
-                        kind="leaseDraft"
-                        id={d.id}
-                        name={d.tenantName}
-                        disabled={busy}
-                        onRemoved={async () => {
-                          // Only reset if the removed lease is open in the editor.
-                          const family = [
-                            d.id,
-                            ...earlierVersions(d).map((v) => v.id),
-                          ];
-                          if (
-                            family.includes(savedId) ||
-                            (parentId && family.includes(parentId))
-                          ) {
-                            setParentId(null);
-                            setSavedId("");
-                            setBody("");
-                            setBodyEdited(false);
-                            setValues({
-                              ...initialLeaseValues(property?.data),
-                              ...sourceDisclosures(
-                                property?.data.address ?? "",
-                              ),
-                              ...property?.leaseDefaults,
-                            });
-                            setDisclosuresReviewed(false);
-                            setDisclosureMessage("");
-                            setDocument(null);
-                            setTenantName("");
-                            setDirty(false);
-                            setStep(0);
-                            setFurthest(0);
-                            setDraftId(crypto.randomUUID());
-                          }
-                          await onRemoved();
-                        }}
-                      />
-                      <a
-                        href={`/api/admin/leases/${d.id}/pdf`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download PDF
-                      </a>
-                    </div>
-                  </div>
-                  <LeaseSigning
-                    draftId={d.id}
-                    tenantName={d.tenantName}
-                    landlordName={d.values?.landlord_name ?? ""}
-                    landlordEmail={d.values?.landlord_email ?? ""}
-                    tenantEmail={
-                      applicants.find(
-                        (a) =>
-                          a.propertyId === d.propertyId &&
-                          a.name === d.tenantName,
-                      )?.email ?? ""
-                    }
-                  />
-                  {earlierVersions(d).length > 0 && (
-                    <details>
-                      <summary>
-                        Earlier versions ({earlierVersions(d).length})
-                      </summary>
-                      {earlierVersions(d).map((v) => (
-                        <div className="lease-history-row" key={v.id}>
-                          <span>{new Date(v.createdAt).toLocaleString()}</span>
-                          <Button type="button" onClick={() => openDraft(v)}>
-                            Open earlier version
-                          </Button>
-                          <a
-                            href={`/api/admin/leases/${v.id}/pdf`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            PDF
-                          </a>
-                          <LeaseSigning
-                            draftId={v.id}
-                            tenantName={v.tenantName}
-                            landlordName={v.values?.landlord_name ?? ""}
-                            landlordEmail={v.values?.landlord_email ?? ""}
-                            tenantEmail={
-                              applicants.find(
-                                (a) =>
-                                  a.propertyId === v.propertyId &&
-                                  a.name === v.tenantName,
-                              )?.email ?? ""
-                            }
-                          />
-                        </div>
-                      ))}
-                    </details>
-                  )}
-                </article>
-              ))
-          )}
-        </section>
       )}
     </section>
   );

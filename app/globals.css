@@ -602,3 +602,62 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 input[type="file"]::file-selector-button { min-block-size:2.5rem; padding:.5rem .75rem; margin-inline-end:1rem; font:inherit; font-weight:600; border:1px solid var(--control-border); border-radius:3px; color:var(--ink); background:var(--paper); cursor:pointer; }
 @media(hover:hover) and (pointer:fine) { input[type="file"]:enabled:hover::file-selector-button { background:var(--control-hover); } }
 input[type="file"]:disabled::file-selector-button { background:var(--bg); color:var(--muted); cursor:not-allowed; }
+
+/* Composed document typography with a quieter, consistent control hierarchy. */
+.owner-main h1 { font-size:2rem; font-weight:550; line-height:1.2; letter-spacing:-.025em; }
+.owner-main h2 { font-size:1.5625rem; font-weight:600; line-height:1.25; letter-spacing:-.015em; }
+.owner-main h3 { font-family:var(--font-document); font-size:1.25rem; font-weight:600; line-height:1.35; }
+.owner-main h4 { font:600 1rem/1.45 var(--font-interface); letter-spacing:-.01em; }
+.owner-main p { font-size:.9375rem; line-height:1.65; }
+.owner-main .field { font-size:.8125rem; line-height:1.5; }
+.owner-main .eyebrow { font-size:.6875rem; font-weight:600; letter-spacing:.09em; line-height:1.5; }
+.owner-main .small-note,.owner-main .document-fingerprint { font-size:.8125rem; line-height:1.6; }
+.owner-main .lease-rich-content,.owner-main .lease-document { font-family:var(--font-document); font-size:1.0625rem; line-height:1.7; font-optical-sizing:auto; }
+.owner-main .lease-rich-content :is(p,li),.owner-main .lease-document :is(p,li) { font:inherit; max-inline-size:72ch; }
+.owner-main .lease-rich-content > :is(p,h2,h3,ul,ol) { margin-inline:auto; max-inline-size:72ch; }
+.owner-main .lease-rich-content :is(h2,h3),.owner-main .lease-document :is(h2,h3) { margin-block:1.5rem .5rem; font-family:var(--font-document); font-size:1.25rem; line-height:1.35; }
+.lease-document > div { display:grid; gap:.875rem; }
+.owner-main .lease-saved { margin-block:0 2rem; padding-block:0 1.5rem; border-block-start:0; border-block-end:1px solid var(--line); }
+.owner-main .lease-saved .record { padding-block:1.5rem; }
+.lease-saved-row p { margin-block-start:.25rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+.lease-delivery-actions { margin-block-start:.75rem; }
+.signing-panel { padding:1.5rem; gap:1.25rem; }
+.signing-panel-heading { display:grid; gap:.3rem; }
+.owner-main .signing-panel-heading h4 { font-family:var(--font-document); font-size:1.5625rem; line-height:1.25; }
+.signing-intro,.signing-send-footer p { max-inline-size:65ch; }
+.signing-recipients { display:grid; gap:1.25rem; padding:0; margin:0; min-inline-size:0; border:0; }
+.signing-recipients > button { justify-self:start; }
+.signer-fields { padding:1rem 1.25rem 1.25rem; }
+.signer-fields legend { padding-inline:.4rem; font-size:.8125rem; font-weight:600; color:var(--muted); }
+.signing-send-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem 2rem; padding-block-start:1.25rem; border-block-start:1px solid var(--line); }
+.owner-main .signing-send-footer p { flex:1 1 20rem; font-size:.8125rem; color:var(--muted); }
+.signing-send-footer button { flex-shrink:0; }
+.owner-main .signer-status p { font-size:.8125rem; }
+.signing-recipient-state { color:var(--muted); margin-block-start:.25rem; }
+.signing-summary { font-variant-numeric:tabular-nums; }
+.signing-audit-details { padding-block-start:.5rem; }
+.signing-audit-details summary { cursor:pointer; font-size:.8125rem; color:var(--muted); }
+.signing-audit-details p { margin-block-start:.5rem; }
+.lease-pdf-preview { min-inline-size:0; margin-block:1.25rem; border:1px solid var(--line); background:var(--paper); }
+.lease-pdf-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.25rem; }
+.owner-main .lease-pdf-heading p { font-size:.8125rem; color:var(--muted); max-inline-size:65ch; margin-block-start:.35rem; }
+.lease-pdf-heading button { flex-shrink:0; }
+.lease-pdf-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem 1.5rem; padding:.75rem 1.25rem; border-block:1px solid var(--line); }
+.lease-pdf-toolbar button,.lease-pdf-toolbar a { font-size:.8125rem; }
+.lease-pdf-pagination { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
+.lease-pdf-pagination span { font-size:.8125rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.lease-pdf-canvas { display:grid; justify-items:center; min-block-size:12rem; max-block-size:75vh; overflow:auto; padding:1.25rem; background:var(--bg); }
+.lease-pdf-canvas .react-pdf__Document { inline-size:100%; display:grid; justify-items:center; }
+.lease-pdf-canvas .react-pdf__Page { max-inline-size:100%; color:#202b23; background:#fff; }
+.lease-pdf-canvas canvas { display:block; max-inline-size:100%; block-size:auto !important; }
+.lease-pdf-preview > [role="alert"] { padding:1rem; }
+:root[data-theme="dark"] .owner-main :is(.lease-rich-content,.lease-document) { line-height:1.75; }
+@media(max-width:640px) { .owner-main h1 { font-size:1.75rem; } .lease-pdf-heading { flex-wrap:wrap; padding:1rem; } .lease-pdf-toolbar { padding:.75rem; } .lease-pdf-canvas { padding:.5rem; } .lease-pdf-pagination { gap:.5rem; } .lease-pdf-pagination button { font-size:.75rem; padding:.5rem; } .signing-panel { padding:1rem; } .signer-fields { padding:1rem; } }
+@media print { .lease-pdf-preview,.lease-signing-admin { display:none; } }
+.lease-signing-admin { min-inline-size:0; inline-size:100%; }
+.lease-pdf-zoom { display:flex; align-items:center; gap:.4rem; }
+.lease-pdf-zoom span { min-inline-size:3rem; text-align:center; font-size:.8125rem; font-variant-numeric:tabular-nums; }
+.lease-pdf-zoom button[aria-label] { min-inline-size:2.75rem; }
+.lease-pdf-canvas { display:block; }
+.lease-pdf-canvas .react-pdf__Document { inline-size:max-content; min-inline-size:100%; }
+.lease-pdf-canvas .react-pdf__Page,.lease-pdf-canvas canvas { max-inline-size:none; }

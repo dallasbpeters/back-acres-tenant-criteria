@@ -1,0 +1,1 @@
+ALTER TABLE "lease_signers" ADD COLUMN "invited_at" timestamp with time zone;

@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
           email: leaseSigners.email,
           role: leaseSigners.role,
           signedAt: leaseSigners.signedAt,
+          invitedAt: leaseSigners.invitedAt,
           declinedAt: leaseSigners.declinedAt,
         })
         .from(leaseSigners)
@@ -211,6 +212,10 @@ export async function POST(request: NextRequest) {
         { error: "Email was not accepted. Try sending a new link." },
         502,
       );
+    await d
+      .update(leaseSigners)
+      .set({ invitedAt: sql`now()` })
+      .where(eq(leaseSigners.id, signer.id));
     return reply({ ok: true });
   } catch {
     return reply(

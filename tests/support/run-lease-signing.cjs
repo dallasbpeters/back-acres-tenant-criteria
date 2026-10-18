@@ -54,6 +54,7 @@ async function run() {
         "node_modules/@playwright/test/cli.js",
         "test",
         "tests/browser/lease-signing.spec.ts",
+        ...process.argv.slice(2),
       ],
       { stdio: "inherit", env },
     );

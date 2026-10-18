@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    "/api/**": ["./public/pdf-assets/fonts/*.woff"],
+  },
   async headers() {
     return ["/sign/lease/:path*", "/api/lease-signing/:path*"].map(
       (source) => ({

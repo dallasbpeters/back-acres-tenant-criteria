@@ -54,6 +54,7 @@ export const leaseSigners = pgTable("lease_signers", {
   email: text("email").notNull(),
   role: text("role").notNull(),
   tokenHash: text("token_hash").notNull().unique(),
+  invitedAt: timestamp("invited_at", { withTimezone: true }),
   codeHash: text("code_hash"),
   codeExpiresAt: timestamp("code_expires_at", { withTimezone: true }),
   codeAttempts: integer("code_attempts").notNull().default(0),

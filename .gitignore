@@ -16,3 +16,6 @@ output/
 # Locally installed integration guidance
 .agents/
 skills-lock.json
+
+# Generated from the installed PDF viewer during npm install
+public/pdf-assets/
