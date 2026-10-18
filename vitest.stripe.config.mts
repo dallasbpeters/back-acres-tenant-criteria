@@ -17,6 +17,7 @@ export default defineConfig({
         "lib/management/stripe.ts",
         "lib/management/autopay.ts",
         "lib/management/billing-events.ts",
+        "lib/management/checkout-events.ts",
         "lib/management/security.ts",
         "lib/management/payment-recovery.ts",
         "lib/management/authorization-receipt.ts",

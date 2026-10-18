@@ -1,12 +1,14 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { eq, isNull } from "drizzle-orm";
+import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { authorizationReceipts } from "@/lib/db/schema";
 import { requireValue } from "@/lib/required";
 import { authorizationReceiptText } from "./authorization-receipt";
 import { billingEvents, handleBillingEvent } from "./billing-events";
+import { reconcileCheckoutSession } from "./checkout-events";
 import { paymentMode, stripe } from "./stripe";
 
 const batchResponse = z.object({
@@ -86,14 +88,8 @@ export async function reconcileRecentPayments(now = Date.now()) {
       ...(cursor ? { starting_after: cursor } : {}),
     });
     for (const event of events.data) {
-      if (
-        event.livemode === (mode === "live") &&
-        billingEvents.includes(event.type)
-      ) {
-        // biome-ignore lint/performance/noAwaitInLoops: Preserve provider/database recovery ordering and stop on a failed record.
-        await handleBillingEvent(event);
-        count += 1;
-      }
+      // biome-ignore lint/performance/noAwaitInLoops: Finish each current-record recovery before the next event.
+      count += await recoverEvent(event, client, mode);
     }
     if (!events.has_more) {
       return count;
@@ -108,4 +104,37 @@ export async function reconcileRecentPayments(now = Date.now()) {
   throw new Error(
     "Payment recovery exceeds its bounded window; owner review required."
   );
+}
+
+async function recoverEvent(
+  event: Stripe.Event,
+  client: Stripe,
+  mode: "test" | "live"
+) {
+  if (event.livemode !== (mode === "live")) {
+    return 0;
+  }
+  if (
+    [
+      "checkout.session.completed",
+      "checkout.session.async_payment_succeeded",
+      "checkout.session.async_payment_failed",
+    ].includes(event.type) &&
+    event.data.object.object === "checkout.session" &&
+    event.data.object.mode === "payment"
+  ) {
+    const session = await client.checkout.sessions.retrieve(
+      event.data.object.id
+    );
+    const response = await reconcileCheckoutSession(session, event.type);
+    if (!response.ok) {
+      throw new Error("Checkout recovery validation failed.");
+    }
+    return 1;
+  }
+  if (billingEvents.includes(event.type)) {
+    await handleBillingEvent(event);
+    return 1;
+  }
+  return 0;
 }

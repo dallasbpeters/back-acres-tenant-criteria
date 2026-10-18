@@ -29,7 +29,8 @@ receipts to existing contacts.
 The daily Vercel job at 05:00 UTC (`/api/internal/payment-recovery`) requires the
 Production `CRON_SECRET` bearer credential and uses constant-time comparison.
 It replays at most 500 Stripe events from the past three days, using the existing
-current-record reconciliation checks. It does not activate ACH enrollments,
+current-record reconciliation checks, including a missed Checkout webhook after
+a failed local session-ID save. It does not activate ACH enrollments,
 create charges, retry debits, or change authorizations. Stripe and receipt recovery
 are independent, so one service outage does not prevent the other from running.
 Failures return 503 and log only `payment_recovery_failed`. The owner activity

@@ -33,6 +33,7 @@ import {
   pg,
   reset,
   schedule,
+  session,
   start,
   state,
 } from "./harness";
@@ -281,6 +282,65 @@ describe("bounded read-only Stripe recovery", () => {
         limit: 100,
       })
     );
+  });
+  it("recovers a missed Checkout webhook even when the original session save failed", async () => {
+    await invoice();
+    client.events.list.mockResolvedValue({
+      data: [
+        event("checkout.session.completed", {
+          ...session({ payment_status: "unpaid" }),
+          object: "checkout.session",
+        }),
+      ],
+      has_more: false,
+    });
+    client.checkout.sessions.retrieve.mockResolvedValue(session());
+    expect(await reconcileRecentPayments()).toBe(1);
+    const [payment] = await state.database.select().from(invoices);
+    expect(payment).toMatchObject({
+      status: "paid",
+      stripeSessionId: "cs_fixture",
+    });
+    expect(client.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+  it("leaves mismatched or unavailable Checkout records for review", async () => {
+    await invoice();
+    client.events.list.mockResolvedValue({
+      data: [
+        event("checkout.session.completed", {
+          ...session(),
+          object: "checkout.session",
+        }),
+      ],
+      has_more: false,
+    });
+    client.checkout.sessions.retrieve.mockRejectedValueOnce(
+      new Error("Stripe unavailable")
+    );
+    await expect(reconcileRecentPayments()).rejects.toThrow();
+    client.checkout.sessions.retrieve.mockResolvedValue(
+      session({ amount_total: 1 })
+    );
+    await expect(reconcileRecentPayments()).rejects.toThrow(
+      "validation failed"
+    );
+    const [payment] = await state.database.select().from(invoices);
+    expect(payment.status).toBe("open");
+  });
+  it("does not activate a Checkout bank setup during payment recovery", async () => {
+    client.events.list.mockResolvedValue({
+      data: [
+        event("checkout.session.completed", {
+          ...session(),
+          mode: "setup",
+          object: "checkout.session",
+        }),
+        event("checkout.session.completed", { id: "cs_unrelated" }),
+      ],
+      has_more: false,
+    });
+    expect(await reconcileRecentPayments()).toBe(0);
+    expect(client.checkout.sessions.retrieve).not.toHaveBeenCalled();
   });
   it("traverses later pages", async () => {
     client.events.list
