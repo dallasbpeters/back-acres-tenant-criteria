@@ -1,4 +1,5 @@
 "use client";
+import { NoticeTemplatePicker } from "./notice-template-picker";
 import { Button } from "@/components/ui/button";
 
 import { RemoveButton } from "./management/remove-button";
@@ -266,7 +267,7 @@ export default function AdverseEditor({
           administrators.
         </p>
         <Button
-          type="submit"
+          type="button"
           className="admin-primary"
           disabled={busy}
           onClick={() =>
@@ -289,7 +290,7 @@ export default function AdverseEditor({
     );
   return (
     <div className="admin-shell">
-      <div className="notice-return">
+      <nav className="notice-return" aria-label="Notice navigation">
         <a href="/admin/adverse-actions">← All adverse-action notices</a>
         {versions[0] && (
           <RemoveButton
@@ -303,16 +304,16 @@ export default function AdverseEditor({
             }}
           />
         )}
-      </div>
+      </nav>
       <div className="admin-workspace">
-        <aside className="notice-history">
-          <div className="admin-actions">
-            <h2>Version history</h2>
-            <Button type="submit" disabled={busy} onClick={() => load(null)}>
+        <aside className="notice-history" aria-label="Version history">
+          <h2>Version history</h2>
+          <div className="admin-actions notice-history-actions">
+            <Button type="button" disabled={busy} onClick={() => load(null)}>
               New notice
             </Button>
             <Button
-              type="submit"
+              type="button"
               disabled={busy}
               onClick={() =>
                 perform(async () => {
@@ -330,23 +331,22 @@ export default function AdverseEditor({
           {versions.length === 0 && <p>No saved notices yet.</p>}
           {versions.map((v) => (
             <Button
-              type="submit"
+              type="button"
               disabled={busy}
               className="version-item"
+              aria-label={`${v.notice.applicantName || "Untitled notice"} · Version ${v.version} · ${status(v.status)}`}
               key={v.id}
               aria-current={current?.id === v.id ? "true" : undefined}
               onClick={() => load(v)}
             >
-              <strong>{v.notice.applicantName || "Untitled notice"}</strong>
-              <span>
-                Version {v.version} · {status(v.status)}
-              </span>
+              <strong>Version {v.version}</strong>
+              <span>{status(v.status)}</span>
               <span>{new Date(v.createdAt).toLocaleString()}</span>
             </Button>
           ))}
           {hasMore && (
             <Button
-              type="submit"
+              type="button"
               disabled={busy}
               onClick={() =>
                 perform(async () => {
@@ -363,21 +363,48 @@ export default function AdverseEditor({
           )}
         </aside>
         <div className="notice-main">
-          <div className="admin-actions">
+          <div className="admin-actions notice-toolbar">
             <p className="eyebrow">
               {current ? `Version ${current.version}` : "New notice"}
               {dirty ? " · Unsaved edits" : " · Saved"}
             </p>
-            <Button
-              type="submit"
-              disabled={busy}
-              onClick={() => {
-                setPreview(!preview);
-                setConfirmed(false);
-              }}
-            >
-              {preview ? "Edit notice" : "Preview notice"}
-            </Button>
+            <div className="notice-toolbar-actions">
+              <Button
+                type="button"
+                className="admin-primary"
+                disabled={busy || !dirty}
+                onClick={() =>
+                  perform(async () => {
+                    const result = await api("notices", "POST", {
+                      notice,
+                      parentId: current?.id || null,
+                      requestId: crypto.randomUUID(),
+                    });
+                    window.history.replaceState(
+                      null,
+                      "",
+                      `/admin/adverse-actions/${result.version.documentId}`,
+                    );
+                    setCurrent(result.version);
+                    await refresh(result.version.documentId);
+                    setConfirmed(false);
+                    setMessage(`Version ${result.version.version} saved.`);
+                  })
+                }
+              >
+                {busy ? "Working…" : "Save new version"}
+              </Button>
+              <Button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setPreview(!preview);
+                  setConfirmed(false);
+                }}
+              >
+                {preview ? "Edit notice" : "Preview notice"}
+              </Button>
+            </div>
           </div>
           {error && (
             <p className="form-error" role="alert">
@@ -388,6 +415,21 @@ export default function AdverseEditor({
             <p className="admin-message" role="status">
               {message}
             </p>
+          )}
+          {!preview && (
+            <NoticeTemplatePicker
+              key={current?.id ?? "new"}
+              notice={notice}
+              disabled={busy}
+              onApply={(next) => {
+                setNotice(next);
+                setEditorKey((k) => k + 1);
+                setConfirmed(false);
+                setMessage(
+                  "Template applied. Review the wording and complete the applicant and report details before sending.",
+                );
+              }}
+            />
           )}
           {preview ? (
             <article
@@ -606,33 +648,8 @@ export default function AdverseEditor({
           )}
           <section className="notice-send">
             <div className="admin-actions">
-              <Button
-                type="submit"
-                className="admin-primary"
-                disabled={busy || !dirty}
-                onClick={() =>
-                  perform(async () => {
-                    const result = await api("notices", "POST", {
-                      notice,
-                      parentId: current?.id || null,
-                      requestId: crypto.randomUUID(),
-                    });
-                    window.history.replaceState(
-                      null,
-                      "",
-                      `/admin/adverse-actions/${result.version.documentId}`,
-                    );
-                    setCurrent(result.version);
-                    await refresh(result.version.documentId);
-                    setConfirmed(false);
-                    setMessage(`Version ${result.version.version} saved.`);
-                  })
-                }
-              >
-                {busy ? "Working…" : "Save new version"}
-              </Button>
               {preview && (
-                <Button type="submit" onClick={() => window.print()}>
+                <Button type="button" onClick={() => window.print()}>
                   Print notice
                 </Button>
               )}
@@ -671,7 +688,7 @@ export default function AdverseEditor({
                   {notice.applicantEmail || "the applicant"}.
                 </label>
                 <Button
-                  type="submit"
+                  type="button"
                   className="admin-primary"
                   disabled={
                     busy ||

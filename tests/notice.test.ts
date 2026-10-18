@@ -97,3 +97,65 @@ test("non-report notices omit unrelated FCRA boilerplate and require alternative
   assert.deepEqual(sendErrors(n), []);
   assert.ok(!renderNotice(n).text.includes("60 days"));
 });
+
+test("sourced notice drafts preserve identity and disclosures, require conditional terms, and do not claim attorney approval", async () => {
+  const { applyNoticeTemplate, noticeTemplates, noticeTemplateRevision } =
+    await import("../lib/adverse/templates");
+  const original = {
+    ...complete(),
+    scoreUsed: true,
+    score: "650",
+    scoreMin: "300",
+    scoreMax: "850",
+    scoreDate: "2026-10-17",
+    scoreSource: "Test source",
+    scoreFactors: "Test factor",
+  };
+  for (const template of noticeTemplates) {
+    const next = applyNoticeTemplate(
+      original,
+      template.id,
+      template.action === "Application denied"
+        ? ""
+        : "Actual conditions provided by owner",
+      "Verified applicant-specific fact.",
+    );
+    assert.equal(next.applicantName, original.applicantName);
+    assert.equal(next.applicantEmail, original.applicantEmail);
+    assert.equal(next.property, original.property);
+    assert.deepEqual(next.agencies, original.agencies);
+    assert.equal(next.reportUsed, true);
+    assert.equal(next.scoreUsed, true);
+    assert.equal(next.score, "650");
+    assert.equal(next.template?.revision, noticeTemplateRevision);
+    assert.ok(renderNotice(next).text.includes("60 days"));
+    assert.ok(
+      renderNotice(next).text.includes("Verified applicant-specific fact."),
+    );
+    assert.deepEqual(sendErrors(next), []);
+  }
+  assert.throws(
+    () => applyNoticeTemplate(original, "report-deposit"),
+    /actual required terms/,
+  );
+  assert.equal(
+    noticeSchema.safeParse({
+      ...original,
+      template: {
+        id: "made-up-attorney-approved",
+        revision: noticeTemplateRevision,
+      },
+    }).success,
+    false,
+  );
+  const parsed = noticeSchema.parse({
+    ...applyNoticeTemplate(original, "report-denial"),
+    template: {
+      id: "report-denial",
+      revision: noticeTemplateRevision,
+      attorneyApproved: true,
+    },
+  });
+  assert.equal("attorneyApproved" in parsed.template!, false);
+  assert.equal(noticeSchema.parse(complete()).template, undefined);
+});

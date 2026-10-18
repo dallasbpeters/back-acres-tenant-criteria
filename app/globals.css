@@ -216,7 +216,7 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .admin-actions h2 { inline-size: 100%; margin: 0; }
 .admin-shell .version-item { display: grid; gap: .3rem; inline-size: 100%; text-align: start; border: 0; border-block-end: 1px solid var(--line); margin-block-start: .5rem; overflow-wrap: anywhere; }
 .version-item span { font-size: .75rem; color: var(--muted); }
-.version-item[aria-current=true] { background: var(--tint); border-inline-start: 3px solid var(--accent); }
+
 .notice-fields { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
 .notice-fields section { border-block-start: 1px solid var(--line); padding-block: 2rem; display: grid; gap: 1rem; }
 .notice-fields .field select, .notice-fields textarea { font: inherit; font-size: 1rem; inline-size: 100%; padding: .75rem; border: 1px solid var(--line); background: var(--paper); color: var(--ink); min-block-size: 3rem; }
@@ -661,3 +661,60 @@ input[type="file"]:disabled::file-selector-button { background:var(--bg); color:
 .lease-pdf-canvas { display:block; }
 .lease-pdf-canvas .react-pdf__Document { inline-size:max-content; min-inline-size:100%; }
 .lease-pdf-canvas .react-pdf__Page,.lease-pdf-canvas canvas { max-inline-size:none; }
+
+/* Notice navigation, revision history and editing actions have distinct rows. */
+.owner-main .admin-shell { inline-size:100%; max-inline-size:88rem; }
+.notice-return { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem 2rem; margin-block:0 1.5rem; padding-block-end:1rem; border-block-end:1px solid var(--line); }
+.notice-return > a { display:inline-flex; align-items:center; min-block-size:2.75rem; font-size:.875rem; }
+.notice-return > .remove-record-button { margin-inline-start:auto; }
+.owner-main .admin-workspace { grid-template-columns:13.5rem minmax(0,1fr); gap:2rem; }
+.notice-history { min-inline-size:0; padding-inline-end:1.5rem; }
+.owner-main .notice-history h2 { font-size:1.25rem; line-height:1.3; margin:0; }
+.notice-history .notice-history-actions { gap:.5rem; margin-block:.75rem 1rem; }
+.notice-history-actions > button { flex:1; padding-inline:.6rem; }
+.owner-main .notice-history > .small-note { font-size:.8125rem; line-height:1.6; margin-block:0 .75rem; }
+.admin-shell .version-item { gap:.35rem; margin-block-start:.5rem; padding:.875rem; border:1px solid var(--soft-line); border-radius:3px; }
+.version-item strong { font-size:.875rem; font-weight:600; }
+.version-item span { font-size:.75rem; line-height:1.5; }
+.admin-shell .version-item[aria-current="true"] { border:1px solid var(--accent); background:var(--tint); }
+.notice-main { min-inline-size:0; }
+.notice-main > .notice-toolbar { justify-content:space-between; gap:1rem 1.5rem; margin-block:0 1.25rem; }
+.owner-main .notice-toolbar > .eyebrow { font-size:.8125rem; line-height:1.5; letter-spacing:0; text-transform:none; }
+.notice-toolbar-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; }
+.owner-main .notice-fields > section { padding-block:1.5rem; gap:1rem; }
+.owner-main .notice-fields h2 { font-size:1.25rem; line-height:1.35; }
+.notice-fields .fields { grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem 1.5rem; }
+.notice-fields .section-intro { margin:0; max-inline-size:65ch; font-size:.875rem; color:var(--muted); }
+.notice-fields .field { gap:.5rem; }
+.notice-fields .field > textarea { min-block-size:6rem; }
+.notice-fields .reasons-content { font-family:var(--font-document); font-size:1.0625rem; line-height:1.7; }
+.notice-fields .reasons-content :is(p,li) { font:inherit; max-inline-size:70ch; }
+.notice-send { padding-block:1.5rem; gap:1.25rem; }
+.notice-send > .admin-actions:empty { display:none; }
+.notice-template-panel { margin-block-end:1.5rem; border:1px solid var(--line); background:var(--bg); }
+.notice-template-panel > summary { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem 1rem; min-block-size:3rem; padding:.75rem 1rem; font-size:.875rem; font-weight:600; cursor:pointer; list-style:none; }
+.notice-template-panel > summary::-webkit-details-marker { display:none; }
+.notice-template-panel > summary > span:first-child::before { content:"+"; display:inline-block; inline-size:1.5rem; color:var(--accent); }
+.notice-template-panel[open] > summary > span:first-child::before { content:"−"; }
+.notice-template-content { display:grid; gap:1rem; padding:1.25rem; border-block-start:1px solid var(--line); }
+.owner-main .notice-template-heading p { font-size:.8125rem; color:var(--muted); max-inline-size:65ch; }
+.notice-template-applied { font-size:.75rem; font-weight:500; color:var(--muted); }
+.owner-main .notice-template-wording { font-family:var(--font-document); font-size:1.0625rem; line-height:1.65; max-inline-size:70ch; }
+.notice-template-content .field .small-note { margin:0; font-weight:400; }
+.notice-template-content .field textarea { padding:.75rem; min-block-size:5rem; inline-size:100%; border:1px solid var(--line); background:var(--paper); color:var(--ink); font:inherit; }
+.notice-template-footer { display:flex; align-items:flex-start; flex-wrap:wrap; gap:1rem 1.5rem; }
+.notice-template-footer > details { flex:1 1 18rem; font-size:.8125rem; }
+.notice-template-footer > details > summary { min-block-size:2.75rem; display:list-item; padding-block:.6rem; cursor:pointer; }
+.owner-main .notice-template-footer p { font-size:.8125rem; margin-block:.5rem; max-inline-size:70ch; }
+.notice-template-footer ul { padding-inline-start:1.25rem; margin-block:.5rem; }
+.notice-template-footer a { overflow-wrap:anywhere; }
+@media(max-width:1050px) { .owner-main .admin-workspace { grid-template-columns:11.5rem minmax(0,1fr); gap:1.5rem; } .notice-history { padding-inline-end:1rem; } }
+@media(max-width:900px) { .owner-main .admin-workspace { grid-template-columns:minmax(0,1fr); } .notice-history { padding:0 0 1.25rem; } .notice-history-actions { max-inline-size:18rem; } }
+@media(max-width:640px) { .notice-fields .fields { grid-template-columns:minmax(0,1fr); } .notice-toolbar-actions { inline-size:100%; gap:.5rem; } .notice-toolbar-actions button { flex:1; } .notice-return { gap:.75rem 1.25rem; } .notice-return > .remove-record-button { margin-inline-start:0; } .notice-template-content { padding:1rem; } .notice-template-panel > summary { padding:.75rem; } .owner-main .notice-fields h2 { font-size:1.125rem; } }
+@media print { .notice-template-panel,.notice-toolbar { display:none !important; } }
+.notice-fields .field > input,.notice-fields .app-select-trigger { min-block-size:2.75rem; }
+.admin-shell .version-item[aria-current="true"] { --button-border:var(--accent); --button-hover-border:var(--accent); --button-bg:var(--tint); }
+.notice-history-actions > button { white-space:nowrap; font-size:.8125rem; padding-inline:.5rem; flex:1 1 auto; }
+:is(button,.ui-button):is(:disabled,[aria-disabled="true"],[data-disabled]) { transition:none; }
+.notice-return > .remove-record-button { min-block-size:2.75rem; }
+@media(max-width:640px) { .owner-navbar nav { gap:.5rem; } .owner-navbar nav > a { display:inline-flex; align-items:center; min-block-size:2.75rem; font-size:.8125rem; } }

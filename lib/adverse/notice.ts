@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { noticeTemplateIds, noticeTemplateRevision } from "./templates";
 
 export type RichNode = {
   type: string;
@@ -27,6 +28,12 @@ const node: z.ZodType<RichNode> = z.lazy(() =>
 );
 const short = z.string().trim().max(300);
 export const noticeSchema = z.object({
+  template: z
+    .object({
+      id: z.enum(noticeTemplateIds),
+      revision: z.literal(noticeTemplateRevision),
+    })
+    .optional(),
   applicantName: short,
   applicantEmail: z.string().trim().max(254),
   property: short,
