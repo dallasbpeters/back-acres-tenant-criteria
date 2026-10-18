@@ -2374,7 +2374,7 @@ textarea::placeholder {
   border: 1px solid var(--border);
 }
 .owner-logo {
-  inline-size: 5rem;
+  inline-size: 3rem;
   block-size: 3rem;
   object-fit: contain;
   padding: 0.2rem;
