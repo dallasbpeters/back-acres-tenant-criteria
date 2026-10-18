@@ -98,7 +98,7 @@ button {
     color 140ms ease;
 }
 :root {
-  --control-hover: color-mix(in oklch, var(--ink) 10%, var(--paper));
+  --control-hover: color-mix(in oklch, var(--primary) 10%, var(--paper));
   --control-active: color-mix(in oklch, var(--ink) 16%, var(--paper));
   --on-accent: var(--paper);
 }
@@ -111,8 +111,8 @@ button {
   --button-bg: var(--actions);
   --button-ink: var(--on-action);
   --button-hover-ink: var(--on-action);
-  --button-hover: color-mix(in oklch, var(--actions) 88%, #0e1005);
-  --button-active: color-mix(in oklch, var(--actions) 78%, #0e1005);
+  --button-hover: color-mix(in oklch, var(--actions) 88%, #ffffff);
+  --button-active: color-mix(in oklch, var(--actions) 78%, #ffffff);
 }
 .ui-button--danger,
 .remove-confirm-button {

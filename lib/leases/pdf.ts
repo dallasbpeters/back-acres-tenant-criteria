@@ -143,16 +143,17 @@ export async function leasePdf(
   const pages = pdf.getPages();
   pages.forEach((p, index) => {
     if (branding) {
-      if (logo) {
-        const d = logo.scaleToFit(96, 38);
+      const brandCenterY = 749,
+        logoSize = logo?.scaleToFit(96, 38);
+      if (logo && logoSize) {
         p.drawImage(logo, {
           x: left,
-          y: 730,
-          width: d.width,
-          height: d.height,
+          y: brandCenterY - logoSize.height / 2,
+          width: logoSize.width,
+          height: logoSize.height,
         });
       }
-      const x = logo ? 168 : left,
+      const x = logoSize ? left + logoSize.width + 12 : left,
         available = right - x,
         name = safe(branding.name);
       let size = 11,
@@ -172,7 +173,10 @@ export async function leasePdf(
       } while (rows.length > 3 && size > 6);
       p.drawText(rows.join("\n"), {
         x,
-        y: 757,
+        y:
+          brandCenterY +
+          ((rows.length - 1) * 12) / 2 -
+          labelBold.heightAtSize(size, { descender: false }) / 2,
         size,
         lineHeight: 12,
         font: labelBold,
