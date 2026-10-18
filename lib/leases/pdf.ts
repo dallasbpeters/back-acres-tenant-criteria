@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import { documentLines, type LeaseNode, type LeaseRun } from "./document";
 import { leaseFonts } from "./pdf-fonts";
+import { leaseTerms } from "./terms";
 
 export async function leasePdf(
   body: string,
@@ -46,8 +47,142 @@ export async function leasePdf(
     : body
         .split("\n")
         .map((text) => ({ runs: [{ text }] as LeaseRun[], heading: false }));
+  const wrapSummary = (
+    value: string,
+    face: PDFFont,
+    size: number,
+    maxWidth: number,
+  ) => {
+    const rows: string[] = [];
+    let row = "";
+    for (const character of safe(value)) {
+      if (row && face.widthOfTextAtSize(row + character, size) > maxWidth) {
+        rows.push(row);
+        row = "";
+      }
+      row += character;
+    }
+    rows.push(row);
+    return rows;
+  };
   let first = true;
-  for (const paragraph of paragraphs) {
+  for (
+    let paragraphIndex = 0;
+    paragraphIndex < paragraphs.length;
+    paragraphIndex++
+  ) {
+    const paragraph = paragraphs[paragraphIndex];
+    const terms = leaseTerms(paragraphs, paragraphIndex);
+    if (terms) {
+      const padding = 10,
+        cellWidth = width / 2,
+        headerHeight = 24;
+      const cells = terms.fields.map((field) => ({
+        label: wrapSummary(field.label, label, 8, cellWidth - padding * 2),
+        value: wrapSummary(field.value, normal, 11, cellWidth - padding * 2),
+      }));
+      const rowHeights: number[] = [];
+      for (let i = 0; i < cells.length; i += 2) {
+        rowHeights.push(
+          Math.max(
+            ...cells
+              .slice(i, i + 2)
+              .map(
+                (cell) =>
+                  padding * 2 +
+                  cell.label.length * 10 +
+                  4 +
+                  cell.value.length * 14,
+              ),
+          ),
+        );
+      }
+      const height =
+        headerHeight + rowHeights.reduce((total, row) => total + row, 0);
+      if (height <= top - bottom) {
+        if (y - height < bottom) newPage();
+        const tableTop = y + 4,
+          tableBottom = tableTop - height;
+        const line = rgb(0.72, 0.76, 0.73);
+        page.drawRectangle({
+          x: left,
+          y: tableTop - headerHeight,
+          width,
+          height: headerHeight,
+          color: rgb(0.96, 0.97, 0.95),
+        });
+        page.drawText("TERMS", {
+          x: left + padding,
+          y: tableTop - 16,
+          size: 9,
+          font: labelBold,
+          color: green,
+        });
+        let rowTop = tableTop - headerHeight;
+        page.drawLine({
+          start: { x: left, y: rowTop },
+          end: { x: right, y: rowTop },
+          thickness: 0.5,
+          color: line,
+        });
+        for (let row = 0; row < rowHeights.length; row++) {
+          const rowHeight = rowHeights[row];
+          for (let column = 0; column < 2; column++) {
+            const cell = cells[row * 2 + column];
+            if (!cell) continue;
+            const x = left + column * cellWidth + padding;
+            let baseline = rowTop - padding - 8;
+            for (const text of cell.label) {
+              page.drawText(text, {
+                x,
+                y: baseline,
+                size: 8,
+                font: label,
+                color: muted,
+              });
+              baseline -= 10;
+            }
+            baseline -= 4;
+            for (const text of cell.value) {
+              page.drawText(text, {
+                x,
+                y: baseline,
+                size: 11,
+                font: normal,
+                color: ink,
+              });
+              baseline -= 14;
+            }
+          }
+          rowTop -= rowHeight;
+          if (row < rowHeights.length - 1)
+            page.drawLine({
+              start: { x: left, y: rowTop },
+              end: { x: right, y: rowTop },
+              thickness: 0.5,
+              color: line,
+            });
+        }
+        page.drawLine({
+          start: { x: left + cellWidth, y: tableTop - headerHeight },
+          end: { x: left + cellWidth, y: tableBottom },
+          thickness: 0.5,
+          color: line,
+        });
+        page.drawRectangle({
+          x: left,
+          y: tableBottom,
+          width,
+          height,
+          borderColor: line,
+          borderWidth: 0.5,
+        });
+        y = tableBottom - 20;
+        paragraphIndex = terms.end;
+        first = false;
+        continue;
+      }
+    }
     const text = paragraph.runs.map((r) => r.text).join("");
     if (!text.trim()) {
       if (y < top) y -= 7;
@@ -116,7 +251,7 @@ export async function leasePdf(
     }
     // Keep headings with the following lines; keep short paragraphs together.
     const required = heading
-      ? rows.length * leading + 32
+      ? rows.length * leading + 64
       : Math.min(rows.length, 3) * leading;
     if (y - required < bottom) newPage();
     else if (heading && !first && y < top) y -= 8;
