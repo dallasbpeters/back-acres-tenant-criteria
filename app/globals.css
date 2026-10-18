@@ -11,14 +11,14 @@
   --accent: var(--primary);
   --on-action: #fffefa;
   /* One neutral color for every visible border and keyboard outline. */
-  --border: #eff1ea;
+  --border: #e6e5df;
   --tint: color-mix(in oklch, var(--primary) 12%, var(--paper));
   --danger: oklch(43% 0.12 30);
   --warning: oklch(42% 0.065 75);
   --font-document: "Source Serif 4 Variable", Georgia, serif;
   --font-interface: "Public Sans Variable", sans-serif;
   --text-label: 0.8rem;
-  --text-body: 1rem;
+  --text-body: 1.125rem;
   --text-subheading: 1.25rem;
   --text-heading: clamp(1.5625rem, 1.354rem + 1.04vw, 2rem);
   --text-title: clamp(2.441rem, 1.996rem + 2.226vw, 3.375rem);
