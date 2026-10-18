@@ -1,0 +1,118 @@
+{
+  "projectId": "prj_GhqBYostXs0kq0zxMbltaxMhdfpt",
+  "teamId": "team_xbjhQrWQq8NVMdYaSleVanYu",
+  "rules": [
+    {
+      "name": "API public forms and signing",
+      "description": "Public intake, checkout, and individual signing endpoints; keep existing record-level abuse checks.",
+      "active": true,
+      "conditionGroup": [
+        {
+          "conditions": [
+            {
+              "type": "path",
+              "op": "re",
+              "value": "^/api/(acknowledge|applications|maintenance|payments/checkout|lease-signing)(/|$)"
+            }
+          ]
+        }
+      ],
+      "action": {
+        "mitigate": {
+          "action": "rate_limit",
+          "rateLimit": {
+            "algo": "fixed_window",
+            "window": 60,
+            "limit": 30,
+            "keys": ["ip"],
+            "action": "rate_limit"
+          }
+        }
+      }
+    },
+    {
+      "name": "API Google sign-in",
+      "description": "OAuth session, CSRF, sign-in, and callback endpoints; allows complete normal sign-in flows.",
+      "active": true,
+      "conditionGroup": [
+        {
+          "conditions": [
+            { "type": "path", "op": "re", "value": "^/api/auth(/|$)" }
+          ]
+        }
+      ],
+      "action": {
+        "mitigate": {
+          "action": "rate_limit",
+          "rateLimit": {
+            "algo": "fixed_window",
+            "window": 60,
+            "limit": 60,
+            "keys": ["ip"],
+            "action": "rate_limit"
+          }
+        }
+      }
+    },
+    {
+      "name": "API Stripe webhook",
+      "description": "Separate generous budget for Stripe event bursts and retries; signature verification remains mandatory.",
+      "active": true,
+      "conditionGroup": [
+        {
+          "conditions": [
+            { "type": "path", "op": "eq", "value": "/api/payments/webhook" }
+          ]
+        }
+      ],
+      "action": {
+        "mitigate": {
+          "action": "rate_limit",
+          "rateLimit": {
+            "algo": "fixed_window",
+            "window": 60,
+            "limit": 1200,
+            "keys": ["ip"],
+            "action": "rate_limit"
+          }
+        }
+      }
+    },
+    {
+      "name": "API general traffic",
+      "description": "All remaining API paths, including owner actions, photos, PDF downloads, and autopay revocation.",
+      "active": true,
+      "conditionGroup": [
+        {
+          "conditions": [
+            { "type": "path", "op": "re", "value": "^/api(/|$)" },
+            {
+              "type": "path",
+              "op": "re",
+              "neg": true,
+              "value": "^/api/(acknowledge|applications|maintenance|payments/checkout|lease-signing|auth)(/|$)"
+            },
+            {
+              "type": "path",
+              "op": "eq",
+              "neg": true,
+              "value": "/api/payments/webhook"
+            }
+          ]
+        }
+      ],
+      "action": {
+        "mitigate": {
+          "action": "rate_limit",
+          "rateLimit": {
+            "algo": "fixed_window",
+            "window": 60,
+            "limit": 600,
+            "keys": ["ip"],
+            "action": "rate_limit"
+          }
+        }
+      }
+    }
+  ]
+}
