@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type Stripe from "stripe";
-import { stripe } from "./stripe";
+import { stripe, collectStripePages } from "./stripe";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invoices, rentSchedules } from "@/lib/db/schema";
@@ -65,11 +65,17 @@ export async function handleBillingEvent(event: Stripe.Event) {
           ? object.payment_intent
           : (object.payment_intent?.id ?? null);
     if (!intentId) return;
-    const payments = await stripe().invoicePayments.list({
-      payment: { type: "payment_intent", payment_intent: intentId },
-      limit: 100,
-    });
-    for (const payment of payments.data) {
+    const payments = await collectStripePages((cursor) =>
+      stripe().invoicePayments.list({
+        payment: { type: "payment_intent", payment_intent: intentId! },
+        limit: 100,
+        ...(cursor ? { starting_after: cursor } : {}),
+      }),
+    );
+    // Checkout payments have no Stripe Invoice. Reconcile their returns and
+    // disputes too, using the current intent rather than the event snapshot.
+    if (!payments.length) await reconcileCheckoutPayment(intentId);
+    for (const payment of payments) {
       const invoice =
         typeof payment.invoice === "string"
           ? await stripe().invoices.retrieve(payment.invoice)
@@ -99,12 +105,15 @@ async function reconcileInvoice(invoice: Stripe.Invoice) {
     invoice.currency !== "usd"
   )
     return;
-  const payments = await stripe().invoicePayments.list({
-    invoice: invoice.id,
-    expand: ["data.payment.payment_intent"],
-    limit: 100,
-  });
-  const intents = payments.data
+  const payments = await collectStripePages((cursor) =>
+    stripe().invoicePayments.list({
+      invoice: invoice.id,
+      expand: ["data.payment.payment_intent"],
+      limit: 100,
+      ...(cursor ? { starting_after: cursor } : {}),
+    }),
+  );
+  const intents = payments
     .map((p) => p.payment.payment_intent)
     .filter((p): p is Stripe.PaymentIntent => !!p && typeof p !== "string");
   const latest = intents.sort((a, b) => b.created - a.created)[0];
@@ -174,4 +183,80 @@ async function reconcileInvoice(invoice: Stripe.Invoice) {
         paidAt: sql`coalesce(${invoices.paidAt},${values.paidAt})`,
       },
     });
+}
+
+async function reconcileCheckoutPayment(intentId: string) {
+  const client = stripe();
+  const sessions = await collectStripePages((cursor) =>
+    client.checkout.sessions.list({
+      payment_intent: intentId,
+      limit: 100,
+      ...(cursor ? { starting_after: cursor } : {}),
+    }),
+  );
+  for (const session of sessions) {
+    const id = session.metadata?.invoiceId;
+    if (!id || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(id))
+      continue;
+    const d = db();
+    const [invoice] = await d
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, id));
+    if (
+      !invoice ||
+      invoice.stripeInvoiceId ||
+      invoice.stripeSessionId !== session.id ||
+      invoice.mode !== (session.livemode ? "live" : "test") ||
+      session.client_reference_id !== id ||
+      session.amount_total !== invoice.amountCents ||
+      session.currency !== "usd"
+    )
+      continue;
+    const intent = await client.paymentIntents.retrieve(intentId, {
+      expand: ["latest_charge"],
+    });
+    if (
+      intent.livemode !== session.livemode ||
+      intent.amount !== invoice.amountCents ||
+      intent.currency !== "usd"
+    )
+      continue;
+    const charge =
+      typeof intent.latest_charge === "string"
+        ? await client.charges.retrieve(intent.latest_charge)
+        : intent.latest_charge;
+    const status = charge?.disputed
+      ? "disputed"
+      : charge?.refunded
+        ? "refunded"
+        : charge?.amount_refunded
+          ? "partially_refunded"
+          : charge?.status === "failed" ||
+              (intent.status === "requires_payment_method" &&
+                intent.last_payment_error)
+            ? "failed"
+            : intent.status === "succeeded"
+              ? "paid"
+              : intent.status === "processing"
+                ? "processing"
+                : null;
+    if (!status) continue;
+    await d
+      .update(invoices)
+      .set({
+        status: sql`case
+        when ${invoices.status} in ('disputed','refunded') then ${invoices.status}
+        when ${status} in ('disputed','refunded','partially_refunded','failed') then ${status}
+        when ${invoices.status} in ('partially_refunded','paid','failed') and ${status} = 'processing' then ${invoices.status}
+        when ${invoices.status} = 'partially_refunded' and ${status} = 'paid' then ${invoices.status}
+        else ${status} end`,
+        ...(status === "paid"
+          ? { paidAt: sql`coalesce(${invoices.paidAt},now())` }
+          : {}),
+      })
+      .where(
+        and(eq(invoices.id, id), eq(invoices.stripeSessionId, session.id)),
+      );
+  }
 }

@@ -401,6 +401,11 @@ export async function POST(request: NextRequest) {
         .from(invoices)
         .where(eq(invoices.id, c.id));
       if (!invoice) return reply({ error: "Payment request not found." }, 404);
+      if (invoice.mode !== paymentMode())
+        return reply(
+          { error: "This request belongs to another payment environment." },
+          409,
+        );
       if (invoice.status === "void") return reply({ ok: true });
       if (invoice.status !== "open")
         return reply(

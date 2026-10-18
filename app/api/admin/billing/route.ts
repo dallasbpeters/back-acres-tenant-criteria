@@ -30,10 +30,11 @@ export async function POST(request: NextRequest) {
       { error: "Complete the rent amount, payer, dates, and authorization." },
       400,
     );
-  const c = parsed.data,
-    d = db(),
-    client = stripe();
+  const c = parsed.data;
+  let d: ReturnType<typeof db> | undefined;
   try {
+    d = db();
+    const client = stripe();
     if (c.action === "cancel") {
       const [r] = await d
         .select()
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
       .where(eq(rentSchedules.id, c.id));
     return reply({ ok: true });
   } catch {
-    if (c.action === "create")
+    if (c.action === "create" && d)
       await d
         .update(rentSchedules)
         .set({ status: "needs_review" })

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { and, eq, ne, or, isNull } from "drizzle-orm";
+import { and, eq, ne, or, isNull, notInArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invoices } from "@/lib/db/schema";
 import { reply } from "@/lib/adverse/auth";
@@ -83,7 +83,14 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(invoices.id, id),
-          ne(invoices.status, "paid"),
+          notInArray(invoices.status, [
+            "paid",
+            "refunded",
+            "partially_refunded",
+            "disputed",
+          ]),
+          // A delayed completion must not reopen a bank payment that failed.
+          ...(status === "processing" ? [ne(invoices.status, "failed")] : []),
           or(
             isNull(invoices.stripeSessionId),
             eq(invoices.stripeSessionId, session.id),

@@ -19,3 +19,5 @@ skills-lock.json
 
 # Generated from the installed PDF viewer during npm install
 public/pdf-assets/
+
+coverage/

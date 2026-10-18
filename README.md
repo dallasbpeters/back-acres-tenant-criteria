@@ -285,3 +285,10 @@ The notice editor separates return/removal navigation, version history, and the 
 Five editable, source-backed drafts cover a consumer-report denial, co-signer requirement, higher deposit, higher rent, and an income-criteria denial. They use the [FTC's landlord guidance](https://www.ftc.gov/business-guidance/resources/using-consumer-reports-what-landlords-need-know), [15 USC 1681m(a)](https://www.law.cornell.edu/uscode/text/15/1681m), and [Texas Property Code 92.3515](https://tcss.legis.texas.gov/docs/PR/htm/PR.92.htm#92.3515) as sources. They are original draft wording, not reproductions of licensed legal forms, and are **not attorney-approved**. The picker displays that status and links to its sources. A licensed attorney-reviewed form or documented legal review is still needed before making any attorney-approval claim.
 
 Applying a template preserves applicant/property/contact details, existing agencies, and credit-score data. Report-based templates enable the report disclosures; no template silently removes existing disclosures. Conditional templates require the owner to enter the actual required terms. The reasons remain editable in Tiptap. Each saved notice retains the template ID and revision alongside its frozen text/HTML; legacy notices without template metadata remain supported. No templates send mail automatically.
+
+### Stripe regression tests
+
+`npm test` includes the isolated Stripe integration suite. Run
+`npm run test:stripe:coverage` for the coverage report and enforced thresholds.
+See [Stripe failure coverage and external-testing limits](docs/stripe-testing.md).
+No real provider calls, charges, emails, or Neon writes are made by this suite.
