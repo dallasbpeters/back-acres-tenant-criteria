@@ -1,0 +1,2 @@
+// Run before the page paints so stored/device preferences don't flash light.
+export const themeBootstrap = `(()=>{let p='system';try{const s=localStorage.getItem('back-acres-theme');if(['system','light','dark'].includes(s))p=s}catch{}const r=document.documentElement;r.dataset.themePreference=p;r.dataset.theme=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p})()`;

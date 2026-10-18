@@ -1,3 +1,4 @@
+import { ThemeControl } from "@/components/ui/theme";
 import type { ReactNode } from "react";
 export function ManagementShell({
   title,
@@ -21,6 +22,7 @@ export function ManagementShell({
           </a>
           <nav className="management-nav" aria-label="Main navigation">
             <a href="/properties">Properties</a>
+            <ThemeControl />
             {owner && (
               <>
                 <a href="/admin">Workspace</a>

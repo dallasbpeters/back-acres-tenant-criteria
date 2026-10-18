@@ -252,3 +252,12 @@ Tiptap is visible at the Review step. Paragraphs, headings, bold/italic,
 and numbered/bulleted lists persist with each draft version and render in the
 PDF. Existing plain-text drafts remain supported. Disclosure detail editors
 use Tiptap with text and list controls; their wording is stored as plain text.
+
+### Color theme
+
+The Theme menu in owner and public navigation offers Light, Dark, and Use device
+setting. The preference stays in this browser’s local storage and synchronizes
+between tabs. The device setting follows operating-system changes. An early
+page script applies the preference before paint; editors, native form controls,
+and portalled menus/dialogs share theme tokens. Printed documents stay light;
+PDF export is independent of the screen theme.

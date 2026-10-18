@@ -1,6 +1,7 @@
 :root {
   color-scheme: light;
   --paper: oklch(98.5% 0.006 155);
+  --surface: #fff;
   --bg: oklch(96.5% 0.008 155);
   --ink: oklch(27% 0.021 155);
   --muted: oklch(46% 0.018 155);
@@ -221,7 +222,7 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .reasons-content { padding: 1.25rem; min-block-size: 12rem; font-family: var(--font-document); font-size: 1.125rem; }
 .reasons-content p + p { margin-block-start: .75rem; }
 .agency-fields, .score-fields { display: grid; gap: 1rem; padding-block: 1rem; border-block-start: 1px solid var(--soft-line); }
-.notice-preview { background: white; padding: clamp(1rem, 4vw, 3rem); border: 1px solid var(--line); }
+.notice-preview { background: var(--surface); padding: clamp(1rem, 4vw, 3rem); border: 1px solid var(--line); }
 .notice-preview p { margin-block: 1rem; }
 .notice-send { display: grid; gap: 1rem; padding-block: 2rem; border-block-start: 1px solid var(--ink); }
 .notice-send .admin-actions, .notice-send .small-note { margin: 0; }
@@ -262,7 +263,7 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 @media print { .management-nav,.management-tabs,.management-actions {display:none;} }
 
 /* Compact owner workspace, shared across operations and correspondence. */
-.owner-app { background: #fff; min-block-size: calc(100dvh - 5rem); }
+.owner-app { background: var(--surface); min-block-size: calc(100dvh - 5rem); }
 .owner-navbar { min-block-size:4.25rem; padding:.6rem clamp(1rem,3vw,2.5rem); display:flex; justify-content:space-between; align-items:center; gap:1rem; border-block-end:1px solid var(--line); background:var(--paper); }
 .owner-brand { display:flex; gap:.65rem; align-items:center; text-decoration:none; font-size:.95rem; font-weight:650; }
 .owner-brand .brand-monogram { font-size:.85rem; inline-size:2.25rem; block-size:2.25rem; }
@@ -414,7 +415,7 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 .lease-review-checks { padding:.75rem 0; border-block:1px solid var(--line); }
 .lease-review-checks p { max-inline-size:70ch; margin-block:.75rem; }
 .lease-review-actions { margin-block:1.25rem; flex-wrap:wrap; }
-.lease-document { max-inline-size:75ch; padding:2rem; border:1px solid var(--line); background:#fff; display:grid; gap:1rem; }
+.lease-document { max-inline-size:75ch; padding:2rem; border:1px solid var(--line); background:var(--surface); display:grid; gap:1rem; }
 .owner-main .lease-document p { font-family:var(--font-document); font-size:1rem; white-space:pre-wrap; overflow-wrap:anywhere; }
 .lease-document-heading { font-weight:650; }
 .lease-saved { margin-block-start:2.5rem; padding-block-start:1.5rem; border-block-start:1px solid var(--line); }
@@ -434,7 +435,7 @@ footer { border-block-start: 1px solid var(--line); background: var(--bg); color
 /* Reversible removal uses the same document-like controls throughout the workspace. */
 button.remove-record-button,
 .owner-main button.remove-record-button {
-  color: #853b32;
+  color: var(--danger);
   border: 1px solid var(--line);
   background: var(--paper);
   padding: .55rem .85rem;
@@ -462,7 +463,7 @@ button.remove-record-button,
   overflow-y: auto;
   background: var(--paper, #fff);
   padding: clamp(1.25rem, 4vw, 2rem);
-  border: 1px solid #a6b2aa;
+  border: 1px solid var(--line);
 }
 .remove-modal [role="dialog"] {
   outline: none;
@@ -530,3 +531,33 @@ button.remove-record-button,
 .lease-disclosure-card button { border: 1px solid var(--line); background: var(--paper); }
 @media print { .lease-rich-editor .editor-tools { display: none; } .lease-rich-content { overflow: visible; max-height: none; } }
 .lease-disclosure-card .section-heading-row button { flex-shrink: 0; white-space: nowrap; }
+
+/* Theme tokens apply to native controls, editors, and portalled menus/dialogs. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: oklch(23% .012 155);
+  --surface: oklch(21% .012 155);
+  --bg: oklch(18.5% .012 155);
+  --ink: oklch(93% .008 155);
+  --muted: oklch(75% .016 155);
+  --accent: oklch(81% .075 155);
+  --line: color-mix(in oklch, var(--ink) 42%, var(--paper));
+  --soft-line: color-mix(in oklch, var(--ink) 22%, var(--paper));
+  --danger: oklch(77% .12 30);
+  --warning: oklch(82% .09 75);
+}
+.masthead-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.theme-control { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-block-size: 2.75rem; padding: .55rem .75rem; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; font: inherit; font-size: .85rem; }
+.theme-control svg { flex: none; }
+.theme-control[data-hovered], .theme-control[data-pressed] { border-color: var(--accent); }
+.theme-popover { z-index: 110; min-inline-size: 12rem; padding: .3rem; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-interface); }
+.theme-option { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-block-size: 2.75rem; padding: .6rem .75rem; cursor: pointer; outline: none; font-size: .9rem; }
+.theme-option[data-focused] { background: var(--tint); }
+.theme-option[aria-checked="true"] { color: var(--accent); font-weight: 600; }
+.theme-check { inline-size: 1rem; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+::selection { background: color-mix(in oklch, var(--accent) 25%, var(--paper)); color: var(--ink); }
+@media print {
+  :root, :root[data-theme] { color-scheme: light; --paper: #fff; --surface: #fff; --bg: #fff; --ink: #18281e; --muted: #465b4d; --accent: #294c38; --danger: #853b32; --warning: #69531f; }
+  .theme-control, .theme-popover { display: none !important; }
+}

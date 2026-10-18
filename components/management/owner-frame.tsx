@@ -1,4 +1,5 @@
 "use client";
+import { ThemeControl } from "@/components/ui/theme";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -36,6 +37,7 @@ export function OwnerFrame({
           <a href="/properties" target="_blank" rel="noreferrer">
             View site ↗
           </a>
+          <ThemeControl />
           {signedIn && (
             <button
               disabled={leaving}
@@ -81,7 +83,9 @@ export function OwnerFrame({
               <a
                 href="/admin/adverse-actions"
                 aria-current={
-                  pathname.startsWith("/admin/adverse-actions") ? "page" : undefined
+                  pathname.startsWith("/admin/adverse-actions")
+                    ? "page"
+                    : undefined
                 }
               >
                 Adverse-action notices
