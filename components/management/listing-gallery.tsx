@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import type { PhotoRecord } from "./photos";
 
@@ -71,6 +72,7 @@ export function ListingGallery({
             setOpen(true);
           }}
         >
+          <Icon name="photos" />
           View all photos
         </Button>
       </div>
@@ -84,8 +86,13 @@ export function ListingGallery({
           <Dialog className="listing-photo-dialog">
             <div className="listing-photo-toolbar">
               <Heading slot="title">{name} · Photos</Heading>
-              <Button onPress={() => setOpen(false)} aria-label="Close photos">
-                Close ×
+              <Button
+                className="icon-button"
+                onPress={() => setOpen(false)}
+                aria-label="Close photos"
+                title="Close photos"
+              >
+                <Icon name="close" size={24} />
               </Button>
             </div>
             <figure className="listing-photo-viewer">
@@ -123,11 +130,13 @@ export function ListingGallery({
             {photos.length > 1 && (
               <div className="listing-photo-controls">
                 <Button onPress={() => move(-1)} aria-label="Previous photo">
-                  ← Previous
+                  <Icon name="back" />
+                  Previous
                 </Button>
                 <p>Use the arrow keys or swipe to browse.</p>
                 <Button onPress={() => move(1)} aria-label="Next photo">
-                  Next →
+                  Next
+                  <Icon name="next" />
                 </Button>
               </div>
             )}

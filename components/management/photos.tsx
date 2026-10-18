@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import {
@@ -76,15 +77,7 @@ function SortablePhoto({
           aria-label={`Remove photo ${index + 1}`}
           title="Remove photo"
         >
-          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-            <path
-              d="m4 4 8 8M12 4l-8 8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
+          <Icon name="close" size={18} />
         </Button>
       </div>
       <span className="photo-number">

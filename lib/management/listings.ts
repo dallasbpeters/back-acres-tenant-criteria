@@ -1,3 +1,4 @@
+import { amenityOptions } from "./amenities";
 import { dollars, type PropertyInput } from "./model";
 export const listingProviders = [
   {
@@ -28,6 +29,14 @@ export function listingText(data: PropertyInput, slug: string, origin: string) {
     `${dollars(data.rentCents)} / month · ${data.bedrooms} bedrooms · ${data.bathrooms} bathrooms`,
     `Available: ${data.availableDate || "Contact owner"}`,
     data.description,
+    ...(data.amenities?.length
+      ? [
+          `Amenities: ${amenityOptions
+            .filter((a) => data.amenities?.includes(a.id))
+            .map((a) => a.label)
+            .join(", ")}`,
+        ]
+      : []),
     `Contact: ${data.contact}`,
     `Listing: ${origin}/properties/${slug}`,
     `Apply: ${origin}/properties/${slug}/apply`,

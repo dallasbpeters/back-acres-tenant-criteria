@@ -1,6 +1,14 @@
-export function PropertyDescription({ text }: { text: string }) {
+export function PropertyDescription({
+  text,
+  grid = false,
+}: {
+  text: string;
+  grid?: boolean;
+}) {
   return (
-    <div className="property-description">
+    <div
+      className={`property-description${grid ? " property-description--grid" : ""}`}
+    >
       {text
         .split(/\r?\n\s*\r?\n/)
         .filter((paragraph) => paragraph.trim())

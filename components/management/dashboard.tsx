@@ -1,4 +1,5 @@
 "use client";
+import { AmenityPicker } from "./amenities";
 import { Button } from "@/components/ui/button";
 
 import { BrandingWorkspace } from "./branding";
@@ -664,6 +665,7 @@ function PropertyWorkspace({
                 name: s("name"),
                 address: s("address"),
                 description: s("description"),
+                amenities: f.getAll("amenities").map(String),
                 rentCents: Math.round(Number(s("rent")) * 100),
                 bedrooms: Number(s("bedrooms")),
                 bathrooms: Number(s("bathrooms")),
@@ -738,6 +740,7 @@ function PropertyWorkspace({
                 rows={5}
               />
             </label>
+            <AmenityPicker selected={data?.amenities} />
             <p>
               Selection criteria are managed centrally.{" "}
               <a href="/#criteria" target="_blank" rel="noreferrer">

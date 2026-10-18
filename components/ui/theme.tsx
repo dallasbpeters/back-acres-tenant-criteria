@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "./icon";
 import {
   createContext,
   useContext,
@@ -81,19 +82,7 @@ export function ThemeControl() {
   return (
     <MenuTrigger>
       <Button className="theme-control" aria-label={`Color theme: ${label}`}>
-        <svg
-          className="theme-control__icon"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="8" />
-          <path d="M12 4v16M12 4a8 8 0 0 1 0 16" fill="currentColor" />
-        </svg>
+        <Icon name="theme" size={18} />
         <span>Theme</span>
       </Button>
       <Popover className="theme-popover" placement="bottom end">
@@ -121,7 +110,7 @@ export function ThemeControl() {
                     : "Dark"}
               </span>
               <span className="theme-check" aria-hidden="true">
-                {preference === mode ? "✓" : ""}
+                {preference === mode ? <Icon name="check" size={16} /> : null}
               </span>
             </MenuItem>
           ))}

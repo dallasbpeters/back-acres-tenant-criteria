@@ -57,6 +57,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     description:
       "Temporary test fixture — not a rental offer.\n\nFull description ends here; this paragraph must remain visible.",
     rentCents: 100000,
+    amenities: ["yard"],
     bedrooms: 2,
     bathrooms: 1,
     availableDate: "",
@@ -70,6 +71,30 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
       data: { action: "property", id, revision, data: { ...data, published } },
     });
   expect((await save(0, false)).ok()).toBe(true);
+  await page.goto("/admin#properties");
+  await page
+    .getByRole("button", { name: `Edit ${data.name}`, exact: true })
+    .click();
+  const amenities = page.getByRole("group", { name: "Amenities", exact: true });
+  await expect(
+    amenities.getByRole("checkbox", { name: "Yard", exact: true }),
+  ).toBeChecked();
+  await amenities.getByRole("checkbox", { name: "Patio", exact: true }).check();
+  await expect(amenities.locator(".amenity-option svg")).toHaveCount(16);
+  await page
+    .getByRole("button", { name: "Save property", exact: true })
+    .click();
+  await expect
+    .poll(async () => {
+      const records = await (
+        await page.request.get("/api/admin/management")
+      ).json();
+      return records.properties.find((p: { id: string }) => p.id === id)
+        ?.revision;
+    })
+    .toBe(2);
+  data.amenities.push("patio");
+
   expect(
     (
       await page.request.post("/api/admin/photos", {
@@ -306,6 +331,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     Object.keys(files).filter((p) => p.startsWith("photos/")),
   ).toHaveLength(2);
   expect(strFromU8(files["listing.txt"])).toContain(data.address);
+  expect(strFromU8(files["listing.txt"])).toContain("Amenities: Yard, Patio");
   expect(strFromU8(files["READ-ME.txt"])).toContain(
     "Nothing has been submitted",
   );
@@ -359,12 +385,25 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     ),
   ).toBe(true);
   await mobile.close();
-  expect((await save(1, true)).ok()).toBe(true);
+  expect((await save(2, true)).ok()).toBe(true);
   expect((await request.get(photos[0].url)).ok()).toBe(true);
   const property = (await records()).properties.find(
     (p: { id: string }) => p.id === id,
   );
   await page.goto(`/properties/${property.slug}`);
+  await expect(page.locator("#property-overview")).toHaveCSS(
+    "border-bottom-width",
+    "0px",
+  );
+  await expect(page.locator("#property-about")).toHaveCSS(
+    "border-top-width",
+    "0px",
+  );
+  await expect(page.locator("#property-amenities li")).toHaveCount(2);
+  await expect(page.locator("#property-amenities li svg")).toHaveCount(2);
+  await expect(page.locator("#property-amenities")).toContainText("Yard");
+  await expect(page.locator("#property-amenities")).toContainText("Patio");
+
   await expect(
     page.getByRole("region", { name: "Property photos" }),
   ).toBeVisible();
@@ -376,6 +415,14 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   ).toBeVisible();
   const viewer = page.getByRole("dialog", { name: `${data.name} · Photos` });
   await expect(viewer).toBeVisible();
+  const closePhotos = viewer.getByRole("button", {
+    name: "Close photos",
+    exact: true,
+  });
+  await expect(closePhotos.locator("svg")).toHaveCount(1);
+  await expect(closePhotos).toHaveText("");
+  await expect(closePhotos).toHaveCSS("border-top-width", "0px");
+
   await expect(viewer.getByText("Photo 2 of 2", { exact: true })).toBeVisible();
   await page.keyboard.press("ArrowRight");
   await expect(viewer.getByText("Photo 1 of 2", { exact: true })).toBeVisible();
@@ -442,7 +489,7 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
       })
     ).ok(),
   ).toBe(true);
-  expect((await save(2, false)).ok()).toBe(true);
+  expect((await save(3, false)).ok()).toBe(true);
   expect((await request.get(photos[0].url)).status()).toBe(404);
   await cleanup();
   await page.goto("/admin/adverse-actions/new");

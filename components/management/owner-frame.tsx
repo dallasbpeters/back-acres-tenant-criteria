@@ -1,5 +1,6 @@
 "use client";
 import { BrandLogoImage, useBranding } from "@/components/brand-logo";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 
 import { ThemeControl } from "@/components/ui/theme";
@@ -38,7 +39,12 @@ export function OwnerFrame({
           </span>
         </a>
         <nav aria-label="Account navigation">
-          {signedIn && <a href="/admin">Workspace</a>}
+          {signedIn && (
+            <a href="/admin">
+              <Icon name="home" size={18} />
+              Workspace
+            </a>
+          )}
           <a href="/properties" target="_blank" rel="noreferrer">
             View site ↗
           </a>
@@ -62,6 +68,7 @@ export function OwnerFrame({
                 }
               }}
             >
+              <Icon name="signout" size={18} />
               {leaving ? "Signing out…" : "Sign out"}
             </Button>
           )}

@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "@/components/ui/icon";
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -78,8 +79,14 @@ export function LeasePdfPreview({
           <h4>Lease PDF preview</h4>
           <p>The actual lease PDF, with signatures recorded so far.</p>
         </div>
-        <Button type="button" onClick={onClose}>
-          Close preview
+        <Button
+          type="button"
+          className="icon-button"
+          onClick={onClose}
+          aria-label="Close preview"
+          title="Close preview"
+        >
+          <Icon name="close" size={24} />
         </Button>
       </div>
       <div className="lease-pdf-toolbar" aria-label="PDF controls">

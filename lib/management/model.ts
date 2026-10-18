@@ -1,3 +1,4 @@
+import { amenityIds } from "./amenities";
 import { z } from "zod";
 import { POLICY, selectionCriteriaText } from "../policy";
 const text = (max = 300) => z.string().trim().max(max);
@@ -19,6 +20,7 @@ export const propertySchema = z
     name: required(),
     address: required(500),
     description: required(10000),
+    amenities: z.array(z.enum(amenityIds)).max(amenityIds.length).optional(),
     rentCents: z.number().int().min(0).max(10000000),
     bedrooms: z.number().int().min(0).max(50),
     bathrooms: z.number().min(0).max(50),

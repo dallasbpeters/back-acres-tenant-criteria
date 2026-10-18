@@ -69,3 +69,33 @@ test("rent schedules require owner authorization and a finite installment count"
       false,
     );
 });
+
+test("property amenities accept known features and preserve legacy listings", () => {
+  const property = {
+    name: "Test",
+    address: "1 Test St",
+    description: "Test property",
+    rentCents: 100000,
+    bedrooms: 2,
+    bathrooms: 1,
+    availableDate: "",
+    contact: "Owner",
+    published: false,
+    acceptingApplications: false,
+  };
+  assert.equal(propertySchema.safeParse(property).success, true);
+  assert.deepEqual(
+    propertySchema.parse({ ...property, amenities: ["yard", "patio"] })
+      .amenities,
+    ["yard", "patio"],
+  );
+  assert.equal(
+    propertySchema.safeParse({ ...property, amenities: ["unverified_feature"] })
+      .success,
+    false,
+  );
+  assert.deepEqual(
+    propertySchema.parse({ ...property, amenities: [] }).amenities,
+    [],
+  );
+});

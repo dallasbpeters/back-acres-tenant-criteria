@@ -1,3 +1,6 @@
+import { Icon } from "@/components/ui/icon";
+import { PropertyAmenities } from "@/components/management/amenities";
+import { availabilityDate } from "@/lib/management/display";
 import { PropertyDescription } from "@/components/management/property-description";
 import { notRemoved } from "@/lib/management/not-removed";
 import { ListingGallery } from "@/components/management/listing-gallery";
@@ -33,7 +36,7 @@ export default async function PropertyPage({
   return (
     <ManagementShell title={p.data.name} hideHeading>
       <a className="property-back" href="/properties">
-        ← All properties
+        <Icon name="back" size={18} /> All properties
       </a>
       <div id="property-photos">
         <ListingGallery
@@ -45,41 +48,93 @@ export default async function PropertyPage({
         />
       </div>
       <header className="property-heading">
-        <p className="eyebrow">Back Acres / Rental property</p>
-        <h1>{p.data.name}</h1>
-        <p>{p.data.address}</p>
+        <div className="property-heading-title">
+          <p className="property-status">
+            <span aria-hidden="true" />
+            {p.data.acceptingApplications
+              ? "Accepting applications"
+              : "Applications closed"}
+          </p>
+          <h1>{p.data.name}</h1>
+          <p className="property-address">{p.data.address}</p>
+        </div>
+        <div className="property-heading-summary">
+          <p className="property-price">
+            {dollars(p.data.rentCents)}
+            <span> / month</span>
+          </p>
+          <p>
+            {p.data.bedrooms} beds <span aria-hidden="true">·</span>{" "}
+            {p.data.bathrooms} baths
+          </p>
+        </div>
       </header>
       <nav className="property-section-nav" aria-label="Property information">
+        <a href="#property-overview">Overview</a>
         <a href="#property-photos">Photos</a>
         <a href="#property-about">About</a>
+        {!!p.data.amenities?.length && (
+          <a href="#property-amenities">Amenities</a>
+        )}
         <a href="#property-criteria">Selection criteria</a>
         <a href="#property-contact">Contact & apply</a>
       </nav>
       <div className="property-content-layout">
         <div>
-          <dl className="document-details property-facts">
-            <div>
-              <dt>Monthly rent</dt>
-              <dd>{dollars(p.data.rentCents)}</dd>
-            </div>
-            <div>
-              <dt>Bedrooms</dt>
-              <dd>{p.data.bedrooms}</dd>
-            </div>
-            <div>
-              <dt>Bathrooms</dt>
-              <dd>{p.data.bathrooms}</dd>
-            </div>
-            <div>
-              <dt>Available</dt>
-              <dd>{p.data.availableDate || "Contact owner"}</dd>
-            </div>
-          </dl>
-          <section id="property-about" className="management-section">
-            <h2>About this property</h2>
-            <PropertyDescription text={p.data.description} />
+          <section
+            id="property-overview"
+            className="property-overview"
+            aria-label="Property overview"
+          >
+            <dl className="property-overview-grid">
+              <div>
+                <dt>
+                  <Icon name="bed" size={22} />
+                  Bedrooms
+                </dt>
+                <dd>
+                  {p.data.bedrooms}
+                  <span>bedrooms</span>
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <Icon name="bath" size={22} />
+                  Bathrooms
+                </dt>
+                <dd>
+                  {p.data.bathrooms}
+                  <span>bathrooms</span>
+                </dd>
+              </div>
+              <div className="property-overview-date">
+                <dt>
+                  <Icon name="calendar" size={22} />
+                  Available from
+                </dt>
+                <dd>{availabilityDate(p.data.availableDate)}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Icon name="money" size={22} />
+                  Monthly rent
+                </dt>
+                <dd>
+                  {dollars(p.data.rentCents)}
+                  <span>per month</span>
+                </dd>
+              </div>
+            </dl>
           </section>
-          <section id="property-criteria" className="management-section">
+          <section id="property-about" className="property-content-section">
+            <h2>About this property</h2>
+            <PropertyDescription text={p.data.description} grid />
+          </section>
+          <PropertyAmenities selected={p.data.amenities} />
+          <section
+            id="property-criteria"
+            className="property-content-section property-criteria-section"
+          >
             <h2>Selection criteria</h2>
             <p>{POLICY.version}</p>
             <p className="document-text">{selectionCriteriaText()}</p>
@@ -90,22 +145,32 @@ export default async function PropertyPage({
           className="property-apply"
           aria-label="Contact and application"
         >
-          <p className="eyebrow">Rental details</p>
-          <h2>
-            {dollars(p.data.rentCents)} <span>/ month</span>
-          </h2>
-          <p>
-            {p.data.bedrooms} bedrooms · {p.data.bathrooms} bathrooms
-          </p>
-          <p>Available: {p.data.availableDate || "Contact owner"}</p>
+          <div className="property-apply-heading">
+            <p className="eyebrow">Back Acres Rental</p>
+            <h2>Interested in this home?</h2>
+            <p>Available {availabilityDate(p.data.availableDate)}</p>
+          </div>
           {p.data.acceptingApplications ? (
             <a className="submit-button" href={`/properties/${p.slug}/apply`}>
-              Apply for this property <span aria-hidden="true">→</span>
+              Apply for this property <Icon name="next" />
             </a>
           ) : (
             <p>Applications are currently closed.</p>
           )}
-          <p className="property-contact-detail">Questions? {p.data.contact}</p>
+          <div className="property-contact-detail">
+            <span className="eyebrow">Property contact</span>
+            <p>{p.data.contact}</p>
+          </div>
+          <a
+            className="property-location-link"
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.data.address)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="location" />
+            View location
+            <Icon name="external" size={16} />
+          </a>
           <a href="#property-criteria">Review selection criteria</a>
         </aside>
       </div>

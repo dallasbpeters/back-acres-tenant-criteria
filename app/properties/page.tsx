@@ -1,7 +1,8 @@
+import { Icon } from "@/components/ui/icon";
 import { ListingGallery } from "@/components/management/listing-gallery";
 import { PropertyDescription } from "@/components/management/property-description";
 import { notRemoved } from "@/lib/management/not-removed";
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { listingPhotos, properties } from "@/lib/db/schema";
 import { ManagementShell } from "@/components/management/shell";
@@ -28,10 +29,10 @@ export default async function PropertiesPage() {
       <p className="hero-lede">
         Review the property details and selection criteria before applying.
       </p>
-      <div className="property-list">
+      <div className="property-list property-list--grid">
         {published.length ? (
           published.map((p) => (
-            <article key={p.id}>
+            <article className="property-listing" key={p.id}>
               <ListingGallery
                 name={p.data.name}
                 photos={photos
@@ -41,29 +42,31 @@ export default async function PropertiesPage() {
                     url: `/api/photos/${photo.id}`,
                   }))}
               />
-              <h2>
-                <a href={`/properties/${p.slug}`}>{p.data.name}</a>
-              </h2>
-              <p>{p.data.address}</p>
-              <p>
-                {dollars(p.data.rentCents)} / month · {p.data.bedrooms} bedrooms
-                · {p.data.bathrooms} bathrooms
-              </p>
-              <p>
-                {p.data.acceptingApplications
-                  ? "Accepting applications"
-                  : "Applications closed"}
-              </p>
+              <div className="property-listing-info">
+                <h2>
+                  <a href={`/properties/${p.slug}`}>{p.data.name}</a>
+                </h2>
+                <p>{p.data.address}</p>
+                <p>
+                  {dollars(p.data.rentCents)} / month · {p.data.bedrooms}{" "}
+                  bedrooms · {p.data.bathrooms} bathrooms
+                </p>
+                <p>
+                  {p.data.acceptingApplications
+                    ? "Accepting applications"
+                    : "Applications closed"}
+                </p>
+                <a
+                  className="property-details-link"
+                  href={`/properties/${p.slug}`}
+                >
+                  View property details <Icon name="next" size={18} />
+                </a>
+              </div>
               <section className="property-about">
                 <h3>About this property</h3>
-                <PropertyDescription text={p.data.description} />
+                <PropertyDescription text={p.data.description} grid />
               </section>
-              <a
-                className="property-details-link"
-                href={`/properties/${p.slug}`}
-              >
-                View property details →
-              </a>
             </article>
           ))
         ) : (
