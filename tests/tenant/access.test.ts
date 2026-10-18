@@ -1,5 +1,6 @@
 // Register isolated database and owner-session fixtures before importing route code.
 import "../stripe/harness";
+import { NextRequest } from "next/server";
 import {
   afterAll,
   beforeAll,
@@ -9,6 +10,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { GET as ownerRecords } from "../../app/api/admin/management/route";
 import { POST as ownerCommand } from "../../app/api/admin/tenants/route";
 import { POST as tenantCommand } from "../../app/api/tenant/route";
 import { db } from "../../lib/db";
@@ -116,6 +118,42 @@ const assign = (patch = {}) =>
     })
   );
 describe("Clerk identity and tenancy boundaries", () => {
+  it("lets a connected tenant request maintenance without an owner-made link", async () => {
+    await property();
+    expect((await assign()).status).toBe(200);
+    const [access] = await assignments("user_tenant_a");
+    const submitted = await tenantCommand(
+      request("/api/tenant", {
+        action: "maintenance",
+        data: {
+          accessNotes: "",
+          description: "Fixture leak under sink",
+          email: "tenant@example.invalid",
+          name: "Tenant A",
+          phone: "555-0100",
+          priority: "routine",
+          subject: "Fixture sink",
+        },
+        id: access.id,
+      })
+    );
+    expect(submitted.status).toBe(201);
+    const records = await (
+      await ownerRecords(
+        new NextRequest("https://rental.example.invalid/api/admin/management")
+      )
+    ).json();
+    expect(
+      records.maintenance.map(
+        (m: { data: { subject: string } }) => m.data.subject
+      )
+    ).toContain("Fixture sink");
+    // The tenant's internal maintenance identity is not an owner request link.
+    expect(
+      records.residentLinks.map((l: { id: string }) => l.id)
+    ).not.toContain(access.residentLinkId);
+  });
+
   it("requires an active Clerk session and fails closed without keys", async () => {
     clerk.userId = null;
     expect(await tenantIdentity()).toBeNull();

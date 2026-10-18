@@ -3,13 +3,12 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { ManagementShell } from "@/components/management/shell";
+import { MaintenanceRequestList } from "@/components/tenant/maintenance-requests";
 import { TenantNavigation } from "@/components/tenant/navigation";
 import { PaymentHistory } from "@/components/tenant/payments";
-import { TenantRequestForm } from "@/components/tenant/request-form";
 import { db } from "@/lib/db";
 import {
   invoices,
-  maintenanceRequests,
   paymentHistory,
   properties,
   rentSchedules,
@@ -18,6 +17,7 @@ import { notRemoved } from "@/lib/management/not-removed";
 import { paymentMode } from "@/lib/management/stripe";
 import { assignments, tenantIdentity } from "@/lib/tenant/access";
 import { tenantAuthReady } from "@/lib/tenant/config";
+import { tenantMaintenanceRequests } from "@/lib/tenant/maintenance";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tenant portal | Back Acres" };
 export default async function TenantPortal() {
@@ -36,10 +36,6 @@ export default async function TenantPortal() {
     redirect("/sign-in");
   }
   const user = await currentUser();
-  const email =
-    user?.emailAddresses.find(
-      (address) => address.id === user.primaryEmailAddressId
-    )?.emailAddress ?? "";
   let content: ReactNode;
   try {
     const accessRows = await assignments(userId);
@@ -81,20 +77,7 @@ export default async function TenantPortal() {
                     )
                     .orderBy(desc(rentSchedules.createdAt))
                 : [],
-              d
-                .select()
-                .from(maintenanceRequests)
-                .where(
-                  and(
-                    eq(
-                      maintenanceRequests.residentLinkId,
-                      access.residentLinkId
-                    ),
-                    notRemoved(maintenanceRequests.id)
-                  )
-                )
-                .orderBy(desc(maintenanceRequests.createdAt))
-                .limit(100),
+              tenantMaintenanceRequests(access.residentLinkId, 3),
             ]);
           const [property] = propertyRows;
           // The history query uses the already-authorized invoice rows, never URL IDs.
@@ -130,38 +113,14 @@ export default async function TenantPortal() {
                   aria-label={`${property?.data.name} maintenance`}
                   id={index === 0 ? "maintenance" : undefined}
                 >
-                  <h3>Maintenance requests</h3>
-                  {requests.length ? (
-                    <ul className="tenant-request-list">
-                      {requests.map((request) => (
-                        <li key={request.id}>
-                          <strong>{request.data.subject}</strong>
-                          <span>
-                            {request.status.replaceAll("_", " ")} ·{" "}
-                            {request.createdAt.toLocaleDateString("en-US", {
-                              timeZone: "America/Chicago",
-                            })}
-                          </span>
-                          <p>{request.data.description}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>
-                      No maintenance requests submitted through this account
-                      yet.
-                    </p>
-                  )}
-                  <details>
-                    <summary>New maintenance request</summary>
-                    <TenantRequestForm
-                      contact={property?.data.contact}
-                      email={email}
-                      id={access.id}
-                      name={access.name}
-                      phone={access.phone}
-                    />
-                  </details>
+                  <h3>Recent maintenance requests</h3>
+                  <MaintenanceRequestList requests={requests} />
+                  <a
+                    className="property-details-link"
+                    href="/tenant/maintenance"
+                  >
+                    Submit or review maintenance requests
+                  </a>
                   <p className="small-note">
                     Property contact: {property?.data.contact}
                   </p>

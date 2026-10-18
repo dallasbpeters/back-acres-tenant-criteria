@@ -1,7 +1,7 @@
 const pattern1 = /^(sk|rk)_live_/;
 
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, notExists } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
@@ -21,6 +21,7 @@ import {
   removedRecords,
   rentSchedules,
   residentLinks,
+  tenantAccess,
 } from "@/lib/db/schema";
 import { disclosureFields } from "@/lib/leases/disclosures";
 import { documentText, leaseDocumentSchema } from "@/lib/leases/document";
@@ -144,7 +145,19 @@ export async function GET(request: NextRequest) {
       d
         .select()
         .from(residentLinks)
-        .where(notRemoved(residentLinks.id))
+        .where(
+          and(
+            notRemoved(residentLinks.id),
+            // Tenant accounts carry an internal maintenance identity; only
+            // links the owner created by hand belong in this list.
+            notExists(
+              d
+                .select({ id: tenantAccess.id })
+                .from(tenantAccess)
+                .where(eq(tenantAccess.residentLinkId, residentLinks.id))
+            )
+          )
+        )
         .orderBy(desc(residentLinks.createdAt))
         .limit(200),
       d

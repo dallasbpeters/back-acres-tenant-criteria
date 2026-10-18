@@ -385,73 +385,59 @@ export function Dashboard() {
             <section>
               <h2>Maintenance</h2>
               <p>
-                Create a private link for each resident. Anyone with the link
-                can submit a request; it does not expose past requests. Links
-                expire after one year and can be revoked.
+                Tenants submit requests from the Maintenance page of their
+                tenant portal. Connect a tenant&apos;s account to a property
+                under Tenants; no request link is needed.
               </p>
-              <form
-                className="management-form"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  await save({
-                    action: "residentLink",
-                    propertyId: f.get("propertyId"),
-                    residentName: f.get("residentName"),
-                  });
-                }}
-              >
-                <div className="fields">
-                  <PropertySelect properties={records.properties} />
-                  <Field label="Resident name" name="residentName" />
-                </div>
-                <Button
-                  className="submit-button"
-                  disabled={busy || !records.properties.length}
-                  type="submit"
-                  variant="primary"
-                >
-                  Create resident link
-                </Button>
-              </form>
-              {records.residentLinks.map((l) => (
-                <article className="record" key={l.id}>
-                  <h3>
-                    {l.residentName} · {propertyName(l.propertyId)}
-                  </h3>
-                  <p>
-                    {l.revoked
-                      ? "Revoked"
-                      : `Expires ${new Date(l.expiresAt).toLocaleDateString()}`}
+              {records.residentLinks.length > 0 && (
+                <details>
+                  <summary>
+                    Older request links ({records.residentLinks.length})
+                  </summary>
+                  <p className="small-note">
+                    Links created before the tenant portal. They keep working
+                    until they expire or you revoke them.
                   </p>
-                  <RemoveButton
-                    disabled={busy}
-                    id={l.id}
-                    kind="residentLink"
-                    name={l.residentName}
-                    onRemoved={load}
-                  />
-                  {!l.revoked && (
-                    <>
-                      <CopyLink url={l.url} />
-                      <div className="management-actions">
-                        <a href={l.url} rel="noreferrer" target="_blank">
-                          Open request form
-                        </a>
-                        <Button
-                          disabled={busy}
-                          onClick={() =>
-                            save({ action: "revokeLink", id: l.id })
-                          }
-                          type="submit"
-                        >
-                          Revoke link
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </article>
-              ))}
+                  {records.residentLinks.map((l) => (
+                    <article className="record" key={l.id}>
+                      <h3>
+                        {l.residentName} · {propertyName(l.propertyId)}
+                      </h3>
+                      <p>
+                        {l.revoked
+                          ? "Revoked"
+                          : `Expires ${new Date(l.expiresAt).toLocaleDateString()}`}
+                      </p>
+                      <RemoveButton
+                        disabled={busy}
+                        id={l.id}
+                        kind="residentLink"
+                        name={l.residentName}
+                        onRemoved={load}
+                      />
+                      {!l.revoked && (
+                        <>
+                          <CopyLink url={l.url} />
+                          <div className="management-actions">
+                            <a href={l.url} rel="noreferrer" target="_blank">
+                              Open request form
+                            </a>
+                            <Button
+                              disabled={busy}
+                              onClick={() =>
+                                save({ action: "revokeLink", id: l.id })
+                              }
+                              type="submit"
+                            >
+                              Revoke link
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </article>
+                  ))}
+                </details>
+              )}
               <h2>Requests</h2>
               {!records.maintenance.length && (
                 <p className="management-empty">No maintenance requests yet.</p>
@@ -753,7 +739,7 @@ function PropertyWorkspace({
                 <a href="/admin#maintenance" rel="noreferrer" target="_blank">
                   Open maintenance portal
                 </a>
-                <small>Manage resident request links in a new tab.</small>
+                <small>Review tenant maintenance requests in a new tab.</small>
               </div>
             </div>
             <label className="field">

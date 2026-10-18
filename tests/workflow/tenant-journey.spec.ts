@@ -510,7 +510,12 @@ test("tenant lifecycle: account, assigned access, signed lease PDF, payment, ACH
       await expect(
         page.getByText("PRIVATE other household invoice")
       ).toHaveCount(0);
-      await page.getByText("New maintenance request", { exact: true }).click();
+      // Maintenance is its own portal area; the owner sends no request link.
+      await page
+        .getByRole("navigation", { name: "Tenant navigation" })
+        .getByRole("link", { exact: true, name: "Maintenance" })
+        .click();
+      await expect(page).toHaveURL(`${origin}/tenant/maintenance`);
       await page
         .getByLabel("Subject", { exact: true })
         .fill("TEST ONLY dripping kitchen faucet");
@@ -526,6 +531,10 @@ test("tenant lifecycle: account, assigned access, signed lease PDF, payment, ACH
         .click();
       await expect(page.getByRole("status")).toContainText("Request received");
       await page.reload();
+      await expect(
+        page.getByText("TEST ONLY dripping kitchen faucet", { exact: true })
+      ).toBeVisible();
+      await page.goto("/tenant");
       await expect(
         page.getByText("TEST ONLY dripping kitchen faucet", { exact: true })
       ).toBeVisible();
