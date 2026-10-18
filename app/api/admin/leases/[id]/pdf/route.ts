@@ -1,26 +1,38 @@
+const pattern1 = /^[0-9a-f-]{36}$/;
+
+import { and, desc, eq, ne } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
-import { notRemoved } from "@/lib/management/not-removed";
-import { NextRequest, NextResponse } from "next/server";
-import { and, eq, desc, ne } from "drizzle-orm";
 import { guard, reply } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import {
-  leaseDrafts,
   brandVersions,
+  leaseDrafts,
   leasePackets,
   leaseSigners,
 } from "@/lib/db/schema";
-import { completePacket } from "@/lib/leases/signing-store";
-import { signaturePdf } from "@/lib/leases/signature-pdf";
 import { leasePdf } from "@/lib/leases/pdf";
+import { signaturePdf } from "@/lib/leases/signature-pdf";
+import { completePacket } from "@/lib/leases/signing-store";
+import { notRemoved } from "@/lib/management/not-removed";
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  {
+    params,
+  }: {
+    params: Promise<{
+      id: string;
+    }>;
+  }
 ) {
   const denied = await guard(request);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/.test(id)) return reply({ error: "Not found." }, 404);
+  if (!pattern1.test(id)) {
+    return reply({ error: "Not found." }, 404);
+  }
   try {
     const [draft] = await db()
       .select()
@@ -29,15 +41,17 @@ export async function GET(
         and(
           eq(leaseDrafts.id, id),
           notRemoved(leaseDrafts.id),
-          notRemoved(leaseDrafts.propertyId),
-        ),
+          notRemoved(leaseDrafts.propertyId)
+        )
       );
-    if (!draft) return reply({ error: "Not found." }, 404);
+    if (!draft) {
+      return reply({ error: "Not found." }, 404);
+    }
     const [candidate] = await db()
       .select()
       .from(leasePackets)
       .where(
-        and(eq(leasePackets.draftId, id), ne(leasePackets.status, "voided")),
+        and(eq(leasePackets.draftId, id), ne(leasePackets.status, "voided"))
       );
     const packet = candidate ? await completePacket(candidate.id) : null;
     const [brand] = await db()
@@ -55,28 +69,46 @@ export async function GET(
             .orderBy(leaseSigners.id)
         : [];
     const partial = signers.some((s) => s.signedAt);
-    const bytes = packet?.finalPdf
-      ? Buffer.from(packet.finalPdf, "base64")
-      : preview && packet && partial
-        ? await signaturePdf(packet, signers, false)
-        : packet
-          ? Buffer.from(packet.basePdf, "base64")
-          : await leasePdf(draft.body, id, draft.document, {
-              name: brand?.name ?? "Back Acres Rental",
-              logoPng: brand?.logoPng ?? null,
-            });
+    const resolveBytes1 = async () => {
+      if (packet?.finalPdf) {
+        return Buffer.from(packet.finalPdf, "base64");
+      }
+      if (preview && packet && partial) {
+        return await signaturePdf(packet, signers, false);
+      }
+      if (packet) {
+        return Buffer.from(packet.basePdf, "base64");
+      }
+      return await leasePdf(draft.body, id, draft.document, {
+        logoPng: brand?.logoPng ?? null,
+        name: brand?.name ?? "Back Acres Rental",
+      });
+    };
+    const bytes = await resolveBytes1();
     const signaturePage =
       preview && packet && partial
         ? (
             await PDFDocument.load(Buffer.from(packet.basePdf, "base64"))
           ).getPageCount() + 1
         : 0;
+    const resolveResult2 = () => {
+      if (packet?.finalPdf) {
+        return "signed";
+      }
+      if (partial) {
+        return "in-progress";
+      }
+      if (packet) {
+        return "for-signature";
+      }
+      return "draft";
+    };
     return new NextResponse(Buffer.from(bytes), {
       headers: {
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": `attachment; filename="lease-${resolveResult2()}-${id}.pdf"`,
         "Content-Type": "application/pdf",
         "X-Lease-Signature-Page": String(signaturePage),
-        "Content-Disposition": `attachment; filename="lease-${packet?.finalPdf ? "signed" : partial ? "in-progress" : packet ? "for-signature" : "draft"}-${id}.pdf"`,
-        "Cache-Control": "private, no-store",
       },
     });
   } catch {

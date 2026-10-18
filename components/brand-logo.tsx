@@ -1,10 +1,18 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
-type Branding = { name: string; hasLogo: boolean; revision: string };
-const initialBrand: Branding = { name: "Back Acres", hasLogo: false, revision: "" };
-
+interface Branding {
+  hasLogo: boolean;
+  name: string;
+  revision: string;
+}
+const initialBrand: Branding = {
+  hasLogo: false,
+  name: "Back Acres",
+  revision: "",
+};
 export function useBranding() {
   const [brand, setBrand] = useState<Branding>(initialBrand);
   useEffect(() => {
@@ -12,12 +20,18 @@ export function useBranding() {
     const load = async () => {
       try {
         const response = await fetch("/api/branding");
-        if (!response.ok) return;
+        if (!response.ok) {
+          return;
+        }
         const value: Branding = await response.json();
-        if (active) setBrand(value);
-      } catch {}
+        if (active) {
+          setBrand(value);
+        }
+      } catch {
+        /* Best-effort fallback: retain the original result when this optional operation fails. */
+      }
     };
-    void load();
+    load();
     window.addEventListener("branding-updated", load);
     return () => {
       active = false;
@@ -26,22 +40,24 @@ export function useBranding() {
   }, []);
   return brand;
 }
-
 export function BrandLogoImage({ brand }: { brand: Branding }) {
   const [failedRevision, setFailedRevision] = useState<string | null>(null);
-  if (!brand.hasLogo || failedRevision === brand.revision) return null;
+  if (!brand.hasLogo || failedRevision === brand.revision) {
+    return null;
+  }
+
   return (
-    <img
-      className="brand-logo"
-      src={`/api/branding/logo?v=${encodeURIComponent(brand.revision)}`}
+    <Image
       alt={`${brand.name} logo`}
-      width={48}
+      className="brand-logo"
       height={48}
       onError={() => setFailedRevision(brand.revision)}
+      src={`/api/branding/logo?v=${encodeURIComponent(brand.revision)}`}
+      unoptimized
+      width={48}
     />
   );
 }
-
 export function BrandLogo() {
   return <BrandLogoImage brand={useBranding()} />;
 }

@@ -1,28 +1,33 @@
-import { test } from "node:test";
+import { requireValue } from "@/lib/required";
+
+const pattern1 = /actual required terms/;
+
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
   blankNotice,
   noticeSchema,
   renderNotice,
   sendErrors,
 } from "../lib/adverse/notice";
+
 const complete = () => ({
   ...blankNotice(),
-  applicantName: "Test Applicant",
+  agencies: [
+    { address: "123 Test St", name: "Test Agency", phone: "800-555-0100" },
+  ],
   applicantEmail: "applicant@example.com",
-  senderContact: "owner@example.com",
+  applicantName: "Test Applicant",
   reasons: {
-    type: "doc",
     content: [
       {
+        content: [{ text: "Documented reason.", type: "text" }],
         type: "paragraph",
-        content: [{ type: "text", text: "Documented reason." }],
       },
     ],
+    type: "doc",
   },
-  agencies: [
-    { name: "Test Agency", address: "123 Test St", phone: "800-555-0100" },
-  ],
+  senderContact: "owner@example.com",
 });
 test("incomplete notices can be saved but cannot be sent", () => {
   assert.equal(noticeSchema.safeParse(blankNotice()).success, true);
@@ -32,8 +37,8 @@ test("incomplete notices can be saved but cannot be sent", () => {
 test("consumer report notice carries rights and all agencies", () => {
   const n = complete();
   n.agencies.push({
-    name: "Second Agency",
     address: "456 Test St",
+    name: "Second Agency",
     phone: "800-555-0101",
   });
   const result = renderNotice(n);
@@ -43,19 +48,20 @@ test("consumer report notice carries rights and all agencies", () => {
     "60 days",
     "right to dispute",
     "did not make this decision",
-  ])
+  ]) {
     assert.ok(result.text.includes(text));
+  }
 });
 test("credit score requires source, range, date and ordered factors", () => {
   const n = { ...complete(), scoreUsed: true };
   assert.ok(sendErrors(n).length);
   Object.assign(n, {
     score: "650",
-    scoreMin: "300",
-    scoreMax: "850",
     scoreDate: "2026-10-17",
-    scoreSource: "Test scoring source",
     scoreFactors: "1. First factor\n2. Second factor",
+    scoreMax: "850",
+    scoreMin: "300",
+    scoreSource: "Test scoring source",
   });
   assert.deepEqual(sendErrors(n), []);
   assert.ok(renderNotice(n).text.includes("range 300–850"));
@@ -65,32 +71,38 @@ test("credit score requires source, range, date and ordered factors", () => {
 test("all user text is escaped and rich content has an allowlist", () => {
   const n = complete();
   n.applicantName = "<script>alert(1)</script>";
-  n.reasons.content![0].content![0].text = "<img src=x onerror=alert(1)>";
-  const html = renderNotice(n).html;
+  const [paragraph] = requireValue(
+    n.reasons.content,
+    "Expected notice paragraph"
+  );
+  const [run] = requireValue(paragraph.content, "Expected paragraph content");
+  run.text = "<img src=x onerror=alert(1)>";
+
+  const { html } = renderNotice(n);
   assert.ok(!html.includes("<script>"));
   assert.ok(!html.includes("<img"));
   assert.ok(html.includes("&lt;img"));
   assert.equal(
     noticeSchema.safeParse({ ...n, reasons: { type: "iframe" } }).success,
-    false,
+    false
   );
   assert.equal(
     noticeSchema.safeParse({
       ...n,
       reasons: {
-        type: "text",
+        marks: [{ attrs: { href: "javascript:alert(1)" }, type: "link" }],
         text: "link",
-        marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }],
+        type: "text",
       },
     }).success,
-    false,
+    false
   );
 });
 test("non-report notices omit unrelated FCRA boilerplate and require alternative terms", () => {
   const n = {
     ...complete(),
-    reportUsed: false,
     action: "Higher rent required" as const,
+    reportUsed: false,
   };
   assert.ok(sendErrors(n).length);
   n.actionDetails = "Monthly rent would be $2,600.";
@@ -103,13 +115,13 @@ test("sourced notice drafts preserve identity and disclosures, require condition
     await import("../lib/adverse/templates");
   const original = {
     ...complete(),
-    scoreUsed: true,
     score: "650",
-    scoreMin: "300",
-    scoreMax: "850",
     scoreDate: "2026-10-17",
-    scoreSource: "Test source",
     scoreFactors: "Test factor",
+    scoreMax: "850",
+    scoreMin: "300",
+    scoreSource: "Test source",
+    scoreUsed: true,
   };
   for (const template of noticeTemplates) {
     const next = applyNoticeTemplate(
@@ -118,7 +130,7 @@ test("sourced notice drafts preserve identity and disclosures, require condition
       template.action === "Application denied"
         ? ""
         : "Actual conditions provided by owner",
-      "Verified applicant-specific fact.",
+      "Verified applicant-specific fact."
     );
     assert.equal(next.applicantName, original.applicantName);
     assert.equal(next.applicantEmail, original.applicantEmail);
@@ -130,13 +142,13 @@ test("sourced notice drafts preserve identity and disclosures, require condition
     assert.equal(next.template?.revision, noticeTemplateRevision);
     assert.ok(renderNotice(next).text.includes("60 days"));
     assert.ok(
-      renderNotice(next).text.includes("Verified applicant-specific fact."),
+      renderNotice(next).text.includes("Verified applicant-specific fact.")
     );
     assert.deepEqual(sendErrors(next), []);
   }
   assert.throws(
     () => applyNoticeTemplate(original, "report-deposit"),
-    /actual required terms/,
+    pattern1
   );
   assert.equal(
     noticeSchema.safeParse({
@@ -146,16 +158,20 @@ test("sourced notice drafts preserve identity and disclosures, require condition
         revision: noticeTemplateRevision,
       },
     }).success,
-    false,
+    false
   );
   const parsed = noticeSchema.parse({
     ...applyNoticeTemplate(original, "report-denial"),
     template: {
+      attorneyApproved: true,
       id: "report-denial",
       revision: noticeTemplateRevision,
-      attorneyApproved: true,
     },
   });
-  assert.equal("attorneyApproved" in parsed.template!, false);
+  assert.equal(
+    "attorneyApproved" in
+      requireValue(parsed.template, "Expected parsed.template"),
+    false
+  );
   assert.equal(noticeSchema.parse(complete()).template, undefined);
 });

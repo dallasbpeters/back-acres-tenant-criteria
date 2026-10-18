@@ -20,20 +20,32 @@ excluded from source linting. Markdown and SVG are not sent to Biome. Existing
 application rules are not disabled. VS Code's project settings use the Biome
 extension for supported source files, with format and safe fixes on save.
 
-## Existing lint baseline
+## Full-project gate and scoped exceptions
 
-Installing strict rules does not make the existing application compliant. The
-initial audit on October 18, 2026 reported **3,233 diagnostics across 146 checked
-files**, before any application-wide cleanup. Most are formatting, sorting,
-block-statement, inline-callback, non-null assertion, and other style rules; the
-report also includes correctness, accessibility, and security findings that need
-individual review.
+The original 3,233-finding baseline has been migrated. `npm run check` now checks
+the full source tree with no errors or warnings, and CI requires it alongside the
+tests, Stripe coverage, TypeScript, and the production build.
 
-The setup intentionally does not rewrite the application or suppress that debt.
-Staged files must pass before committing. The full-project lint command remains
-failing until the existing files are migrated. Existing CI continues to require
-unit tests, Stripe coverage, TypeScript, and the production build; it does not
-claim a clean full-project lint gate yet.
+The presets remain globally enabled. Source-local comments document deliberate
+exceptions rather than changing observable behavior merely to satisfy a heuristic:
+
+- Controlled DOM/React Aria callbacks capture current form/row values; these are
+  not memoized app children that benefit from extra callback memoization.
+- Provider pagination, payment/signature state transitions, ordered PDF output,
+  and stateful test fixtures await dependent steps sequentially.
+- The stylesheet keeps its component/theme cascade order; selectors are not moved
+  across responsive boundaries solely to sort specificity.
+- Multi-step request and document coordinators retain explicit branches for
+  validation, recovery, and rendering. Workflow/PDF regression tests protect output.
+- Native confirmations protect unsaved edits and financial/signing actions.
+- Static theme bootstrap and escaped/allowlisted notice HTML have explicit trust
+  boundaries. Untrusted raw HTML is not allowed elsewhere.
+- Drizzle's server-only schema assembly needs the complete schema export object.
+- Async test stubs preserve promise/rejection semantics without artificial awaits.
+
+Keep exceptions narrow and explained. A new lint finding should be fixed unless
+it represents one of these intentional behaviors; don't copy a suppression as a
+substitute for checking the code.
 
 ## Versions and verification
 

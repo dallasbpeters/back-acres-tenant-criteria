@@ -1,27 +1,30 @@
-import { notRemoved } from "@/lib/management/not-removed";
-import { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
-import { and, or, ilike, isNull, sql, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { noticeVersions, noticeDeliveries } from "@/lib/db/schema";
 import { guard, readBody, reply } from "@/lib/adverse/auth";
-import { noticeSchema, renderNotice } from "@/lib/adverse/notice";
+import { type Notice, noticeSchema, renderNotice } from "@/lib/adverse/notice";
+import { db } from "@/lib/db";
+import { noticeDeliveries, noticeVersions } from "@/lib/db/schema";
+import { notRemoved } from "@/lib/management/not-removed";
 export async function GET(request: NextRequest) {
   const denied = await guard(request);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
   try {
     const database = db();
     const documentId = request.nextUrl.searchParams.get("documentId");
-    if (documentId && !z.string().uuid().safeParse(documentId).success)
+    if (documentId && !z.string().uuid().safeParse(documentId).success) {
       return reply({ error: "Invalid notice identifier." }, 400);
+    }
     if (request.nextUrl.searchParams.get("view") === "list") {
       const offset = Math.max(
         0,
         Math.min(
-          1000000,
-          Math.floor(Number(request.nextUrl.searchParams.get("offset")) || 0),
-        ),
+          1_000_000,
+          Math.floor(Number(request.nextUrl.searchParams.get("offset")) || 0)
+        )
       );
       const q = (request.nextUrl.searchParams.get("q") ?? "")
         .trim()
@@ -36,51 +39,61 @@ export async function GET(request: NextRequest) {
           "unknown",
           "rejected",
         ].includes(status)
-      )
+      ) {
         return reply({ error: "Invalid notice status." }, 400);
+      }
       const latest = database
         .selectDistinctOn([noticeVersions.documentId], {
-          id: noticeVersions.id,
-          documentId: noticeVersions.documentId,
-          version: noticeVersions.version,
-          applicantName:
-            sql<string>`${noticeVersions.notice}->>'applicantName'`.as(
-              "applicant_name",
-            ),
+          action: sql<string>`${noticeVersions.notice}->>'action'`.as("action"),
           applicantEmail:
             sql<string>`${noticeVersions.notice}->>'applicantEmail'`.as(
-              "applicant_email",
+              "applicant_email"
             ),
-          property: sql<string>`${noticeVersions.notice}->>'property'`.as(
-            "property",
-          ),
-          action: sql<string>`${noticeVersions.notice}->>'action'`.as("action"),
+          applicantName:
+            sql<string>`${noticeVersions.notice}->>'applicantName'`.as(
+              "applicant_name"
+            ),
           createdAt: noticeVersions.createdAt,
+          documentId: noticeVersions.documentId,
+          id: noticeVersions.id,
+          property: sql<string>`${noticeVersions.notice}->>'property'`.as(
+            "property"
+          ),
           status: noticeDeliveries.status,
+          version: noticeVersions.version,
         })
         .from(noticeVersions)
         .leftJoin(
           noticeDeliveries,
-          eq(noticeVersions.id, noticeDeliveries.versionId),
+          eq(noticeVersions.id, noticeDeliveries.versionId)
         )
         .where(notRemoved(noticeVersions.documentId))
         .orderBy(noticeVersions.documentId, desc(noticeVersions.version))
         .as("latest_notices");
       const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+      const resolveResult1 = () => {
+        if (status === "all") {
+          return;
+        }
+        if (status === "draft") {
+          return isNull(latest.status);
+        }
+        return eq(latest.status, status);
+      };
       const rows = await database
         .select({
-          id: latest.id,
-          documentId: latest.documentId,
-          version: latest.version,
-          applicantName: latest.applicantName,
-          applicantEmail: latest.applicantEmail,
-          property: latest.property,
           action: latest.action,
+          applicantEmail: latest.applicantEmail,
+          applicantName: latest.applicantName,
           createdAt: latest.createdAt,
-          status: latest.status,
+          documentId: latest.documentId,
+          id: latest.id,
           lastAcceptedVersion: sql<
             number | null
           >`(select max(v.version) from adverse_notice_versions v join adverse_notice_deliveries d on d.version_id=v.id where v.document_id=${latest.documentId} and d.status='accepted')`,
+          property: latest.property,
+          status: latest.status,
+          version: latest.version,
         })
         .from(latest)
         .where(
@@ -89,15 +102,11 @@ export async function GET(request: NextRequest) {
               ? or(
                   ilike(latest.applicantName, pattern),
                   ilike(latest.applicantEmail, pattern),
-                  ilike(latest.property, pattern),
+                  ilike(latest.property, pattern)
                 )
               : undefined,
-            status === "all"
-              ? undefined
-              : status === "draft"
-                ? isNull(latest.status)
-                : eq(latest.status, status),
-          ),
+            resolveResult1()
+          )
         )
         .orderBy(desc(latest.createdAt), desc(latest.documentId))
         .limit(26)
@@ -111,31 +120,31 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(
       0,
       Math.min(
-        1000000,
-        Number(request.nextUrl.searchParams.get("offset")) || 0,
-      ),
+        1_000_000,
+        Number(request.nextUrl.searchParams.get("offset")) || 0
+      )
     );
     const rows = await database
       .select({
-        id: noticeVersions.id,
-        documentId: noticeVersions.documentId,
-        version: noticeVersions.version,
-        notice: noticeVersions.notice,
-        html: noticeVersions.html,
         createdAt: noticeVersions.createdAt,
-        status: noticeDeliveries.status,
+        documentId: noticeVersions.documentId,
+        html: noticeVersions.html,
+        id: noticeVersions.id,
+        notice: noticeVersions.notice,
         resendId: noticeDeliveries.resendId,
+        status: noticeDeliveries.status,
+        version: noticeVersions.version,
       })
       .from(noticeVersions)
       .leftJoin(
         noticeDeliveries,
-        eq(noticeVersions.id, noticeDeliveries.versionId),
+        eq(noticeVersions.id, noticeDeliveries.versionId)
       )
       .where(
         and(
           notRemoved(noticeVersions.documentId),
-          documentId ? eq(noticeVersions.documentId, documentId) : undefined,
-        ),
+          documentId ? eq(noticeVersions.documentId, documentId) : undefined
+        )
       )
       .orderBy(desc(noticeVersions.version), desc(noticeVersions.createdAt))
       .limit(200)
@@ -144,14 +153,16 @@ export async function GET(request: NextRequest) {
   } catch {
     return reply(
       { error: "Could not load notices. Check the database configuration." },
-      503,
+      503
     );
   }
 }
 export async function POST(request: NextRequest) {
   const denied = await guard(request);
-  if (denied) return denied;
-  let data;
+  if (denied) {
+    return denied;
+  }
+  let data: { notice: Notice; parentId: string | null; requestId: string };
   try {
     data = z
       .object({
@@ -163,7 +174,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return reply(
       { error: "Invalid notice. Check the fields and reason formatting." },
-      400,
+      400
     );
   }
   try {
@@ -174,10 +185,12 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(noticeVersions.id, data.requestId),
-          notRemoved(noticeVersions.documentId),
-        ),
+          notRemoved(noticeVersions.documentId)
+        )
       );
-    if (existing[0]) return reply({ version: existing[0] });
+    if (existing[0]) {
+      return reply({ version: existing[0] });
+    }
     let documentId: string = randomUUID();
     let version = 1;
     if (data.parentId) {
@@ -187,47 +200,50 @@ export async function POST(request: NextRequest) {
         .where(
           and(
             eq(noticeVersions.id, data.parentId),
-            notRemoved(noticeVersions.documentId),
-          ),
+            notRemoved(noticeVersions.documentId)
+          )
         );
-      if (!parent)
+      if (!parent) {
         return reply({ error: "The previous version no longer exists." }, 404);
+      }
       const [latest] = await database
         .select()
         .from(noticeVersions)
         .where(eq(noticeVersions.documentId, parent.documentId))
         .orderBy(desc(noticeVersions.version))
         .limit(1);
-      if (latest.id !== parent.id)
+      if (latest.id !== parent.id) {
         return reply(
           {
             error:
               "A newer version exists. Load it before saving your changes.",
           },
-          409,
+          409
         );
-      documentId = parent.documentId;
+      }
+      ({ documentId } = parent);
       version = parent.version + 1;
     }
     const rendered = renderNotice(data.notice);
     const [saved] = await database
       .insert(noticeVersions)
       .values({
-        id: data.requestId,
         documentId,
-        version,
-        notice: data.notice,
-        subject: rendered.subject,
         html: rendered.html,
+        id: data.requestId,
+        notice: data.notice,
         plainText: rendered.text,
+        subject: rendered.subject,
+        version,
       })
       .onConflictDoNothing()
       .returning();
-    if (!saved)
+    if (!saved) {
       return reply(
         { error: "Another save completed first. Reload the latest version." },
-        409,
+        409
       );
+    }
     return reply({ version: saved });
   } catch {
     return reply(
@@ -235,7 +251,7 @@ export async function POST(request: NextRequest) {
         error:
           "Could not save this version. Your edits are still on this screen.",
       },
-      503,
+      503
     );
   }
 }

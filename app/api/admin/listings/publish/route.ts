@@ -1,19 +1,21 @@
-import { notRemoved } from "@/lib/management/not-removed";
 import { randomUUID } from "node:crypto";
-import { NextRequest } from "next/server";
-import { and, eq, asc } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { guard, readBody, reply } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import {
   listingPhotos,
   listingPublications,
   properties,
 } from "@/lib/db/schema";
-import { guard, readBody, reply } from "@/lib/adverse/auth";
 import { listingDigest } from "@/lib/management/listing-digest";
+import { notRemoved } from "@/lib/management/not-removed";
 export async function POST(request: NextRequest) {
   const denied = await guard(request);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
   const parsed = z
     .object({
       propertyId: z.string().uuid(),
@@ -21,8 +23,9 @@ export async function POST(request: NextRequest) {
       status: z.enum(["not_started", "submitted", "live", "removed"]),
     })
     .safeParse(await readBody(request).catch(() => null));
-  if (!parsed.success)
+  if (!parsed.success) {
     return reply({ error: "Choose a listing website and status." }, 400);
+  }
   try {
     const b = parsed.data,
       d = db();
@@ -30,33 +33,35 @@ export async function POST(request: NextRequest) {
       .select()
       .from(properties)
       .where(and(eq(properties.id, b.propertyId), notRemoved(properties.id)));
-    if (!property) return reply({ error: "Property not found." }, 404);
+    if (!property) {
+      return reply({ error: "Property not found." }, 404);
+    }
     const photos = await d
-      .select({ id: listingPhotos.id, caption: listingPhotos.caption })
+      .select({ caption: listingPhotos.caption, id: listingPhotos.id })
       .from(listingPhotos)
       .where(
         and(
           eq(listingPhotos.propertyId, b.propertyId),
-          eq(listingPhotos.archived, false),
-        ),
+          eq(listingPhotos.archived, false)
+        )
       )
       .orderBy(asc(listingPhotos.position), asc(listingPhotos.createdAt));
     const values = {
       ...b,
-      id: randomUUID(),
       contentDigest: listingDigest(property.data, photos),
+      id: randomUUID(),
       updatedAt: new Date(),
     };
     await d
       .insert(listingPublications)
       .values(values)
       .onConflictDoUpdate({
-        target: [listingPublications.propertyId, listingPublications.provider],
         set: {
-          status: b.status,
           contentDigest: values.contentDigest,
+          status: b.status,
           updatedAt: values.updatedAt,
         },
+        target: [listingPublications.propertyId, listingPublications.provider],
       });
     return reply({ ok: true });
   } catch {

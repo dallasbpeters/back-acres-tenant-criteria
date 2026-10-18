@@ -1,26 +1,27 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-
-import { RemoveButton } from "./remove-button";
-import { terminalSchedules } from "@/lib/management/removal";
-import { AppSelect } from "@/components/ui/select";
 import { useState } from "react";
-import { Field, PropertySelect, type PropertyRecord } from "./dashboard";
+import { Button } from "@/components/ui/button";
+import { AppSelect } from "@/components/ui/select";
 import { dollars } from "@/lib/management/model";
-export type RentScheduleRecord = {
-  id: string;
-  propertyId: string;
-  payerName: string;
-  payerEmail: string;
-  monthlyCents: number;
-  firstDate: string;
-  installments: number;
-  mode: string;
-  status: string;
-  stripeScheduleId: string | null;
+import { terminalSchedules } from "@/lib/management/removal";
+import { requireValue } from "@/lib/required";
+import { Field, type PropertyRecord, PropertySelect } from "./dashboard";
+import { RemoveButton } from "./remove-button";
+export interface RentScheduleRecord {
   collection: string;
   enrollmentUrl: string | null;
-};
+  firstDate: string;
+  id: string;
+  installments: number;
+  mode: string;
+  monthlyCents: number;
+  payerEmail: string;
+  payerName: string;
+  propertyId: string;
+  status: string;
+  stripeScheduleId: string | null;
+}
 export function BillingWorkspace({
   properties,
   schedules,
@@ -42,23 +43,26 @@ export function BillingWorkspace({
     setError("");
     try {
       const response = await fetch("/api/admin/billing", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         }),
         result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+      if (!response.ok) {
+        throw new Error(result.error);
+      }
       await onSaved();
       return true;
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Could not save rent schedule.",
+        e instanceof Error ? e.message : "Could not save rent schedule."
       );
       return false;
     } finally {
       setBusy(false);
     }
   }
+
   return (
     <section className="management-section">
       <h3>Monthly rent payments</h3>
@@ -76,17 +80,17 @@ export function BillingWorkspace({
             f = new FormData(form);
           const ok = await post({
             action: "create",
-            id,
             data: {
+              authorized: f.get("authorized") === "on",
               collection: f.get("collection"),
-              propertyId: f.get("propertyId"),
-              payerName: f.get("payerName"),
-              payerEmail: f.get("payerEmail"),
-              monthlyCents: Math.round(Number(amount) * 100),
               firstDate: f.get("firstDate"),
               installments: Number(count),
-              authorized: f.get("authorized") === "on",
+              monthlyCents: Math.round(Number(amount) * 100),
+              payerEmail: f.get("payerEmail"),
+              payerName: f.get("payerName"),
+              propertyId: f.get("propertyId"),
             },
+            id,
           });
           if (ok) {
             setId(crypto.randomUUID());
@@ -99,9 +103,9 @@ export function BillingWorkspace({
         <fieldset disabled={busy || !ready}>
           <div className="fields">
             <AppSelect
+              defaultValue="ach"
               label={<>Payment collection</>}
               name="collection"
-              defaultValue="ach"
             >
               <option value="ach">
                 Automatic ACH · tenant authorization required
@@ -111,63 +115,63 @@ export function BillingWorkspace({
               </option>
             </AppSelect>
             <PropertySelect properties={properties} />
-            <Field name="payerName" label="Rent payer name" />
-            <Field name="payerEmail" label="Rent payer email" type="email" />
+            <Field label="Rent payer name" name="payerName" />
+            <Field label="Rent payer email" name="payerEmail" type="email" />
             <label className="field">
               Monthly rent amount ($)
               <input
-                name="monthlyAmount"
-                type="number"
                 min="0.50"
-                step="0.01"
-                required
-                value={amount}
+                name="monthlyAmount"
                 onChange={(e) => setAmount(e.target.value)}
+                required
+                step="0.01"
+                type="number"
+                value={amount}
               />
             </label>
             <Field
-              name="firstDate"
               label="First payment date (day 1–28; future date for ACH)"
+              name="firstDate"
               type="date"
             />
             <label className="field">
               Number of monthly payments
               <input
-                type="number"
-                min="1"
                 max="60"
-                step="1"
-                required
-                value={count}
+                min="1"
                 onChange={(e) => setCount(e.target.value)}
+                required
+                step="1"
+                type="number"
+                value={count}
               />
             </label>
           </div>
           <p>
             Total scheduled:{" "}
             {dollars(
-              Math.round(Number(amount || 0) * 100) * Number(count || 0),
+              Math.round(Number(amount || 0) * 100) * Number(count || 0)
             )}
             . No automatic lease renewal. Enroll and verify the bank account
             before the first ACH payment date. Invoices are due when issued.
           </p>
           <label className="check-row">
-            <input name="authorized" type="checkbox" required />I have checked
+            <input name="authorized" required type="checkbox" />I have checked
             the payer, amount, and agreed lease term and authorize these payment
             terms. For ACH, the tenant must provide their own bank
             authorization. Live-mode invoices and debits can collect real money.
           </label>
           <Button
-            type="submit"
-            variant="primary"
             className="submit-button"
             disabled={!properties.length}
+            type="submit"
+            variant="primary"
           >
             Create rent payment schedule
           </Button>
         </fieldset>
       </form>
-      {error && <p role="alert">{error}</p>}
+      {!!error && <p role="alert">{error}</p>}
       {schedules.map((s) => (
         <article className="record" key={s.id}>
           <h3>
@@ -182,52 +186,54 @@ export function BillingWorkspace({
             {s.status.replaceAll("_", " ")} · {s.mode} mode
           </p>
           <RemoveButton
-            kind="rentSchedule"
+            cancelFirst={!terminalSchedules.includes(s.status)}
+            disabled={busy}
             id={s.id}
+            kind="rentSchedule"
             name={s.payerName}
             onRemoved={onSaved}
-            disabled={busy}
-            cancelFirst={!terminalSchedules.includes(s.status)}
           />
-          {s.enrollmentUrl && (
+          {!!s.enrollmentUrl && (
             <p>
-              <a href={s.enrollmentUrl} target="_blank" rel="noreferrer">
+              <a href={s.enrollmentUrl} rel="noreferrer" target="_blank">
                 Open tenant enrollment and payment controls
               </a>{" "}
               <Button
-                type="submit"
                 onClick={async () => {
                   try {
-                    await navigator.clipboard.writeText(s.enrollmentUrl!);
+                    await navigator.clipboard.writeText(
+                      requireValue(s.enrollmentUrl, "Expected s.enrollmentUrl")
+                    );
                     setError(
-                      "Enrollment link copied. Share it privately with the named payer.",
+                      "Enrollment link copied. Share it privately with the named payer."
                     );
                   } catch {
                     setError("Open the enrollment page and copy its address.");
                   }
                 }}
+                type="submit"
               >
                 Copy private enrollment link
               </Button>
             </p>
           )}
-          {s.status === "needs_review" && (
+          {!!(s.status === "needs_review") && (
             <p>
               Review this schedule in Stripe before replacing it. If bank
               verification missed the first payment date, cancel and create a
               new enrollment with a future date.
             </p>
           )}
-          {s.stripeScheduleId && (
+          {!!s.stripeScheduleId && (
             <a
-              target="_blank"
-              rel="noreferrer"
               href={`https://dashboard.stripe.com/${s.mode === "test" ? "test/" : ""}subscription_schedules/${s.stripeScheduleId}`}
+              rel="noreferrer"
+              target="_blank"
             >
               Review schedule in Stripe
             </a>
           )}
-          {[
+          {!![
             "active",
             "not_started",
             "awaiting_authorization",
@@ -237,16 +243,17 @@ export function BillingWorkspace({
             "canceling",
           ].includes(s.status) && (
             <Button
-              type="submit"
               disabled={busy}
               onClick={() => {
                 if (
-                  window.confirm(
-                    "Stop future rent payments? This does not cancel the lease, reverse submitted debits, or remove invoices already issued.",
+                  /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+                    "Stop future rent payments? This does not cancel the lease, reverse submitted debits, or remove invoices already issued."
                   )
-                )
+                ) {
                   post({ action: "cancel", id: s.id });
+                }
               }}
+              type="submit"
             >
               Stop future payments
             </Button>

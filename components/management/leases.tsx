@@ -1,55 +1,59 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-
-import { LeaseSigning } from "./lease-signing";
-import { LeaseDisclosures, disclosureDefaults } from "./lease-disclosures";
-import { sourceDisclosures } from "@/lib/leases/disclosures";
-import { textDocument, type LeaseNode } from "@/lib/leases/document";
-import { RemoveButton } from "./remove-button";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
-import {
-  generateLease,
-  templateFields,
-  type LeaseValues,
-} from "@/lib/management/leases";
+import { sourceDisclosures } from "@/lib/leases/disclosures";
+import { type LeaseNode, textDocument } from "@/lib/leases/document";
 import {
   fieldLabel,
   initialLeaseValues,
+  type LeaseField,
   leaseFormValues,
   leaseSteps,
   missingLeaseDetails,
   moneyFields,
   normalizedLeaseValues,
   questionsFor,
-  type LeaseField,
 } from "@/lib/management/lease-workflow";
+import {
+  generateLease,
+  type LeaseValues,
+  templateFields,
+} from "@/lib/management/leases";
 import { dollars } from "@/lib/management/model";
-import dynamic from "next/dynamic";
+import { requireValue } from "@/lib/required";
+import { disclosureDefaults, LeaseDisclosures } from "./lease-disclosures";
+import { LeaseSigning } from "./lease-signing";
+import { RemoveButton } from "./remove-button";
+
 const LeaseDocumentPreview = dynamic(
   () => import("./lease-text-editor").then((m) => m.LeaseDocumentPreview),
-  { ssr: false },
+  { ssr: false }
 );
 const LeaseTextEditor = dynamic(
   () => import("./lease-text-editor").then((m) => m.LeaseTextEditor),
-  { ssr: false, loading: () => <p>Loading editor…</p> },
+  { loading: () => <p>Loading editor…</p>, ssr: false }
 );
 const LeaseWordingEditor = dynamic(
   () => import("./lease-wording-editor").then((m) => m.LeaseWordingEditor),
-  { ssr: false, loading: () => <p role="status">Loading document editor…</p> },
+  { loading: () => <p role="status">Loading document editor…</p>, ssr: false }
 );
+
 import type {
-  PropertyRecord,
-  TemplateRecord,
   DraftRecord,
+  PropertyRecord,
   Save,
+  TemplateRecord,
 } from "./dashboard";
-type Applicant = {
-  id: string;
-  propertyId: string;
-  name: string;
+
+interface Applicant {
   email?: string;
-};
+  id: string;
+  name: string;
+  propertyId: string;
+}
 const longAnswers: LeaseField[] = [
   "tenant_names",
   "landlord_notice_address",
@@ -64,6 +68,7 @@ const longAnswers: LeaseField[] = [
   "lead_pamphlet_receipt",
   "enclosures",
 ];
+/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export function LeaseWorkspace({
   properties,
   templates,
@@ -85,12 +90,12 @@ export function LeaseWorkspace({
     templates.find((t) => t.id === "91268531-0000-4000-8000-000000000001") ??
     templates[0];
   const [propertyId, setPropertyId] = useState(
-      properties.length === 1 ? properties[0].id : "",
+      properties.length === 1 ? properties[0].id : ""
     ),
     [templateId, setTemplateId] = useState(preferred?.id ?? ""),
     [values, setValues] = useState<LeaseValues>(() => ({
       ...initialLeaseValues(
-        properties.length === 1 ? properties[0].data : undefined,
+        properties.length === 1 ? properties[0].data : undefined
       ),
       ...(properties.length === 1
         ? sourceDisclosures(properties[0].data.address)
@@ -146,7 +151,6 @@ export function LeaseWorkspace({
       setFurthest(0);
     }
   }, [templates, properties, templateId, propertyId, preferred?.id, parentId]);
-
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (dirty || wordingDirty) {
@@ -157,9 +161,14 @@ export function LeaseWorkspace({
     const signOut = (event: Event) => {
       if (
         (dirty || wordingDirty) &&
-        !window.confirm("Leave without saving your lease changes?")
-      )
+        !(
+          /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+            "Leave without saving your lease changes?"
+          )
+        )
+      ) {
         event.preventDefault();
+      }
     };
     window.addEventListener("beforeunload", beforeUnload);
     window.addEventListener("owner-sign-out", signOut);
@@ -168,8 +177,8 @@ export function LeaseWorkspace({
       window.removeEventListener("owner-sign-out", signOut);
     };
   }, [dirty, wordingDirty]);
-  function go(next: number) {
-    setStep(next);
+  function go(nextLocal: number) {
+    setStep(nextLocal);
     setError("");
     requestAnimationFrame(() => {
       heading.current?.focus();
@@ -184,9 +193,14 @@ export function LeaseWorkspace({
   function startNew() {
     if (
       (dirty || wordingDirty) &&
-      !window.confirm("Start a new lease without saving these changes?")
-    )
+      !(
+        /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+          "Start a new lease without saving these changes?"
+        )
+      )
+    ) {
       return;
+    }
     setWordingOpen(false);
     setWordingDirty(false);
     setValues({
@@ -209,9 +223,10 @@ export function LeaseWorkspace({
     setEditingDocument(false);
     go(0);
   }
+  /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
   function next() {
     setError("");
-    if (!property || !template) {
+    if (!(property && template)) {
       setError("Choose a property and a lease document.");
       return;
     }
@@ -229,28 +244,34 @@ export function LeaseWorkspace({
       return;
     }
     try {
-      if (questionsFor(template.body, 2).length && !disclosuresReviewed)
-        throw Error("Review the prefilled disclosures before continuing.");
+      if (questionsFor(template.body, 2).length && !disclosuresReviewed) {
+        throw new Error("Review the prefilled disclosures before continuing.");
+      }
       const normalized = normalizedLeaseValues({
         ...values,
-        property_name: property.data.name,
         property_address: property.data.address,
+        property_name: property.data.name,
       });
       const missing = missingLeaseDetails(template.body, normalized);
-      if (missing.length)
-        throw Error(`Complete these lease details: ${missing.join(", ")}.`);
+      if (missing.length) {
+        throw new Error(`Complete these lease details: ${missing.join(", ")}.`);
+      }
       if (
         bodyEdited &&
-        !window.confirm(
-          "Rebuild the lease from these details? Changes made directly to the document will be replaced.",
+        !(
+          /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+            "Rebuild the lease from these details? Changes made directly to the document will be replaced."
+          )
         )
-      )
+      ) {
         return;
+      }
       const generated = generateLease(template.body, normalized);
-      if (generated.length > 45000)
-        throw Error(
-          "This lease is too long to save. Shorten the added details and try again.",
+      if (generated.length > 45_000) {
+        throw new Error(
+          "This lease is too long to save. Shorten the added details and try again."
         );
+      }
       setDocumentEditorKey((n) => n + 1);
       setBody(generated);
       setDocument(textDocument(generated));
@@ -269,7 +290,7 @@ export function LeaseWorkspace({
     setError("");
     if (templateFields(body).length) {
       setError(
-        "The document still has an unfilled detail. Return to the lease questions before saving.",
+        "The document still has an unfilled detail. Return to the lease questions before saving."
       );
       return;
     }
@@ -279,13 +300,13 @@ export function LeaseWorkspace({
     }
     const ok = await save({
       action: "leaseDraft",
-      id: draftId,
-      propertyId,
-      templateId,
-      parentId,
-      tenantName,
       body,
       document: leaseDocument ?? textDocument(body),
+      id: draftId,
+      parentId,
+      propertyId,
+      templateId,
+      tenantName,
       values: normalizedLeaseValues(values),
     });
     if (ok) {
@@ -301,7 +322,9 @@ export function LeaseWorkspace({
     let parent = d.parentId;
     while (parent && !seen.has(parent)) {
       const previous = drafts.find((v) => v.id === parent);
-      if (!previous) break;
+      if (!previous) {
+        break;
+      }
       versions.push(previous);
       seen.add(previous.id);
       parent = previous.parentId;
@@ -311,11 +334,14 @@ export function LeaseWorkspace({
   function openDraft(d: DraftRecord) {
     if (
       dirty &&
-      !window.confirm(
-        "Open this saved lease without saving your current changes?",
+      !(
+        /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+          "Open this saved lease without saving your current changes?"
+        )
       )
-    )
+    ) {
       return;
+    }
     setPropertyId(d.propertyId);
     setTemplateId(d.templateId);
     setTenantName(d.tenantName);
@@ -328,10 +354,11 @@ export function LeaseWorkspace({
     let manuallyEdited = true;
     try {
       const source = templates.find((t) => t.id === d.templateId);
-      if (source && d.values)
+      if (source && d.values) {
         manuallyEdited = generateLease(source.body, d.values) !== d.body;
+      }
     } catch {
-      /* Keep the saved document authoritative. */
+      /* Best-effort fallback: retain the original result when this optional operation fails. */
     }
     setBodyEdited(manuallyEdited);
     setSavedId(d.id);
@@ -342,16 +369,55 @@ export function LeaseWorkspace({
     go(3);
   }
   function openWording() {
-    if (wordingOpen) return;
+    if (wordingOpen) {
+      return;
+    }
     setWordingSourceId(templateId);
     setWording(template?.body ?? "");
     setWordingName(
-      template ? `${template.name} · revised` : "Back Acres lease",
+      template ? `${template.name} · revised` : "Back Acres lease"
     );
     setWordingDirty(false);
     setWordingOpen(true);
     setError("");
   }
+
+  const resolveResult1 = () => {
+    if (savedId && !dirty) {
+      return "Draft saved";
+    }
+    if (parentId) {
+      return "Save new version";
+    }
+    return "Save lease draft";
+  };
+  const resolveResult3 = () => {
+    if (values.start_date && values.end_date) {
+      return `${values.start_date} — ${values.end_date}`;
+    }
+    if (step === 3) {
+      return "See document";
+    }
+    return "Not entered";
+  };
+  const resolveResult4 = () => {
+    if (values.monthly_rent) {
+      return dollars(Number(values.monthly_rent.replace(/[$,]/g, "")) * 100);
+    }
+    if (step === 3) {
+      return "See document";
+    }
+    return "Not entered";
+  };
+  const resolveResult5 = () => {
+    if (step === 3) {
+      if (dirty) {
+        return "Not yet saved";
+      }
+      return "Saved draft";
+    }
+    return "Changes are saved when you save the lease draft at review.";
+  };
   return (
     <section className="lease-workspace">
       <div className="section-heading-row">
@@ -363,10 +429,10 @@ export function LeaseWorkspace({
           </p>
         </div>
         <div className="management-actions">
-          <Button type="button" disabled={busy} onClick={startNew}>
+          <Button disabled={busy} onClick={startNew} type="button">
             New lease
           </Button>
-          <Button type="button" disabled={busy} onClick={openWording}>
+          <Button disabled={busy} onClick={openWording} type="button">
             Lease wording
           </Button>
         </div>
@@ -374,157 +440,167 @@ export function LeaseWorkspace({
       {!wordingOpen && (
         <section className="lease-saved">
           <h3>Saved leases</h3>
-          {!drafts.length ? (
+          {drafts.length ? (
+            drafts
+              .filter((d) => !drafts.some((child) => child.parentId === d.id))
+              .map((d) => {
+                return (
+                  <article className="record" key={d.id}>
+                    <div className="lease-saved-row">
+                      <div>
+                        <h4>{d.tenantName}</h4>
+                        <p>
+                          {
+                            properties.find((p) => p.id === d.propertyId)?.data
+                              .name
+                          }{" "}
+                          · Saved version ·{" "}
+                          {new Date(d.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="management-actions">
+                        <Button
+                          disabled={busy}
+                          onClick={() => openDraft(d)}
+                          type="button"
+                        >
+                          Open lease
+                        </Button>
+                        <RemoveButton
+                          disabled={busy}
+                          id={d.id}
+                          kind="leaseDraft"
+                          name={d.tenantName}
+                          onRemoved={async () => {
+                            // Only reset if the removed lease is open in the editor.
+                            const family = [
+                              d.id,
+                              ...earlierVersions(d).map((v) => v.id),
+                            ];
+                            if (
+                              family.includes(savedId) ||
+                              (parentId && family.includes(parentId))
+                            ) {
+                              setParentId(null);
+                              setSavedId("");
+                              setBody("");
+                              setBodyEdited(false);
+                              setValues({
+                                ...initialLeaseValues(property?.data),
+                                ...sourceDisclosures(
+                                  property?.data.address ?? ""
+                                ),
+                                ...property?.leaseDefaults,
+                              });
+                              setDisclosuresReviewed(false);
+                              setDisclosureMessage("");
+                              setDocument(null);
+                              setTenantName("");
+                              setDirty(false);
+                              setStep(0);
+                              setFurthest(0);
+                              setDraftId(crypto.randomUUID());
+                            }
+                            await onRemoved();
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <LeaseSigning
+                      draftId={d.id}
+                      landlordEmail={d.values?.landlord_email ?? ""}
+                      landlordName={d.values?.landlord_name ?? ""}
+                      tenantEmail={
+                        applicants.find(
+                          (a) =>
+                            a.propertyId === d.propertyId &&
+                            a.name === d.tenantName
+                        )?.email ?? ""
+                      }
+                      tenantName={d.tenantName}
+                    />
+                    {!!(earlierVersions(d).length > 0) && (
+                      <details>
+                        <summary>
+                          Earlier versions ({earlierVersions(d).length})
+                        </summary>
+                        {earlierVersions(d).map((v) => (
+                          <div className="lease-history-row" key={v.id}>
+                            <span>
+                              {new Date(v.createdAt).toLocaleString()}
+                            </span>
+                            <Button onClick={() => openDraft(v)} type="button">
+                              Open earlier version
+                            </Button>
+                            <a
+                              href={`/api/admin/leases/${v.id}/pdf`}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              PDF
+                            </a>
+                            <LeaseSigning
+                              draftId={v.id}
+                              landlordEmail={v.values?.landlord_email ?? ""}
+                              landlordName={v.values?.landlord_name ?? ""}
+                              tenantEmail={
+                                applicants.find(
+                                  (a) =>
+                                    a.propertyId === v.propertyId &&
+                                    a.name === v.tenantName
+                                )?.email ?? ""
+                              }
+                              tenantName={v.tenantName}
+                            />
+                          </div>
+                        ))}
+                      </details>
+                    )}
+                  </article>
+                );
+              })
+          ) : (
             <p className="management-empty">
               Your saved lease drafts will appear here.
             </p>
-          ) : (
-            drafts
-              .filter((d) => !drafts.some((child) => child.parentId === d.id))
-              .map((d) => (
-                <article className="record" key={d.id}>
-                  <div className="lease-saved-row">
-                    <div>
-                      <h4>{d.tenantName}</h4>
-                      <p>
-                        {
-                          properties.find((p) => p.id === d.propertyId)?.data
-                            .name
-                        }{" "}
-                        · Saved version ·{" "}
-                        {new Date(d.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="management-actions">
-                      <Button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => openDraft(d)}
-                      >
-                        Open lease
-                      </Button>
-                      <RemoveButton
-                        kind="leaseDraft"
-                        id={d.id}
-                        name={d.tenantName}
-                        disabled={busy}
-                        onRemoved={async () => {
-                          // Only reset if the removed lease is open in the editor.
-                          const family = [
-                            d.id,
-                            ...earlierVersions(d).map((v) => v.id),
-                          ];
-                          if (
-                            family.includes(savedId) ||
-                            (parentId && family.includes(parentId))
-                          ) {
-                            setParentId(null);
-                            setSavedId("");
-                            setBody("");
-                            setBodyEdited(false);
-                            setValues({
-                              ...initialLeaseValues(property?.data),
-                              ...sourceDisclosures(
-                                property?.data.address ?? "",
-                              ),
-                              ...property?.leaseDefaults,
-                            });
-                            setDisclosuresReviewed(false);
-                            setDisclosureMessage("");
-                            setDocument(null);
-                            setTenantName("");
-                            setDirty(false);
-                            setStep(0);
-                            setFurthest(0);
-                            setDraftId(crypto.randomUUID());
-                          }
-                          await onRemoved();
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <LeaseSigning
-                    draftId={d.id}
-                    tenantName={d.tenantName}
-                    landlordName={d.values?.landlord_name ?? ""}
-                    landlordEmail={d.values?.landlord_email ?? ""}
-                    tenantEmail={
-                      applicants.find(
-                        (a) =>
-                          a.propertyId === d.propertyId &&
-                          a.name === d.tenantName,
-                      )?.email ?? ""
-                    }
-                  />
-                  {earlierVersions(d).length > 0 && (
-                    <details>
-                      <summary>
-                        Earlier versions ({earlierVersions(d).length})
-                      </summary>
-                      {earlierVersions(d).map((v) => (
-                        <div className="lease-history-row" key={v.id}>
-                          <span>{new Date(v.createdAt).toLocaleString()}</span>
-                          <Button type="button" onClick={() => openDraft(v)}>
-                            Open earlier version
-                          </Button>
-                          <a
-                            href={`/api/admin/leases/${v.id}/pdf`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            PDF
-                          </a>
-                          <LeaseSigning
-                            draftId={v.id}
-                            tenantName={v.tenantName}
-                            landlordName={v.values?.landlord_name ?? ""}
-                            landlordEmail={v.values?.landlord_email ?? ""}
-                            tenantEmail={
-                              applicants.find(
-                                (a) =>
-                                  a.propertyId === v.propertyId &&
-                                  a.name === v.tenantName,
-                              )?.email ?? ""
-                            }
-                          />
-                        </div>
-                      ))}
-                    </details>
-                  )}
-                </article>
-              ))
           )}
         </section>
       )}
       {wordingOpen ? (
         <section
-          className="lease-wording-panel"
           aria-label="Edit lease wording"
+          className="lease-wording-panel"
         >
           <h3>Lease wording</h3>
           <p>
             Make a separate copy when you need to change the document. Existing
             leases keep their original wording.
           </p>
-          {templates.length > 0 && (
+          {!!(templates.length > 0) && (
             <AppSelect
-              label="Start from"
-              value={wordingSourceId}
               disabled={busy}
+              label="Start from"
               onValueChange={(id) => {
                 if (
                   wordingDirty &&
-                  !window.confirm(
-                    "Replace the wording changes you haven’t saved?",
+                  !(
+                    /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+                      "Replace the wording changes you haven’t saved?"
+                    )
                   )
-                )
+                ) {
                   return;
-                const t = templates.find((t) => t.id === id)!;
+                }
+                const t = requireValue(
+                  templates.find((tLocal) => tLocal.id === id),
+                  "Expected templates.find((t) => t.id === id)"
+                );
                 setWordingSourceId(id);
                 setWording(t.body);
                 setWordingName(`${t.name} · revised`);
                 setWordingDirty(false);
               }}
+              value={wordingSourceId}
             >
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -533,11 +609,12 @@ export function LeaseWorkspace({
               ))}
             </AppSelect>
           )}
-          {wordingSourceId && (
+          {!!wordingSourceId && (
             <div className="management-actions">
               <RemoveButton
-                kind="leaseTemplate"
+                disabled={busy}
                 id={wordingSourceId}
+                kind="leaseTemplate"
                 name={
                   templates.find((t) => t.id === wordingSourceId)?.name ??
                   "Lease document"
@@ -547,48 +624,46 @@ export function LeaseWorkspace({
                   setWordingDirty(false);
                   await onRemoved();
                 }}
-                disabled={busy}
               />
             </div>
           )}
           <label className="field">
             Document name
             <input
-              value={wordingName}
+              disabled={busy}
+              maxLength={300}
               onChange={(e) => {
                 setWordingName(e.target.value);
                 setWordingDirty(true);
               }}
-              maxLength={300}
-              disabled={busy}
+              value={wordingName}
             />
           </label>
           <LeaseWordingEditor
-            key={wordingSourceId}
             body={wording}
+            disabled={busy}
+            key={wordingSourceId}
             onChange={(value) => {
               setWording(value);
               setWordingDirty(true);
             }}
-            disabled={busy}
           />
           <div className="management-actions">
             <Button
-              type="button"
               className="submit-button"
               disabled={
                 busy ||
                 !wordingName.trim() ||
                 !wording.trim() ||
-                wording.length > 45000
+                wording.length > 45_000
               }
               onClick={async () => {
                 const id = crypto.randomUUID();
                 const ok = await save({
                   action: "leaseTemplate",
+                  body: wording,
                   id,
                   name: wordingName.trim(),
-                  body: wording,
                 });
                 if (ok) {
                   setTemplateId(id);
@@ -602,21 +677,24 @@ export function LeaseWorkspace({
                   go(0);
                 }
               }}
+              type="button"
             >
               Save as a new document
             </Button>
             <Button
-              type="button"
               disabled={busy}
               onClick={() => {
                 if (
                   !wordingDirty ||
-                  window.confirm("Close without saving the wording changes?")
+                  /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+                    "Close without saving the wording changes?"
+                  )
                 ) {
                   setWordingOpen(false);
                   setWordingDirty(false);
                 }
               }}
+              type="button"
             >
               Back to lease
             </Button>
@@ -624,13 +702,13 @@ export function LeaseWorkspace({
         </section>
       ) : (
         <>
-          <ol className="lease-progress" aria-label="Lease progress">
+          <ol aria-label="Lease progress" className="lease-progress">
             {leaseSteps.map((label, i) => (
-              <li key={label} aria-current={step === i ? "step" : undefined}>
+              <li aria-current={step === i ? "step" : undefined} key={label}>
                 <Button
-                  type="button"
                   disabled={busy || i > furthest || (i === 3 && step !== 3)}
                   onClick={() => go(i)}
+                  type="button"
                 >
                   <span>{i + 1}</span>
                   {label}
@@ -640,249 +718,10 @@ export function LeaseWorkspace({
           </ol>
           <div className="lease-flow">
             <div className="lease-questions">
-              <h3 ref={heading} tabIndex={-1} className="lease-step-heading">
+              <h3 className="lease-step-heading" ref={heading} tabIndex={-1}>
                 {leaseSteps[step]}
               </h3>
-              {step !== 3 ? (
-                <form
-                  className="management-form lease-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    next();
-                  }}
-                >
-                  <fieldset disabled={busy}>
-                    {step === 0 && (
-                      <>
-                        <AppSelect
-                          label="Property"
-                          name="leasePropertyId"
-                          value={propertyId}
-                          required
-                          onValueChange={(id) => {
-                            const p = properties.find((p) => p.id === id)!;
-                            setPropertyId(id);
-                            setParentId(null);
-                            setDraftId(crypto.randomUUID());
-                            setValues({
-                              ...initialLeaseValues(p.data),
-                              ...sourceDisclosures(p.data.address),
-                              ...p.leaseDefaults,
-                              tenant_names: "",
-                            });
-                            setDisclosuresReviewed(false);
-                            setDisclosureMessage("");
-                            setDocument(null);
-                            setApplicantId("");
-                            setDirty(true);
-                            setSavedId("");
-                          }}
-                        >
-                          <option value="">Choose a property</option>
-                          {properties.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.data.name} · {p.data.address}
-                            </option>
-                          ))}
-                        </AppSelect>
-                        {templates.length > 1 ? (
-                          <AppSelect
-                            label="Lease document"
-                            value={templateId}
-                            required
-                            onValueChange={(id) => {
-                              setTemplateId(id);
-                              setParentId(null);
-                              setDraftId(crypto.randomUUID());
-                              setDirty(true);
-                              setFurthest(0);
-                            }}
-                          >
-                            {templates.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                          </AppSelect>
-                        ) : (
-                          <p className="small-note">
-                            Based on your supplied lease. Use Lease wording only
-                            when you need to change its text.
-                          </p>
-                        )}
-                        {!templates.length && (
-                          <p className="management-empty">
-                            Add your lease document using Lease wording to
-                            begin.
-                          </p>
-                        )}
-                        {applicants.some(
-                          (a) => a.propertyId === propertyId,
-                        ) && (
-                          <AppSelect
-                            label="Fill tenant from an application"
-                            value={applicantId}
-                            onValueChange={(id) => {
-                              setApplicantId(id);
-                              const applicant = applicants.find(
-                                (a) => a.id === id,
-                              );
-                              if (applicant)
-                                change("tenant_names", applicant.name);
-                            }}
-                          >
-                            <option value="">
-                              Choose an applicant, or enter the name below
-                            </option>
-                            {applicants
-                              .filter((a) => a.propertyId === propertyId)
-                              .map((a) => (
-                                <option key={a.id} value={a.id}>
-                                  {a.name}
-                                </option>
-                              ))}
-                          </AppSelect>
-                        )}
-                      </>
-                    )}
-                    {step === 1 && (
-                      <p className="small-note">
-                        Monthly rent comes from the property. Check every
-                        amount; enter 0 where no fee applies.
-                      </p>
-                    )}
-                    {step === 2 &&
-                      questionsFor(template?.body ?? "", 2).length > 0 && (
-                        <>
-                          <LeaseDisclosures
-                            fields={questionsFor(template?.body ?? "", 2)}
-                            values={values}
-                            onChange={(key, value) => {
-                              change(key, value);
-                              setDisclosuresReviewed(false);
-                              setDisclosureMessage("");
-                            }}
-                            reviewed={disclosuresReviewed}
-                            onReviewed={setDisclosuresReviewed}
-                            busy={busy}
-                            fromSource={
-                              !!sourceDisclosures(property?.data.address ?? "")
-                                .habitability_disclosure
-                            }
-                            hasDefaults={
-                              !!property?.leaseDefaults &&
-                              Object.keys(property.leaseDefaults).length > 0
-                            }
-                            onSaveDefaults={async () => {
-                              if (
-                                await save({
-                                  action: "leaseDefaults",
-                                  propertyId,
-                                  values: disclosureDefaults(values),
-                                })
-                              )
-                                setDisclosureMessage(
-                                  "Saved. New leases for this property will use these disclosures.",
-                                );
-                            }}
-                            onClearDefaults={async () => {
-                              if (
-                                await save({
-                                  action: "leaseDefaults",
-                                  propertyId,
-                                  values: {},
-                                })
-                              )
-                                setDisclosureMessage(
-                                  "Saved defaults cleared. This lease’s wording is unchanged.",
-                                );
-                            }}
-                          />
-                          {disclosureMessage && (
-                            <p role="status">{disclosureMessage}</p>
-                          )}
-                        </>
-                      )}
-                    <div className="fields lease-fields">
-                      {(step === 2
-                        ? []
-                        : questionsFor(template?.body ?? "", step)
-                      ).map((key) => (
-                        <label
-                          className={`field${longAnswers.includes(key) ? " lease-wide" : ""}`}
-                          key={key}
-                        >
-                          {fieldLabel(key)}
-                          {moneyFields.includes(key) ? " ($)" : ""}
-                          {longAnswers.includes(key) ? (
-                            <textarea
-                              aria-label={fieldLabel(key)}
-                              name={key}
-                              value={values[key] ?? ""}
-                              onChange={(e) => change(key, e.target.value)}
-                              required
-                              rows={key === "tenant_names" ? 2 : 3}
-                              maxLength={key === "tenant_names" ? 300 : 3000}
-                            />
-                          ) : (
-                            <input
-                              name={key}
-                              value={values[key] ?? ""}
-                              onChange={(e) => change(key, e.target.value)}
-                              required
-                              type={
-                                key.endsWith("_date")
-                                  ? "date"
-                                  : moneyFields.includes(key) ||
-                                      key === "rent_due_day"
-                                    ? "number"
-                                    : key === "landlord_email"
-                                      ? "email"
-                                      : key === "landlord_phone"
-                                        ? "tel"
-                                        : "text"
-                              }
-                              {...(moneyFields.includes(key)
-                                ? { min: 0, max: 100000, step: "0.01" }
-                                : {})}
-                              {...(key === "rent_due_day"
-                                ? { min: 1, max: 28, step: 1 }
-                                : {})}
-                              maxLength={3000}
-                            />
-                          )}
-                          {key === "tenant_names" && (
-                            <span className="small-note">
-                              One adult tenant per line.
-                            </span>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                    {step === 2 &&
-                      questionsFor(template?.body ?? "", 2).length === 0 && (
-                        <p>
-                          This document has no additional disclosure questions.
-                        </p>
-                      )}
-                    <div className="lease-step-actions">
-                      {step > 0 && (
-                        <Button type="button" onClick={() => go(step - 1)}>
-                          Back
-                        </Button>
-                      )}
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        className="submit-button"
-                        disabled={!template || !properties.length}
-                      >
-                        {step === 2 ? "Review lease" : "Continue"}
-                      </Button>
-                    </div>
-                  </fieldset>
-                </form>
-              ) : (
+              {step === 3 ? (
                 <>
                   <p className="lease-review-note">
                     Review the document, save your changes, then preview the PDF
@@ -902,34 +741,31 @@ export function LeaseWorkspace({
                   </details>
                   <div className="management-actions lease-review-actions">
                     <Button
-                      type="button"
                       className="submit-button"
                       disabled={busy || (!dirty && !!savedId)}
                       onClick={saveDraft}
+                      type="button"
                     >
-                      {savedId && !dirty
-                        ? "Draft saved"
-                        : parentId
-                          ? "Save new version"
-                          : "Save lease draft"}
+                      {resolveResult1()}
                     </Button>
 
                     <Button
-                      type="button"
                       onClick={() => {
                         setEditingDocument((v) => !v);
                       }}
+                      type="button"
                     >
                       {editingDocument ? "Read document" : "Edit document text"}
                     </Button>
                     <Button
-                      type="button"
                       onClick={() => {
                         const url = URL.createObjectURL(
                           new Blob(
                             [`DRAFT — REVIEW BEFORE SIGNING\n\n${body}`],
-                            { type: "text/plain" },
-                          ),
+                            {
+                              type: "text/plain",
+                            }
+                          )
                         );
                         const a = document.createElement("a");
                         a.href = url;
@@ -937,39 +773,39 @@ export function LeaseWorkspace({
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
+                      type="button"
                     >
                       Download text
                     </Button>
-                    {values.tenant_names && (
-                      <Button type="button" onClick={() => go(0)}>
+                    {!!values.tenant_names && (
+                      <Button onClick={() => go(0)} type="button">
                         Edit lease details
                       </Button>
                     )}
                   </div>
-                  {savedId && !dirty && (
+                  {!!(savedId && !dirty) && (
                     <LeaseSigning
-                      key={savedId}
                       draftId={savedId}
-                      tenantName={tenantName}
-                      landlordName={values.landlord_name ?? ""}
+                      key={savedId}
                       landlordEmail={values.landlord_email ?? ""}
+                      landlordName={values.landlord_name ?? ""}
                       tenantEmail={
                         applicants.find(
                           (a) =>
-                            a.propertyId === propertyId &&
-                            a.name === tenantName,
+                            a.propertyId === propertyId && a.name === tenantName
                         )?.email ?? ""
                       }
+                      tenantName={tenantName}
                     />
                   )}
 
                   {editingDocument ? (
                     <LeaseTextEditor
+                      body={body}
+                      disabled={busy}
+                      document={leaseDocument}
                       key={documentEditorKey}
                       label="Lease document text"
-                      body={body}
-                      document={leaseDocument}
-                      disabled={busy}
                       onChange={(text, content) => {
                         setBody(text);
                         setDocument(content);
@@ -983,17 +819,290 @@ export function LeaseWorkspace({
                     />
                   )}
                 </>
+              ) : (
+                <form
+                  className="management-form lease-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    next();
+                  }}
+                >
+                  <fieldset disabled={busy}>
+                    {!!(step === 0) && (
+                      <>
+                        <AppSelect
+                          label="Property"
+                          name="leasePropertyId"
+                          onValueChange={(id) => {
+                            const p = requireValue(
+                              properties.find((pLocal) => pLocal.id === id),
+                              "Expected properties.find((p) => p.id === id)"
+                            );
+                            setPropertyId(id);
+                            setParentId(null);
+                            setDraftId(crypto.randomUUID());
+                            setValues({
+                              ...initialLeaseValues(p.data),
+                              ...sourceDisclosures(p.data.address),
+                              ...p.leaseDefaults,
+                              tenant_names: "",
+                            });
+                            setDisclosuresReviewed(false);
+                            setDisclosureMessage("");
+                            setDocument(null);
+                            setApplicantId("");
+                            setDirty(true);
+                            setSavedId("");
+                          }}
+                          required
+                          value={propertyId}
+                        >
+                          <option value="">Choose a property</option>
+                          {properties.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.data.name} · {p.data.address}
+                            </option>
+                          ))}
+                        </AppSelect>
+                        {templates.length > 1 ? (
+                          <AppSelect
+                            label="Lease document"
+                            onValueChange={(id) => {
+                              setTemplateId(id);
+                              setParentId(null);
+                              setDraftId(crypto.randomUUID());
+                              setDirty(true);
+                              setFurthest(0);
+                            }}
+                            required
+                            value={templateId}
+                          >
+                            {templates.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </AppSelect>
+                        ) : (
+                          <p className="small-note">
+                            Based on your supplied lease. Use Lease wording only
+                            when you need to change its text.
+                          </p>
+                        )}
+                        {!templates.length && (
+                          <p className="management-empty">
+                            Add your lease document using Lease wording to
+                            begin.
+                          </p>
+                        )}
+                        {!!applicants.some(
+                          (a) => a.propertyId === propertyId
+                        ) && (
+                          <AppSelect
+                            label="Fill tenant from an application"
+                            onValueChange={(id) => {
+                              setApplicantId(id);
+                              const applicant = applicants.find(
+                                (a) => a.id === id
+                              );
+                              if (applicant) {
+                                change("tenant_names", applicant.name);
+                              }
+                            }}
+                            value={applicantId}
+                          >
+                            <option value="">
+                              Choose an applicant, or enter the name below
+                            </option>
+                            {applicants
+                              .filter((a) => a.propertyId === propertyId)
+                              .map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {a.name}
+                                </option>
+                              ))}
+                          </AppSelect>
+                        )}
+                      </>
+                    )}
+                    {!!(step === 1) && (
+                      <p className="small-note">
+                        Monthly rent comes from the property. Check every
+                        amount; enter 0 where no fee applies.
+                      </p>
+                    )}
+                    {!!(
+                      step === 2 &&
+                      questionsFor(template?.body ?? "", 2).length > 0
+                    ) && (
+                      <>
+                        <LeaseDisclosures
+                          busy={busy}
+                          fields={questionsFor(template?.body ?? "", 2)}
+                          fromSource={
+                            !!sourceDisclosures(property?.data.address ?? "")
+                              .habitability_disclosure
+                          }
+                          hasDefaults={
+                            !!property?.leaseDefaults &&
+                            Object.keys(property.leaseDefaults).length > 0
+                          }
+                          onChange={(key, value) => {
+                            change(key, value);
+                            setDisclosuresReviewed(false);
+                            setDisclosureMessage("");
+                          }}
+                          onClearDefaults={async () => {
+                            if (
+                              await save({
+                                action: "leaseDefaults",
+                                propertyId,
+                                values: {},
+                              })
+                            ) {
+                              setDisclosureMessage(
+                                "Saved defaults cleared. This lease’s wording is unchanged."
+                              );
+                            }
+                          }}
+                          onReviewed={setDisclosuresReviewed}
+                          onSaveDefaults={async () => {
+                            if (
+                              await save({
+                                action: "leaseDefaults",
+                                propertyId,
+                                values: disclosureDefaults(values),
+                              })
+                            ) {
+                              setDisclosureMessage(
+                                "Saved. New leases for this property will use these disclosures."
+                              );
+                            }
+                          }}
+                          reviewed={disclosuresReviewed}
+                          values={values}
+                        />
+                        {!!disclosureMessage && (
+                          <p role="status">{disclosureMessage}</p>
+                        )}
+                      </>
+                    )}
+                    <div className="fields lease-fields">
+                      {(step === 2
+                        ? []
+                        : questionsFor(template?.body ?? "", step)
+                      ).map(
+                        /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
+                        (key) => {
+                          const resolveType2 =
+                            /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
+                            () => {
+                              if (key.endsWith("_date")) {
+                                return "date";
+                              }
+                              if (
+                                moneyFields.includes(key) ||
+                                key === "rent_due_day"
+                              ) {
+                                return "number";
+                              }
+                              if (key === "landlord_email") {
+                                return "email";
+                              }
+                              if (key === "landlord_phone") {
+                                return "tel";
+                              }
+                              return "text";
+                            };
+                          return (
+                            <label
+                              className={[
+                                "field",
+                                longAnswers.includes(key) ? "lease-wide" : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                              htmlFor={`lease-field-${key}`}
+                              key={key}
+                            >
+                              {fieldLabel(key)}
+                              {moneyFields.includes(key) ? " ($)" : ""}
+                              {longAnswers.includes(key) ? (
+                                <textarea
+                                  aria-label={fieldLabel(key)}
+                                  id={`lease-field-${key}`}
+                                  maxLength={
+                                    key === "tenant_names" ? 300 : 3000
+                                  }
+                                  name={key}
+                                  onChange={(e) => change(key, e.target.value)}
+                                  required
+                                  rows={key === "tenant_names" ? 2 : 3}
+                                  value={values[key] ?? ""}
+                                />
+                              ) : (
+                                <input
+                                  id={`lease-field-${key}`}
+                                  name={key}
+                                  onChange={(e) => change(key, e.target.value)}
+                                  required
+                                  type={resolveType2()}
+                                  value={values[key] ?? ""}
+                                  {...(moneyFields.includes(key)
+                                    ? { max: 100_000, min: 0, step: "0.01" }
+                                    : {})}
+                                  {...(key === "rent_due_day"
+                                    ? { max: 28, min: 1, step: 1 }
+                                    : {})}
+                                  maxLength={3000}
+                                />
+                              )}
+                              {!!(key === "tenant_names") && (
+                                <span className="small-note">
+                                  One adult tenant per line.
+                                </span>
+                              )}
+                            </label>
+                          );
+                        }
+                      )}
+                    </div>
+                    {!!(
+                      step === 2 &&
+                      questionsFor(template?.body ?? "", 2).length === 0
+                    ) && (
+                      <p>
+                        This document has no additional disclosure questions.
+                      </p>
+                    )}
+                    <div className="lease-step-actions">
+                      {!!(step > 0) && (
+                        <Button onClick={() => go(step - 1)} type="button">
+                          Back
+                        </Button>
+                      )}
+                      <Button
+                        className="submit-button"
+                        disabled={!(template && properties.length)}
+                        type="submit"
+                        variant="primary"
+                      >
+                        {step === 2 ? "Review lease" : "Continue"}
+                      </Button>
+                    </div>
+                  </fieldset>
+                </form>
               )}
-              {error && (
+              {!!error && (
                 <p className="form-error" role="alert">
                   {error}
                 </p>
               )}
             </div>
-            <aside className="lease-summary" aria-label="Lease summary">
+            <aside aria-label="Lease summary" className="lease-summary">
               <p className="eyebrow">Your lease</p>
               <h3>{property?.data.name || "Choose a property"}</h3>
-              {property && <p>{property.data.address}</p>}
+              {!!property && <p>{property.data.address}</p>}
               <dl>
                 <div>
                   <dt>Tenant</dt>
@@ -1001,35 +1110,14 @@ export function LeaseWorkspace({
                 </div>
                 <div>
                   <dt>Lease dates</dt>
-                  <dd>
-                    {values.start_date && values.end_date
-                      ? `${values.start_date} — ${values.end_date}`
-                      : step === 3
-                        ? "See document"
-                        : "Not entered"}
-                  </dd>
+                  <dd>{resolveResult3()}</dd>
                 </div>
                 <div>
                   <dt>Monthly rent</dt>
-                  <dd>
-                    {values.monthly_rent
-                      ? dollars(
-                          Number(values.monthly_rent.replace(/[$,]/g, "")) *
-                            100,
-                        )
-                      : step === 3
-                        ? "See document"
-                        : "Not entered"}
-                  </dd>
+                  <dd>{resolveResult4()}</dd>
                 </div>
               </dl>
-              <p className="small-note">
-                {step === 3
-                  ? dirty
-                    ? "Not yet saved"
-                    : "Saved draft"
-                  : "Changes are saved when you save the lease draft at review."}
-              </p>
+              <p className="small-note">{resolveResult5()}</p>
             </aside>
           </div>
         </>

@@ -1,41 +1,46 @@
-import { vi } from "vitest";
+// biome-ignore-all lint/suspicious/useAwait: Async transport stubs intentionally preserve native promise and rejection behavior, including faults before the first await.
+// biome-ignore-all lint/performance/noAwaitInLoops: These stateful fixtures and assertions must finish each transition before the next request or cleanup.
+import { readdir, readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
-import { readFile, readdir } from "node:fs/promises";
+import { drizzle } from "drizzle-orm/pglite";
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
+import { type Mock, vi } from "vitest";
+// biome-ignore lint/performance/noNamespaceImport: Drizzle needs the complete schema object, including relationships, for this server-only database/test adapter.
 import * as schema from "../../lib/db/schema";
+
 const state = vi.hoisted(() => ({
+  // biome-ignore lint/suspicious/noExplicitAny: This test-only state swaps the Neon query interface for a PGlite adapter with transactional batch support.
   database: null as any,
-  session: null as any,
+  session: null as { user: { email: string } } | null,
 }));
 vi.mock("@/lib/db", () => ({ db: vi.fn(() => state.database) }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn(() => state.session) }));
 const client = vi.hoisted(() => ({
+  charges: { retrieve: vi.fn() },
   checkout: {
     sessions: {
       create: vi.fn(),
-      retrieve: vi.fn(),
       expire: vi.fn(),
       list: vi.fn(),
+      retrieve: vi.fn(),
     },
   },
   customers: { create: vi.fn() },
-  products: { create: vi.fn() },
-  subscriptionSchedules: {
-    create: vi.fn(),
-    retrieve: vi.fn(),
-    list: vi.fn(),
-    cancel: vi.fn(),
-  },
-  setupIntents: { retrieve: vi.fn(), cancel: vi.fn() },
-  mandates: { retrieve: vi.fn() },
-  paymentMethods: { retrieve: vi.fn() },
-  paymentIntents: { retrieve: vi.fn() },
   invoicePayments: { list: vi.fn() },
   invoices: { retrieve: vi.fn(), voidInvoice: vi.fn() },
-  charges: { retrieve: vi.fn() },
+  mandates: { retrieve: vi.fn() },
+  paymentIntents: { retrieve: vi.fn() },
+  paymentMethods: { retrieve: vi.fn() },
+  products: { create: vi.fn() },
+  setupIntents: { cancel: vi.fn(), retrieve: vi.fn() },
+  subscriptionSchedules: {
+    cancel: vi.fn(),
+    create: vi.fn(),
+    list: vi.fn(),
+    retrieve: vi.fn(),
+  },
 }));
 // Use the actual Stripe constructor and signature verification. Only outbound resources are replaced.
 vi.mock("stripe", async (importOriginal) => {
@@ -46,12 +51,12 @@ vi.mock("stripe", async (importOriginal) => {
       constructor(...args: ConstructorParameters<typeof RealStripe>) {
         super(args[0], {
           ...args[1],
-          maxNetworkRetries: 0,
           httpClient: RealStripe.createFetchHttpClient(async () => {
             throw new Error(
-              "External Stripe network access is forbidden in isolated tests",
+              "External Stripe network access is forbidden in isolated tests"
             );
           }),
+          maxNetworkRetries: 0,
         });
         Object.assign(this, client);
       }
@@ -63,16 +68,17 @@ export async function start() {
   pg = new PGlite();
   for (const file of (await readdir("drizzle"))
     .filter((f) => f.endsWith(".sql"))
-    .sort())
+    .sort()) {
     await pg.exec(await readFile(`drizzle/${file}`, "utf8"));
+  }
   state.database = drizzle(pg, { schema });
   // Neon HTTP batch is transactional. Use a real PostgreSQL transaction for the
   // corresponding PGlite calls; these routes do not consume batch return rows.
   state.database.batch = (
-    queries: { toSQL(): { sql: string; params: unknown[] } }[],
+    queries: { toSQL: () => { sql: string; params: unknown[] } }[]
   ) =>
     pg.transaction(async (transaction) => {
-      const results = [];
+      const results: unknown[] = [];
       for (const query of queries) {
         const statement = query.toSQL();
         results.push(await transaction.query(statement.sql, statement.params));
@@ -85,11 +91,11 @@ export async function reset() {
     "fetch",
     vi.fn(() => {
       throw new Error("External network access is forbidden in isolated tests");
-    }),
+    })
   );
   vi.stubEnv(
     "DATABASE_URL",
-    "postgresql://fixture:fixture@invalid.local/fixture",
+    "postgresql://fixture:fixture@invalid.local/fixture"
   );
   vi.restoreAllMocks();
   vi.clearAllMocks();
@@ -103,20 +109,23 @@ export async function reset() {
   vi.stubEnv("ADMIN_EMAILS", "owner@example.invalid");
   state.session = { user: { email: "owner@example.invalid" } };
   await pg.exec(
-    "TRUNCATE rental_invoices, rent_schedules, properties, intake_limits, removed_records, management_events CASCADE",
+    "TRUNCATE rental_invoices, rent_schedules, properties, intake_limits, removed_records, management_events CASCADE"
   );
-  for (const group of Object.values(client))
+  for (const group of Object.values(client)) {
     for (const method of Object.values(group)) {
-      if (typeof method === "function")
-        (method as any)
+      if (typeof method === "function") {
+        (method as Mock)
           .mockReset()
           .mockRejectedValue(new Error("Unexpected Stripe call"));
-      else
-        for (const fn of Object.values(method))
-          (fn as any)
+      } else {
+        for (const fn of Object.values(method)) {
+          (fn as Mock)
             .mockReset()
             .mockRejectedValue(new Error("Unexpected Stripe call"));
+        }
+      }
     }
+  }
   client.checkout.sessions.create.mockResolvedValue({
     id: "cs_fixture",
     status: "open",
@@ -147,23 +156,23 @@ export const id = "11111111-1111-4111-8111-111111111111";
 export const propertyId = "22222222-2222-4222-8222-222222222222";
 export async function property() {
   await state.database.insert(schema.properties).values({
+    data: { address: "1 Fixture St", contact: "Owner", name: "Fixture" },
     id: propertyId,
     slug: "fixture",
-    data: { name: "Fixture", address: "1 Fixture St", contact: "Owner" },
   });
 }
 export async function invoice(patch = {}) {
   await property();
   const row = {
-    id,
-    propertyId,
-    payerName: "Tenant",
-    payerEmail: "tenant@example.invalid",
+    amountCents: 125_000,
     category: "rent",
     description: "Rent",
-    amountCents: 125000,
     dueDate: "2099-01-10",
+    id,
     mode: "test",
+    payerEmail: "tenant@example.invalid",
+    payerName: "Tenant",
+    propertyId,
     ...patch,
   };
   await state.database.insert(schema.invoices).values(row);
@@ -172,15 +181,15 @@ export async function invoice(patch = {}) {
 export async function schedule(patch = {}) {
   await property();
   const row = {
-    id,
-    propertyId,
-    payerName: "Tenant",
-    payerEmail: "tenant@example.invalid",
-    monthlyCents: 125000,
-    firstDate: "2099-01-10",
-    installments: 12,
     collection: "ach",
+    firstDate: "2099-01-10",
+    id,
+    installments: 12,
     mode: "test",
+    monthlyCents: 125_000,
+    payerEmail: "tenant@example.invalid",
+    payerName: "Tenant",
+    propertyId,
     status: "awaiting_authorization",
     ...patch,
   };
@@ -193,25 +202,30 @@ export async function stored(table: AnyPgTable = schema.invoices) {
 export function request(
   path: string,
   body: unknown,
-  headers: Record<string, string> = {},
+  headers: Record<string, string> = {}
 ) {
   return new NextRequest(`https://rental.example.invalid${path}`, {
-    method: "POST",
+    body: typeof body === "string" ? body : JSON.stringify(body),
     headers: {
-      origin: "https://rental.example.invalid",
       "content-type": "application/json",
+      origin: "https://rental.example.invalid",
       ...headers,
     },
-    body: typeof body === "string" ? body : JSON.stringify(body),
+    method: "POST",
   });
 }
-export function event(type: string, object: any) {
-  return { id: "evt_fixture", type, livemode: false, data: { object } } as any;
+export function event(type: string, object: unknown) {
+  return {
+    data: { object },
+    id: "evt_fixture",
+    livemode: false,
+    type,
+  } as Stripe.Event;
 }
 export function webhookRequest(
-  e: any,
+  e: unknown,
   secret = "whsec_isolated_fixture",
-  timestamp = Math.floor(Date.now() / 1000),
+  timestamp = Math.floor(Date.now() / 1000)
 ) {
   const payload = JSON.stringify(e);
   return request("/api/payments/webhook", payload, {
@@ -224,50 +238,50 @@ export function webhookRequest(
 }
 export function session(patch = {}) {
   return {
-    id: "cs_fixture",
-    mode: "payment",
-    metadata: { invoiceId: id },
+    amount_total: 125_000,
     client_reference_id: id,
-    amount_total: 125000,
     currency: "usd",
+    id: "cs_fixture",
     livemode: false,
+    metadata: { invoiceId: id },
+    mode: "payment",
     payment_status: "paid",
     ...patch,
   };
 }
 export function bank(patch = {}) {
   client.setupIntents.retrieve.mockResolvedValue({
-    id: "seti_fixture",
-    metadata: { rentScheduleId: id },
     customer: "cus_fixture",
+    id: "seti_fixture",
     livemode: false,
-    status: "succeeded",
-    payment_method: "pm_fixture",
     mandate: "mandate_fixture",
+    metadata: { rentScheduleId: id },
+    payment_method: "pm_fixture",
+    status: "succeeded",
     ...patch,
   });
   client.checkout.sessions.retrieve.mockResolvedValue({
+    client_reference_id: id,
     id: "cs_fixture",
     setup_intent: "seti_fixture",
-    client_reference_id: id,
   });
   client.mandates.retrieve.mockResolvedValue({
     id: "mandate_fixture",
     status: "active",
   });
   client.paymentMethods.retrieve.mockResolvedValue({
+    customer: "cus_fixture",
     id: "pm_fixture",
     type: "us_bank_account",
-    customer: "cus_fixture",
   });
 }
 export async function readyBank(patch = {}) {
   return schedule({
-    status: "awaiting_verification",
     consentedAt: new Date(),
-    stripeCustomerId: "cus_fixture",
     setupSessionId: "cs_fixture",
+    status: "awaiting_verification",
+    stripeCustomerId: "cus_fixture",
     ...patch,
   });
 }
-export { state, client };
+export { client, state };

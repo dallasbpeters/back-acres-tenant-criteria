@@ -8,11 +8,13 @@ export async function GET() {
       .from(brandVersions)
       .orderBy(desc(brandVersions.createdAt))
       .limit(1);
-    if (!brand?.logoPng) return new Response(null, { status: 404 });
+    if (!brand?.logoPng) {
+      return new Response(null, { status: 404 });
+    }
     return new Response(Buffer.from(brand.logoPng, "base64"), {
       headers: {
-        "Content-Type": "image/png",
         "Cache-Control": "no-store",
+        "Content-Type": "image/png",
         "X-Content-Type-Options": "nosniff",
       },
     });

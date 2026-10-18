@@ -1,5 +1,5 @@
-import { amenityOptions, type AmenityId } from "@/lib/management/amenities";
 import { Icon } from "@/components/ui/icon";
+import { type AmenityId, amenityOptions } from "@/lib/management/amenities";
 
 export function AmenityPicker({ selected = [] }: { selected?: AmenityId[] }) {
   return (
@@ -10,12 +10,12 @@ export function AmenityPicker({ selected = [] }: { selected?: AmenityId[] }) {
       </p>
       <div className="amenity-options">
         {amenityOptions.map((option) => (
-          <label key={option.id} className="amenity-option">
+          <label className="amenity-option" key={option.id}>
             <input
-              type="checkbox"
-              name="amenities"
-              value={option.id}
               defaultChecked={selected.includes(option.id)}
+              name="amenities"
+              type="checkbox"
+              value={option.id}
             />
             <Icon name={option.icon} size={24} />
             <span>{option.label}</span>
@@ -31,13 +31,15 @@ export function PropertyAmenities({
   selected?: AmenityId[];
 }) {
   const options = amenityOptions.filter((option) =>
-    selected.includes(option.id),
+    selected.includes(option.id)
   );
-  if (!options.length) return null;
+  if (!options.length) {
+    return null;
+  }
   return (
     <section
-      id="property-amenities"
       className="property-content-section property-amenities"
+      id="property-amenities"
     >
       <h2>Amenities</h2>
       <ul>

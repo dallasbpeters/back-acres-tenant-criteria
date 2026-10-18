@@ -1,49 +1,45 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { AmenityPicker } from "./amenities";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-
+import { AppSelect } from "@/components/ui/select";
+import {
+  type ApplicationInput,
+  applicationStatuses,
+  dollars,
+  maintenanceStatuses,
+  type PropertyInput,
+} from "@/lib/management/model";
+import { AmenityPicker } from "./amenities";
+import { BillingWorkspace, type RentScheduleRecord } from "./billing";
 import { BrandingWorkspace } from "./branding";
+import { LeaseWorkspace } from "./leases";
+import { ownerSections } from "./navigation";
+import type { PhotoRecord } from "./photos";
+import { type PublicationRecord, PublishingWorkspace } from "./publishing";
 import {
   RemoveButton,
-  RemovedWorkspace,
   type RemovedRecord,
+  RemovedWorkspace,
 } from "./remove-button";
-import { AppSelect } from "@/components/ui/select";
-import { useEffect, useState } from "react";
-import { ownerSections } from "./navigation";
-import { PublishingWorkspace, type PublicationRecord } from "./publishing";
-import type { PhotoRecord } from "./photos";
-import {
-  applicationStatuses,
-  maintenanceStatuses,
-  dollars,
-  type PropertyInput,
-  type ApplicationInput,
-} from "@/lib/management/model";
-import { POLICY, policyRecordText } from "@/lib/policy";
-import { LeaseWorkspace } from "./leases";
-import { BillingWorkspace, type RentScheduleRecord } from "./billing";
-export type PropertyRecord = {
-  leaseDefaults?: import("@/lib/management/leases").LeaseValues | null;
-  id: string;
-  slug: string;
-  revision: number;
-  publishingDigest: string;
+export interface PropertyRecord {
   data: PropertyInput;
-};
-type ApplicationRecord = {
   id: string;
-  propertyId: string;
-  status: string;
+  leaseDefaults?: import("@/lib/management/leases").LeaseValues | null;
+  publishingDigest: string;
+  revision: number;
+  slug: string;
+}
+interface ApplicationRecord {
   createdAt: string;
-  data: ApplicationInput;
-  criteriaVersion: string;
   criteriaSnapshot: string;
-};
-type MaintenanceRecord = {
+  criteriaVersion: string;
+  data: ApplicationInput;
   id: string;
   propertyId: string;
   status: string;
+}
+interface MaintenanceRecord {
   createdAt: string;
   data: {
     name: string;
@@ -54,67 +50,72 @@ type MaintenanceRecord = {
     priority: string;
     accessNotes: string;
   };
-};
-type LinkRecord = {
+  id: string;
+  propertyId: string;
+  status: string;
+}
+interface LinkRecord {
+  expiresAt: string;
   id: string;
   propertyId: string;
   residentName: string;
   revoked: boolean;
-  expiresAt: string;
   url: string;
-};
-type InvoiceRecord = {
-  mode: string;
-  id: string;
-  propertyId: string;
-  payerName: string;
-  payerEmail: string;
-  description: string;
+}
+interface InvoiceRecord {
   amountCents: number;
-  status: string;
+  description: string;
   dueDate: string;
+  id: string;
+  mode: string;
+  payerEmail: string;
+  payerName: string;
+  propertyId: string;
+  status: string;
   url: string;
-};
-export type TemplateRecord = {
+}
+export interface TemplateRecord {
+  body: string;
+  createdAt: string;
   id: string;
   name: string;
+}
+export interface DraftRecord {
   body: string;
   createdAt: string;
-};
-export type DraftRecord = {
   document?: import("@/lib/leases/document").LeaseNode | null;
-  values: import("@/lib/management/leases").LeaseValues | null;
   id: string;
+  parentId: string | null;
   propertyId: string;
   templateId: string;
-  parentId: string | null;
   tenantName: string;
-  body: string;
-  createdAt: string;
-};
-type Records = {
-  removed: RemovedRecord[];
-  photos: PhotoRecord[];
-  publications: PublicationRecord[];
-  rentSchedules: RentScheduleRecord[];
-  properties: PropertyRecord[];
+  values: import("@/lib/management/leases").LeaseValues | null;
+}
+interface Records {
   applications: ApplicationRecord[];
-  maintenance: MaintenanceRecord[];
-  residentLinks: LinkRecord[];
-  invoices: InvoiceRecord[];
-  templates: TemplateRecord[];
   drafts: DraftRecord[];
-  paymentsReady: boolean;
+  invoices: InvoiceRecord[];
+  maintenance: MaintenanceRecord[];
   paymentMode: string;
-};
+  paymentsReady: boolean;
+  photos: PhotoRecord[];
+  properties: PropertyRecord[];
+  publications: PublicationRecord[];
+  removed: RemovedRecord[];
+  rentSchedules: RentScheduleRecord[];
+  residentLinks: LinkRecord[];
+  templates: TemplateRecord[];
+}
 export async function command(body: unknown) {
   const r = await fetch("/api/admin/management", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   });
   const result = await r.json();
-  if (!r.ok) throw new Error(result.error);
+  if (!r.ok) {
+    throw new Error(result.error);
+  }
   return result;
 }
 export function Dashboard() {
@@ -123,16 +124,19 @@ export function Dashboard() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
-  async function load() {
+  const load = useCallback(async () => {
     const r = await fetch("/api/admin/management", { cache: "no-store" });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error);
+    if (!r.ok) {
+      throw new Error(data.error);
+    }
     setRecords(data);
-  }
+  }, []);
+
   useEffect(() => {
     const changeSection = () => {
       const selected = ownerSections.find(
-        (s) => s.key === window.location.hash.slice(1),
+        (s) => s.key === window.location.hash.slice(1)
       );
       setTab(selected?.name ?? "Properties");
       setMessage("");
@@ -141,7 +145,7 @@ export function Dashboard() {
     window.addEventListener("hashchange", changeSection);
     load().catch((e) => setError(e.message));
     return () => window.removeEventListener("hashchange", changeSection);
-  }, []);
+  }, [load]);
   async function save(body: unknown) {
     setBusy(true);
     setError("");
@@ -163,45 +167,44 @@ export function Dashboard() {
     records?.removed.find((r) => r.entityId === id && r.kind === "property")
       ?.label ??
     "Property";
+
   return (
     <>
-      {error && (
+      {!!error && (
         <p role="alert">
           {error}{" "}
           <Button
-            type="submit"
             onClick={() => load().catch((e) => setError(e.message))}
+            type="submit"
           >
             Reload records
           </Button>
         </p>
       )}
-      {message && <p role="status">{message}</p>}
-      {!records ? (
-        <p>Loading property records…</p>
-      ) : (
+      {!!message && <p role="status">{message}</p>}
+      {records ? (
         <>
-          {tab === "Branding" && <BrandingWorkspace />}
-          {tab === "Removed" && (
-            <RemovedWorkspace records={records.removed} onSaved={load} />
+          {!!(tab === "Branding") && <BrandingWorkspace />}
+          {!!(tab === "Removed") && (
+            <RemovedWorkspace onSaved={load} records={records.removed} />
           )}
-          {tab === "Properties" && (
+          {!!(tab === "Properties") && (
             <PropertyWorkspace
-              properties={records.properties}
-              save={save}
               busy={busy}
               onRemoved={load}
-            />
-          )}
-          {tab === "Publishing" && (
-            <PublishingWorkspace
               properties={records.properties}
-              photos={records.photos}
-              publications={records.publications}
-              onSaved={load}
+              save={save}
             />
           )}
-          {tab === "Applications" && (
+          {!!(tab === "Publishing") && (
+            <PublishingWorkspace
+              onSaved={load}
+              photos={records.photos}
+              properties={records.properties}
+              publications={records.publications}
+            />
+          )}
+          {!!(tab === "Applications") && (
             <section>
               <h2>Applications</h2>
               <p>
@@ -212,8 +215,8 @@ export function Dashboard() {
               <p>
                 <a
                   href="https://www.mysmartmove.com/"
-                  target="_blank"
                   rel="noreferrer"
+                  target="_blank"
                 >
                   Open SmartMove for screening
                 </a>{" "}
@@ -259,9 +262,8 @@ export function Dashboard() {
                     <p className="document-text">{a.criteriaSnapshot}</p>
                   </details>
                   <AppSelect
-                    label={<>Application status</>}
-                    value={a.status}
                     disabled={busy}
+                    label={<>Application status</>}
                     onValueChange={(value) =>
                       save({
                         action: "applicationStatus",
@@ -269,17 +271,18 @@ export function Dashboard() {
                         status: value,
                       })
                     }
+                    value={a.status}
                   >
                     {applicationStatuses.map((s) => (
                       <option key={s}>{s}</option>
                     ))}
                   </AppSelect>
                   <RemoveButton
-                    kind="application"
+                    disabled={busy}
                     id={a.id}
+                    kind="application"
                     name={a.data.name}
                     onRemoved={load}
-                    disabled={busy}
                   />
                   <a href="/admin/adverse-actions">
                     Prepare a notice separately
@@ -290,21 +293,21 @@ export function Dashboard() {
           )}
           <div hidden={tab !== "Leases"}>
             <LeaseWorkspace
-              properties={records.properties}
-              templates={records.templates}
-              drafts={records.drafts}
               applicants={records.applications.map((a) => ({
-                id: a.id,
-                propertyId: a.propertyId,
-                name: a.data.name,
                 email: a.data.email,
+                id: a.id,
+                name: a.data.name,
+                propertyId: a.propertyId,
               }))}
-              save={save}
               busy={busy}
+              drafts={records.drafts}
               onRemoved={load}
+              properties={records.properties}
+              save={save}
+              templates={records.templates}
             />
           </div>
-          {tab === "Payments" && (
+          {!!(tab === "Payments") && (
             <section>
               <h2>Payment requests</h2>
               <p>
@@ -317,15 +320,15 @@ export function Dashboard() {
                 bank authorization.
               </p>
               <BillingWorkspace
-                properties={records.properties}
-                schedules={records.rentSchedules}
                 onSaved={load}
+                properties={records.properties}
                 ready={records.paymentsReady}
+                schedules={records.rentSchedules}
               />
               <InvoiceForm
+                busy={busy}
                 properties={records.properties}
                 save={save}
-                busy={busy}
               />
               {records.invoices.map((i) => (
                 <article className="record" key={i.id}>
@@ -339,26 +342,26 @@ export function Dashboard() {
                   <p>
                     Due {i.dueDate} · {i.status} · {i.mode} mode
                   </p>
-                  <a href={i.url} target="_blank" rel="noreferrer">
+                  <a href={i.url} rel="noreferrer" target="_blank">
                     Open payment request
                   </a>
                   <CopyLink url={i.url} />
                   <RemoveButton
-                    kind="invoice"
+                    cancelFirst={i.status === "open"}
+                    disabled={busy}
                     id={i.id}
+                    kind="invoice"
                     name={i.description}
                     onRemoved={load}
-                    disabled={busy}
-                    cancelFirst={i.status === "open"}
                   />
-                  {i.status === "open" && (
+                  {!!(i.status === "open") && (
                     <div className="management-actions">
                       <Button
-                        type="submit"
                         disabled={busy}
                         onClick={() =>
                           save({ action: "voidInvoice", id: i.id })
                         }
+                        type="submit"
                       >
                         Cancel payment request
                       </Button>
@@ -368,7 +371,7 @@ export function Dashboard() {
               ))}
             </section>
           )}
-          {tab === "Maintenance" && (
+          {!!(tab === "Maintenance") && (
             <section>
               <h2>Maintenance</h2>
               <p>
@@ -390,13 +393,13 @@ export function Dashboard() {
               >
                 <div className="fields">
                   <PropertySelect properties={records.properties} />
-                  <Field name="residentName" label="Resident name" />
+                  <Field label="Resident name" name="residentName" />
                 </div>
                 <Button
-                  type="submit"
-                  variant="primary"
                   className="submit-button"
                   disabled={busy || !records.properties.length}
+                  type="submit"
+                  variant="primary"
                 >
                   Create resident link
                 </Button>
@@ -412,25 +415,25 @@ export function Dashboard() {
                       : `Expires ${new Date(l.expiresAt).toLocaleDateString()}`}
                   </p>
                   <RemoveButton
-                    kind="residentLink"
+                    disabled={busy}
                     id={l.id}
+                    kind="residentLink"
                     name={l.residentName}
                     onRemoved={load}
-                    disabled={busy}
                   />
                   {!l.revoked && (
                     <>
                       <CopyLink url={l.url} />
                       <div className="management-actions">
-                        <a href={l.url} target="_blank" rel="noreferrer">
+                        <a href={l.url} rel="noreferrer" target="_blank">
                           Open request form
                         </a>
                         <Button
-                          type="submit"
                           disabled={busy}
                           onClick={() =>
                             save({ action: "revokeLink", id: l.id })
                           }
+                          type="submit"
                         >
                           Revoke link
                         </Button>
@@ -456,9 +459,8 @@ export function Dashboard() {
                   <p className="document-text">{m.data.description}</p>
                   <p>Access: {m.data.accessNotes || "Contact resident"}</p>
                   <AppSelect
-                    label={<>Request status</>}
-                    value={m.status}
                     disabled={busy}
+                    label={<>Request status</>}
                     onValueChange={(value) =>
                       save({
                         action: "maintenanceStatus",
@@ -466,17 +468,18 @@ export function Dashboard() {
                         status: value,
                       })
                     }
+                    value={m.status}
                   >
                     {maintenanceStatuses.map((s) => (
                       <option key={s}>{s}</option>
                     ))}
                   </AppSelect>
                   <RemoveButton
-                    kind="maintenance"
+                    disabled={busy}
                     id={m.id}
+                    kind="maintenance"
                     name={m.data.subject}
                     onRemoved={load}
-                    disabled={busy}
                   />
                 </details>
               ))}
@@ -486,6 +489,8 @@ export function Dashboard() {
             Workspace shows the latest 200 records per section.
           </p>
         </>
+      ) : (
+        <p>Loading property records…</p>
       )}
     </>
   );
@@ -508,13 +513,13 @@ export function Field({
     <label className="field">
       {label}
       <input
-        name={name}
-        type={type}
         defaultValue={value}
-        required={required}
-        min={type === "number" ? "0" : undefined}
-        step={type === "number" ? "0.01" : undefined}
         maxLength={500}
+        min={type === "number" ? "0" : undefined}
+        name={name}
+        required={required}
+        step={type === "number" ? "0.01" : undefined}
+        type={type}
       />
     </label>
   );
@@ -526,9 +531,9 @@ export function PropertySelect({
 }) {
   return (
     <AppSelect
+      aria-label="Property"
       label={<>Property</>}
       name="propertyId"
-      aria-label="Property"
       required
     >
       <option value="">Choose a property</option>
@@ -542,21 +547,22 @@ export function PropertySelect({
 }
 function CopyLink({ url }: { url: string }) {
   const [message, setMessage] = useState("");
+
   return (
     <div className="management-actions">
       <Button
-        type="button"
         onClick={() =>
           navigator.clipboard
             .writeText(url)
             .then(() => setMessage("Copied."))
             .catch(() => setMessage("Copy the link below."))
         }
+        type="button"
       >
         Copy private link
       </Button>
       <span role="status">{message}</span>
-      {message === "Copy the link below." && (
+      {!!(message === "Copy the link below.") && (
         <input aria-label="Private link" readOnly value={url} />
       )}
     </div>
@@ -576,6 +582,7 @@ function PropertyWorkspace({
   const [editing, setEditing] = useState<PropertyRecord | null>(null),
     [open, setOpen] = useState(false);
   const data = editing?.data;
+
   return (
     <section>
       <div className="section-heading-row">
@@ -587,96 +594,104 @@ function PropertyWorkspace({
         </div>
         <div className="management-actions">
           <Button
-            type="submit"
             onClick={() => {
               setEditing(null);
               setOpen(true);
             }}
+            type="submit"
           >
             Add property
           </Button>
         </div>
       </div>
-      {properties.map((p) => (
-        <article className="record" key={p.id}>
-          <h3>{p.data.name}</h3>
-          <p>
-            {p.data.address} · {dollars(p.data.rentCents)} / month
-          </p>
-          <p>
-            {p.data.published ? "Published" : "Draft"} ·{" "}
-            {p.data.acceptingApplications
-              ? p.data.published
-                ? "Applications open"
-                : "Applications enabled after publishing"
-              : "Applications closed"}
-          </p>
-          <div className="management-actions">
-            <Button
-              type="submit"
-              onClick={() => {
-                setEditing(p);
-                setOpen(true);
-              }}
-            >
-              Edit {p.data.name}
-            </Button>
-            <RemoveButton
-              kind="property"
-              id={p.id}
-              name={p.data.name}
-              disabled={busy}
-              onRemoved={async () => {
-                if (editing?.id === p.id) {
-                  setEditing(null);
-                  setOpen(false);
-                }
-                await onRemoved();
-              }}
-            />
-            <a href={`/admin?property=${p.id}#publishing`}>
-              Photos & publishing
-            </a>
-            {p.data.published && (
-              <a
-                href={`/properties/${p.slug}`}
-                target="_blank"
-                rel="noreferrer"
+      {properties.map((p) => {
+        const resolveResult1 = () => {
+          if (p.data.acceptingApplications) {
+            if (p.data.published) {
+              return "Applications open";
+            }
+            return "Applications enabled after publishing";
+          }
+          return "Applications closed";
+        };
+        return (
+          <article className="record" key={p.id}>
+            <h3>{p.data.name}</h3>
+            <p>
+              {p.data.address} · {dollars(p.data.rentCents)} / month
+            </p>
+            <p>
+              {p.data.published ? "Published" : "Draft"} · {resolveResult1()}
+            </p>
+            <div className="management-actions">
+              <Button
+                onClick={() => {
+                  setEditing(p);
+                  setOpen(true);
+                }}
+                type="submit"
               >
-                View listing
+                Edit {p.data.name}
+              </Button>
+              <RemoveButton
+                disabled={busy}
+                id={p.id}
+                kind="property"
+                name={p.data.name}
+                onRemoved={async () => {
+                  if (editing?.id === p.id) {
+                    setEditing(null);
+                    setOpen(false);
+                  }
+                  await onRemoved();
+                }}
+              />
+              <a href={`/admin?property=${p.id}#publishing`}>
+                Photos & publishing
               </a>
-            )}
-          </div>
-        </article>
-      ))}
-      {open && (
+              {!!p.data.published && (
+                <a
+                  href={`/properties/${p.slug}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  View listing
+                </a>
+              )}
+            </div>
+          </article>
+        );
+      })}
+      {!!open && (
         <form
-          key={editing?.id ?? "new"}
           className="management-form"
+          key={editing?.id ?? "new"}
           onSubmit={async (e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
             const s = (key: string) => String(f.get(key) ?? "");
             const ok = await save({
               action: "property",
+              data: {
+                acceptingApplications: f.get("acceptingApplications") === "on",
+                address: s("address"),
+                amenities: f.getAll("amenities").map(String),
+                availableDate: s("availableDate"),
+                bathrooms: Number(s("bathrooms")),
+                bedrooms: Number(s("bedrooms")),
+                contact: s("contact"),
+                description: s("description"),
+                emergencyContact: data?.emergencyContact ?? "",
+                name: s("name"),
+                published: f.get("published") === "on",
+                rentCents: Math.round(Number(s("rent")) * 100),
+              },
               id: editing?.id ?? crypto.randomUUID(),
               revision: editing?.revision ?? 0,
-              data: {
-                name: s("name"),
-                address: s("address"),
-                description: s("description"),
-                amenities: f.getAll("amenities").map(String),
-                rentCents: Math.round(Number(s("rent")) * 100),
-                bedrooms: Number(s("bedrooms")),
-                bathrooms: Number(s("bathrooms")),
-                availableDate: s("availableDate"),
-                contact: s("contact"),
-                emergencyContact: data?.emergencyContact ?? "",
-                published: f.get("published") === "on",
-                acceptingApplications: f.get("acceptingApplications") === "on",
-              },
             });
-            if (ok) setOpen(false);
+            if (ok) {
+              setOpen(false);
+            }
           }}
         >
           <h3>{editing ? "Edit property" : "New property"}</h3>
@@ -687,45 +702,45 @@ function PropertyWorkspace({
           </p>
           <fieldset disabled={busy}>
             <div className="fields">
-              <Field name="name" label="Property name" value={data?.name} />
+              <Field label="Property name" name="name" value={data?.name} />
               <Field
-                name="address"
                 label="Property address"
+                name="address"
                 value={data?.address}
               />
               <Field
-                name="rent"
                 label="Monthly rent ($)"
+                name="rent"
                 type="number"
                 value={data ? data.rentCents / 100 : undefined}
               />
               <Field
-                name="bedrooms"
                 label="Bedrooms"
+                name="bedrooms"
                 type="number"
                 value={data?.bedrooms}
               />
               <Field
-                name="bathrooms"
                 label="Bathrooms"
+                name="bathrooms"
                 type="number"
                 value={data?.bathrooms}
               />
               <Field
-                name="availableDate"
                 label="Available date"
+                name="availableDate"
+                required={false}
                 type="date"
                 value={data?.availableDate}
-                required={false}
               />
               <Field
-                name="contact"
                 label="Public owner contact"
+                name="contact"
                 value={data?.contact}
               />
               <div className="field">
                 <span>Urgent repairs</span>
-                <a href="/admin#maintenance" target="_blank" rel="noreferrer">
+                <a href="/admin#maintenance" rel="noreferrer" target="_blank">
                   Open maintenance portal
                 </a>
                 <small>Manage resident request links in a new tab.</small>
@@ -734,8 +749,8 @@ function PropertyWorkspace({
             <label className="field">
               Listing description
               <textarea
-                name="description"
                 defaultValue={data?.description}
+                name="description"
                 required
                 rows={5}
               />
@@ -743,7 +758,7 @@ function PropertyWorkspace({
             <AmenityPicker selected={data?.amenities} />
             <p>
               Selection criteria are managed centrally.{" "}
-              <a href="/#criteria" target="_blank" rel="noreferrer">
+              <a href="/#criteria" rel="noreferrer" target="_blank">
                 View selection criteria
               </a>
             </p>
@@ -752,27 +767,27 @@ function PropertyWorkspace({
             </p>
             <label className="check-row">
               <input
+                defaultChecked={data?.published}
                 name="published"
                 type="checkbox"
-                defaultChecked={data?.published}
               />
               Publish this listing
             </label>
             <label className="check-row">
               <input
+                defaultChecked={data?.acceptingApplications}
                 name="acceptingApplications"
                 type="checkbox"
-                defaultChecked={data?.acceptingApplications}
               />
               Accept applications
             </label>
-            <Button type="submit" variant="primary" className="submit-button">
+            <Button className="submit-button" type="submit" variant="primary">
               Save property
             </Button>
           </fieldset>
         </form>
       )}
-      {!properties.length && !open && (
+      {!(properties.length || open) && (
         <p className="management-empty">
           Add your first property to start listing and accepting applications.
         </p>
@@ -790,6 +805,7 @@ function InvoiceForm({
   busy: boolean;
 }) {
   const [id, setId] = useState(() => crypto.randomUUID());
+
   return (
     <form
       className="management-form"
@@ -799,16 +815,16 @@ function InvoiceForm({
           f = new FormData(form);
         const ok = await save({
           action: "invoice",
-          id,
           data: {
-            propertyId: f.get("propertyId"),
-            payerName: f.get("payerName"),
-            payerEmail: f.get("payerEmail"),
+            amountCents: Math.round(Number(f.get("amount")) * 100),
             category: f.get("category"),
             description: f.get("description"),
-            amountCents: Math.round(Number(f.get("amount")) * 100),
             dueDate: f.get("dueDate"),
+            payerEmail: f.get("payerEmail"),
+            payerName: f.get("payerName"),
+            propertyId: f.get("propertyId"),
           },
+          id,
         });
         if (ok) {
           setId(crypto.randomUUID());
@@ -819,27 +835,27 @@ function InvoiceForm({
       <fieldset disabled={busy}>
         <div className="fields">
           <PropertySelect properties={properties} />
-          <Field name="payerName" label="Payer name" />
-          <Field name="payerEmail" label="Payer email" type="email" />
+          <Field label="Payer name" name="payerName" />
+          <Field label="Payer email" name="payerEmail" type="email" />
           <AppSelect label={<>Payment type</>} name="category">
             <option value="rent">Rent</option>
             <option value="deposit">Deposit</option>
             <option value="application_fee">Application fee</option>
             <option value="other">Other</option>
           </AppSelect>
-          <Field name="description" label="Description / rent period" />
-          <Field name="amount" label="Amount ($)" type="number" />
-          <Field name="dueDate" label="Due date" type="date" />
+          <Field label="Description / rent period" name="description" />
+          <Field label="Amount ($)" name="amount" type="number" />
+          <Field label="Due date" name="dueDate" type="date" />
         </div>
         <p>
           Confirm the amount and recipient. Requests are immutable once created.
           No email is sent; copy and share the private link.
         </p>
         <Button
-          type="submit"
-          variant="primary"
           className="submit-button"
           disabled={!properties.length}
+          type="submit"
+          variant="primary"
         >
           Create payment request
         </Button>

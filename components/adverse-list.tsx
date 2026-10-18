@@ -1,21 +1,22 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-
-import { RemoveButton } from "./management/remove-button";
 import { AppSelect } from "@/components/ui/select";
-import { useEffect, useRef, useState } from "react";
-type NoticeRow = {
-  id: string;
-  documentId: string;
-  version: number;
-  applicantName: string;
-  applicantEmail: string;
-  property: string;
+import { RemoveButton } from "./management/remove-button";
+
+interface NoticeRow {
   action: string;
+  applicantEmail: string;
+  applicantName: string;
   createdAt: string;
-  status: string | null;
+  documentId: string;
+  id: string;
   lastAcceptedVersion: number | null;
-};
+  property: string;
+  status: string | null;
+  version: number;
+}
 const statuses = [
   ["all", "All statuses"],
   ["draft", "Draft"],
@@ -36,7 +37,7 @@ export function AdverseList({
   const [query, setQuery] = useState(initialQuery),
     [applied, setApplied] = useState(initialQuery),
     [filter, setFilter] = useState(
-      statuses.some((s) => s[0] === initialStatus) ? initialStatus : "all",
+      statuses.some((s) => s[0] === initialStatus) ? initialStatus : "all"
     ),
     [rows, setRows] = useState<NoticeRow[]>([]),
     [loading, setLoading] = useState(true),
@@ -45,125 +46,76 @@ export function AdverseList({
     [error, setError] = useState(""),
     [refresh, setRefresh] = useState(0);
   const generation = useRef(0);
-  async function fetchRows(offset: number) {
-    const params = new URLSearchParams({
-      view: "list",
-      q: applied,
-      status: filter,
-      offset: String(offset),
-    });
-    const response = await fetch(`/api/admin/notices?${params}`, {
-        cache: "no-store",
-      }),
-      data = await response.json();
-    if (!response.ok) throw Error(data.error || "Could not load notices.");
-    return data as {
-      documents: NoticeRow[];
-      hasMore: boolean;
-      nextOffset: number;
-    };
-  }
+  const fetchRows = useCallback(
+    async (offsetLocal: number) => {
+      const params = new URLSearchParams({
+        offset: String(offsetLocal),
+        q: applied,
+        revision: String(refresh),
+        status: filter,
+        view: "list",
+      });
+      const response = await fetch(`/api/admin/notices?${params}`, {
+          cache: "no-store",
+        }),
+        data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Could not load notices.");
+      }
+      return data as {
+        documents: NoticeRow[];
+        hasMore: boolean;
+        nextOffset: number;
+      };
+    },
+    [applied, filter, refresh]
+  );
+
   useEffect(() => {
-    const request = ++generation.current;
+    generation.current += 1;
+    const request = generation.current;
     setLoading(true);
     setError("");
     setRows([]);
     fetchRows(0)
       .then((data) => {
-        if (request !== generation.current) return;
+        if (request !== generation.current) {
+          return;
+        }
         setRows(data.documents);
         setMore(data.hasMore);
         setOffset(data.nextOffset);
       })
       .catch((e) => {
-        if (request === generation.current) setError(e.message);
+        if (request === generation.current) {
+          setError(e.message);
+        }
       })
       .finally(() => {
-        if (request === generation.current) setLoading(false);
+        if (request === generation.current) {
+          setLoading(false);
+        }
       });
     return () => {
-      generation.current++;
+      generation.current += 1;
     };
-  }, [applied, filter, refresh]);
-  return (
-    <section aria-label="Adverse-action notice list">
-      <div className="section-heading-row">
-        <div>
-          <h2>All notices</h2>
-          <p className="small-note">
-            One row per notice. Open a notice to edit it or review its versions.
-          </p>
-        </div>
-        <a href="/admin/adverse-actions/new" className="submit-button">
-          New notice
-        </a>
-      </div>
-      <form
-        className="notice-list-filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setApplied(query.trim());
-          const params = new URLSearchParams();
-          if (query.trim()) params.set("q", query.trim());
-          if (filter !== "all") params.set("status", filter);
-          window.history.replaceState(
-            null,
-            "",
-            `/admin/adverse-actions${params.size ? "?" + params : ""}`,
-          );
-          setRefresh((n) => n + 1);
-        }}
-      >
-        <label className="field">
-          Search notices
-          <input
-            type="search"
-            value={query}
-            maxLength={200}
-            placeholder="Applicant, email, or property"
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <AppSelect
-          label={<>Latest version status</>}
-          aria-label="Latest version status"
-          value={filter}
-          onValueChange={(value) => setFilter(value)}
-        >
-          {statuses.map(([value, text]) => (
-            <option value={value} key={value}>
-              {text}
-            </option>
-          ))}
-        </AppSelect>
-        <Button type="submit">Search</Button>
-        <Button
-          type="button"
-          disabled={loading}
-          onClick={() => setRefresh((n) => n + 1)}
-        >
-          Refresh
-        </Button>
-      </form>
-      {error && <p role="alert">{error}</p>}
-      {loading && !rows.length ? (
-        <p role="status">Loading notices…</p>
-      ) : !rows.length && !error ? (
-        <p className="management-empty">
-          {applied || filter !== "all"
-            ? "No notices match these filters."
-            : "No adverse-action notices yet. Create your first notice to get started."}
-        </p>
-      ) : (
+  }, [fetchRows]);
+
+  const resolveResult1 = () => {
+    if (loading && !rows.length) {
+      return <p role="status">Loading notices…</p>;
+    }
+    if (rows.length || error) {
+      return (
         <div className="notice-table-scroll">
-          <table className="notice-table" aria-label="Adverse-action notices">
+          <table aria-label="Adverse-action notices" className="notice-table">
             <thead>
               <tr>
                 <th scope="col">Applicant</th>
                 <th scope="col">Property / decision</th>
                 <th scope="col">Status</th>
                 <th scope="col">Updated</th>
-                <th scope="col" aria-label="Actions" />
+                <th aria-label="Actions" scope="col" />
               </tr>
             </thead>
             <tbody>
@@ -185,13 +137,15 @@ export function AdverseList({
                     >
                       {label(row.status)}
                     </span>
-                    {row.lastAcceptedVersion !== null &&
-                      row.lastAcceptedVersion < row.version && (
-                        <small>
-                          Version {row.lastAcceptedVersion} previously accepted
-                          by Resend
-                        </small>
-                      )}
+                    {!!(
+                      row.lastAcceptedVersion !== null &&
+                      row.lastAcceptedVersion < row.version
+                    ) && (
+                      <small>
+                        Version {row.lastAcceptedVersion} previously accepted by
+                        Resend
+                      </small>
+                    )}
                   </td>
                   <td>
                     <time dateTime={row.createdAt}>
@@ -200,17 +154,17 @@ export function AdverseList({
                   </td>
                   <td>
                     <a
-                      href={`/admin/adverse-actions/${row.documentId}`}
                       aria-label={`Open notice for ${row.applicantName || "untitled applicant"} at ${row.property || "unspecified property"}`}
+                      href={`/admin/adverse-actions/${row.documentId}`}
                     >
                       Open notice →
                     </a>
                     <RemoveButton
-                      kind="notice"
+                      disabled={loading}
                       id={row.documentId}
+                      kind="notice"
                       name={row.applicantName || "Untitled notice"}
                       onRemoved={() => setRefresh((n) => n + 1)}
-                      disabled={loading}
                     />
                   </td>
                 </tr>
@@ -218,16 +172,90 @@ export function AdverseList({
             </tbody>
           </table>
         </div>
-      )}
-      {rows.length > 0 && (
+      );
+    }
+    return (
+      <p className="management-empty">
+        {applied || filter !== "all"
+          ? "No notices match these filters."
+          : "No adverse-action notices yet. Create your first notice to get started."}
+      </p>
+    );
+  };
+  return (
+    <section aria-label="Adverse-action notice list">
+      <div className="section-heading-row">
+        <div>
+          <h2>All notices</h2>
+          <p className="small-note">
+            One row per notice. Open a notice to edit it or review its versions.
+          </p>
+        </div>
+        <a className="submit-button" href="/admin/adverse-actions/new">
+          New notice
+        </a>
+      </div>
+      <form
+        className="notice-list-filters"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setApplied(query.trim());
+          const params = new URLSearchParams();
+          if (query.trim()) {
+            params.set("q", query.trim());
+          }
+          if (filter !== "all") {
+            params.set("status", filter);
+          }
+          window.history.replaceState(
+            null,
+            "",
+            `/admin/adverse-actions${params.size ? `?${params}` : ""}`
+          );
+          setRefresh((n) => n + 1);
+        }}
+      >
+        <label className="field">
+          Search notices
+          <input
+            maxLength={200}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Applicant, email, or property"
+            type="search"
+            value={query}
+          />
+        </label>
+        <AppSelect
+          aria-label="Latest version status"
+          label={<>Latest version status</>}
+          onValueChange={(value) => setFilter(value)}
+          value={filter}
+        >
+          {statuses.map(([value, text]) => (
+            <option key={value} value={value}>
+              {text}
+            </option>
+          ))}
+        </AppSelect>
+        <Button type="submit">Search</Button>
+        <Button
+          disabled={loading}
+          onClick={() => setRefresh((n) => n + 1)}
+          type="button"
+        >
+          Refresh
+        </Button>
+      </form>
+      {!!error && <p role="alert">{error}</p>}
+      {resolveResult1()}
+      {!!(rows.length > 0) && (
         <div className="management-actions notice-list-footer">
           <p className="small-note">
             {rows.length} notice{rows.length === 1 ? "" : "s"} shown. Email
             acceptance does not confirm inbox delivery.
           </p>
-          {more && (
+          {!!more && (
             <Button
-              type="submit"
               disabled={loading}
               onClick={async () => {
                 const request = generation.current;
@@ -241,24 +269,28 @@ export function AdverseList({
                       ...data.documents.filter(
                         (row) =>
                           !previous.some(
-                            (old) => old.documentId === row.documentId,
-                          ),
+                            (old) => old.documentId === row.documentId
+                          )
                       ),
                     ]);
                     setMore(data.hasMore);
                     setOffset(data.nextOffset);
                   }
                 } catch (e) {
-                  if (request === generation.current)
+                  if (request === generation.current) {
                     setError(
                       e instanceof Error
                         ? e.message
-                        : "Could not load more notices.",
+                        : "Could not load more notices."
                     );
+                  }
                 } finally {
-                  if (request === generation.current) setLoading(false);
+                  if (request === generation.current) {
+                    setLoading(false);
+                  }
                 }
               }}
+              type="submit"
             >
               {loading ? "Loading…" : "Load more notices"}
             </Button>

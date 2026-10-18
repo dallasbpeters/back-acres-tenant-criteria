@@ -1,3 +1,4 @@
+"use strict";
 // Keep PDF rendering local: no lease content or fonts go to a third-party viewer.
 const fs = require("node:fs"),
   path = require("node:path");
@@ -31,15 +32,15 @@ for (const [family, weights] of [
   fs.copyFileSync(
     path.join(
       path.dirname(require.resolve(`@fontsource/${family}/package.json`)),
-      "LICENSE",
+      "LICENSE"
     ),
-    path.join(fontTarget, `${family}-LICENSE.txt`),
+    path.join(fontTarget, `${family}-LICENSE.txt`)
   );
   for (const [weight, style] of weights) {
     const name = `${family}-latin-${weight}-${style}.woff`;
     fs.copyFileSync(
       require.resolve(`@fontsource/${family}/files/${name}`),
-      path.join(fontTarget, name),
+      path.join(fontTarget, name)
     );
   }
 }

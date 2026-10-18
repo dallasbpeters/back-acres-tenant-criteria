@@ -4,31 +4,12 @@ import GoogleProvider from "next-auth/providers/google";
 import { canSignIn, isAllowedEmail } from "./access";
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      authorization: {
-        params: { scope: "openid email profile", prompt: "select_account" },
-      },
-      checks: ["pkce", "state"],
-    }),
-  ],
-  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
-  pages: { signIn: "/admin/adverse-actions", error: "/admin/adverse-actions" },
   callbacks: {
-    async signIn({ account, profile }) {
-      return canSignIn(
-        account?.provider,
-        profile as { email?: unknown; email_verified?: unknown } | undefined,
-      );
-    },
-    async jwt({ token, account, profile }) {
+    jwt({ token, account, profile }) {
       if (account) {
         token.googleVerified = canSignIn(
           account.provider,
-          profile as { email?: unknown; email_verified?: unknown } | undefined,
+          profile as { email?: unknown; email_verified?: unknown } | undefined
         );
         token.email =
           typeof profile?.email === "string"
@@ -37,15 +18,26 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    session({ session, token }) {
       // Re-check membership on every request so removing an email revokes access.
-      if (token.googleVerified !== true || !isAllowedEmail(token.email))
+      if (token.googleVerified !== true || !isAllowedEmail(token.email)) {
         session.user = undefined;
-      else if (session.user) session.user.email = token.email;
+      } else if (session.user) {
+        session.user.email = token.email;
+      }
       return session;
+    },
+    signIn({ account, profile }) {
+      return canSignIn(
+        account?.provider,
+        profile as { email?: unknown; email_verified?: unknown } | undefined
+      );
     },
   },
   logger: {
+    debug() {
+      /* Debug output is intentionally disabled to avoid exposing provider tokens. */
+    },
     // Keep provider responses, tokens, and configuration values out of logs.
     error(code) {
       console.error("Google authentication error:", code);
@@ -53,6 +45,18 @@ export const authOptions: NextAuthOptions = {
     warn(code) {
       console.warn("Google authentication warning:", code);
     },
-    debug() {},
   },
+  pages: { error: "/admin/adverse-actions", signIn: "/admin/adverse-actions" },
+  providers: [
+    GoogleProvider({
+      authorization: {
+        params: { prompt: "select_account", scope: "openid email profile" },
+      },
+      checks: ["pkce", "state"],
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    }),
+  ],
+  secret: process.env.NEXTAUTH_SECRET,
+  session: { maxAge: 8 * 60 * 60, strategy: "jwt" },
 };

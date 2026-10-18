@@ -1,18 +1,18 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-
-import { AppSelect } from "@/components/ui/select";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { AppSelect } from "@/components/ui/select";
 import { listingProviders, listingText } from "@/lib/management/listings";
 import type { PropertyRecord } from "./dashboard";
 import { PhotoManager, type PhotoRecord } from "./photos";
-export type PublicationRecord = {
+export interface PublicationRecord {
+  contentDigest: string;
   propertyId: string;
   provider: string;
   status: string;
-  contentDigest: string;
   updatedAt: string;
-};
+}
 export function PublishingWorkspace({
   properties,
   photos,
@@ -26,7 +26,7 @@ export function PublishingWorkspace({
 }) {
   useEffect(() => {
     setChosen(
-      new URLSearchParams(window.location.search).get("property") ?? "",
+      new URLSearchParams(window.location.search).get("property") ?? ""
     );
   }, []);
   const [chosen, setChosen] = useState(""),
@@ -34,20 +34,24 @@ export function PublishingWorkspace({
     [busy, setBusy] = useState(false);
   const property = properties.find((p) => p.id === chosen) ?? properties[0];
   async function status(provider: string, value: string) {
-    if (!property) return;
+    if (!property) {
+      return;
+    }
     setBusy(true);
     try {
       const r = await fetch("/api/admin/listings/publish", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             propertyId: property.id,
             provider,
             status: value,
           }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         }),
         result = await r.json();
-      if (!r.ok) throw Error(result.error);
+      if (!r.ok) {
+        throw new Error(result.error);
+      }
       await onSaved();
       setMessage("Publishing status saved.");
     } catch (e) {
@@ -56,6 +60,7 @@ export function PublishingWorkspace({
       setBusy(false);
     }
   }
+
   return (
     <section>
       <div className="section-heading-row">
@@ -64,20 +69,16 @@ export function PublishingWorkspace({
           <p>Prepare once, then publish through your listing accounts.</p>
         </div>
       </div>
-      {!property ? (
-        <p className="management-empty">
-          Add a property first to upload its photos and prepare its listings.
-        </p>
-      ) : (
+      {property ? (
         <>
           <AppSelect
             className="publishing-property"
             label={<>Property</>}
-            value={property.id}
             onValueChange={(value) => {
               setChosen(value);
               setMessage("");
             }}
+            value={property.id}
           >
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
@@ -87,9 +88,9 @@ export function PublishingWorkspace({
           </AppSelect>
           <PhotoManager
             key={property.id}
-            propertyId={property.id}
-            photos={photos.filter((p) => p.propertyId === property.id)}
             onSaved={onSaved}
+            photos={photos.filter((p) => p.propertyId === property.id)}
+            propertyId={property.id}
           />
           <section className="management-section">
             <h3>Publish your listing</h3>
@@ -106,31 +107,31 @@ export function PublishingWorkspace({
                 Download listing & photos
               </a>
               <Button
-                type="button"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(
                       listingText(
                         property.data,
                         property.slug,
-                        window.location.origin,
-                      ),
+                        window.location.origin
+                      )
                     );
                     setMessage("Listing text copied.");
                   } catch {
                     setMessage(
-                      "Open the downloaded listing.txt to copy the text.",
+                      "Open the downloaded listing.txt to copy the text."
                     );
                   }
                 }}
+                type="button"
               >
                 Copy listing text
               </Button>
-              {property.data.published && (
+              {!!property.data.published && (
                 <a
                   href={`/properties/${property.slug}`}
-                  target="_blank"
                   rel="noreferrer"
+                  target="_blank"
                 >
                   View your listing
                 </a>
@@ -146,45 +147,49 @@ export function PublishingWorkspace({
               {listingProviders.map((provider) => {
                 const record = publications.find(
                     (p) =>
-                      p.propertyId === property.id &&
-                      p.provider === provider.id,
+                      p.propertyId === property.id && p.provider === provider.id
                   ),
                   outdated =
                     record &&
                     ["live", "submitted"].includes(record.status) &&
                     record.contentDigest !== property.publishingDigest;
+
                 return (
-                  <article key={provider.id} className="publication-row">
+                  <article className="publication-row" key={provider.id}>
                     <div>
                       <h4>{provider.name}</h4>
                       <p>{provider.coverage}</p>
-                      {outdated && (
+                      {!!outdated && (
                         <p className="form-error">
                           Listing details or photos changed. Update this site,
                           then confirm its status again.
                         </p>
                       )}
                     </div>
-                    <a href={provider.url} target="_blank" rel="noreferrer">
+                    <a href={provider.url} rel="noreferrer" target="_blank">
                       Open {provider.name} ↗
                     </a>
                     <AppSelect
-                      label={<>Your reported status</>}
                       aria-label={`${provider.name} publishing status`}
-                      value={record?.status ?? "not_started"}
                       disabled={busy}
+                      label={<>Your reported status</>}
                       onValueChange={(value) => status(provider.id, value)}
+                      value={record?.status ?? "not_started"}
                     >
                       <option value="not_started">Not started</option>
                       <option value="submitted">Submitted / in review</option>
                       <option value="live">Live — confirmed by me</option>
                       <option value="removed">Removed / off market</option>
                     </AppSelect>
-                    {outdated && (
+                    {!!outdated && (
                       <Button
-                        type="submit"
                         disabled={busy}
-                        onClick={() => status(provider.id, record.status)}
+                        onClick={() => {
+                          if (record) {
+                            status(provider.id, record.status);
+                          }
+                        }}
+                        type="submit"
                       >
                         I updated this listing
                       </Button>
@@ -199,9 +204,13 @@ export function PublishingWorkspace({
               duplicate listings on sites already covered by your syndication
               account.
             </p>
-            {message && <p role="status">{message}</p>}
+            {!!message && <p role="status">{message}</p>}
           </section>
         </>
+      ) : (
+        <p className="management-empty">
+          Add a property first to upload its photos and prepare its listings.
+        </p>
       )}
     </section>
   );

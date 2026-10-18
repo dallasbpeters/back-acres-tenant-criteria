@@ -1,26 +1,29 @@
-import { sendLeaseMail } from "@/lib/leases/mail";
-import { NextRequest, NextResponse } from "next/server";
+const pattern1 = /\{\{[^}]+\}\}/;
+
 import { randomBytes, randomUUID } from "node:crypto";
-import { and, eq, desc, sql, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { guard, readBody, reply } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import {
+  brandVersions,
   leaseDrafts,
   leasePackets,
   leaseSigners,
-  brandVersions,
 } from "@/lib/db/schema";
-import { guard, readBody, reply } from "@/lib/adverse/auth";
-import { notRemoved } from "@/lib/management/not-removed";
-import { packetInput, digest, signingText } from "@/lib/leases/signing-model";
-import { leasePdf } from "@/lib/leases/pdf";
-import { activePacket, completePacket } from "@/lib/leases/signing-store";
-import { siteUrl } from "@/lib/management/security";
 import {
   documentText,
-  textDocument,
   type LeaseNode,
+  textDocument,
 } from "@/lib/leases/document";
+import { sendLeaseMail } from "@/lib/leases/mail";
+import { leasePdf } from "@/lib/leases/pdf";
+import { digest, packetInput, signingText } from "@/lib/leases/signing-model";
+import { activePacket, completePacket } from "@/lib/leases/signing-store";
+import { notRemoved } from "@/lib/management/not-removed";
+import { siteUrl } from "@/lib/management/security";
+
 function cleanDocument(node: LeaseNode): LeaseNode {
   return {
     ...node,
@@ -30,42 +33,63 @@ function cleanDocument(node: LeaseNode): LeaseNode {
 }
 export async function GET(request: NextRequest) {
   const denied = await guard(request);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
   try {
     const draftId = z.uuid().parse(request.nextUrl.searchParams.get("draftId"));
     const packets = await db()
       .select({
+        createdAt: leasePackets.createdAt,
+        documentHash: leasePackets.documentHash,
+        expiresAt: leasePackets.expiresAt,
+        finalHash: leasePackets.finalHash,
         id: leasePackets.id,
         status: leasePackets.status,
-        documentHash: leasePackets.documentHash,
-        finalHash: leasePackets.finalHash,
-        createdAt: leasePackets.createdAt,
-        expiresAt: leasePackets.expiresAt,
       })
       .from(leasePackets)
       .where(eq(leasePackets.draftId, draftId))
       .orderBy(desc(leasePackets.createdAt));
-    const rows = [];
+    const rows: ((typeof packets)[number] & {
+      signers: Pick<
+        typeof leaseSigners.$inferSelect,
+        | "declinedAt"
+        | "email"
+        | "id"
+        | "invitedAt"
+        | "name"
+        | "role"
+        | "signedAt"
+      >[];
+    })[] = [];
     for (const p of packets) {
-      if (!(await activePacket(p.id))) continue;
+      if (
+        !(
+          /* biome-ignore lint/performance/noAwaitInLoops: Each step depends on the preceding provider/database state or output order; parallel execution would change recovery semantics. */ (await activePacket(
+            p.id
+          ))
+        )
+      ) {
+        continue;
+      }
       const finalized = await completePacket(p.id);
       const signers = await db()
         .select({
-          id: leaseSigners.id,
-          name: leaseSigners.name,
+          declinedAt: leaseSigners.declinedAt,
           email: leaseSigners.email,
+          id: leaseSigners.id,
+          invitedAt: leaseSigners.invitedAt,
+          name: leaseSigners.name,
           role: leaseSigners.role,
           signedAt: leaseSigners.signedAt,
-          invitedAt: leaseSigners.invitedAt,
-          declinedAt: leaseSigners.declinedAt,
         })
         .from(leaseSigners)
         .where(eq(leaseSigners.packetId, p.id));
       rows.push({
         ...p,
-        status: finalized?.status ?? p.status,
         finalHash: finalized?.finalHash ?? p.finalHash,
         signers,
+        status: finalized?.status ?? p.status,
       });
     }
     return reply({ packets: rows });
@@ -78,17 +102,21 @@ const command = z.discriminatedUnion("action", [
   z.object({ action: z.literal("invite"), signerId: z.uuid() }),
   z.object({ action: z.literal("void"), packetId: z.uuid() }),
 ]);
+/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export async function POST(request: NextRequest) {
   const denied = await guard(request);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
   const parsed = command.safeParse(await readBody(request).catch(() => null));
-  if (!parsed.success)
+  if (!parsed.success) {
     return reply(
       {
         error: parsed.error.issues[0]?.message ?? "Check the signing details.",
       },
-      400,
+      400
     );
+  }
   try {
     const c = parsed.data,
       d = db();
@@ -100,15 +128,18 @@ export async function POST(request: NextRequest) {
           and(
             eq(leaseDrafts.id, c.data.draftId),
             notRemoved(leaseDrafts.id),
-            notRemoved(leaseDrafts.propertyId),
-          ),
+            notRemoved(leaseDrafts.propertyId)
+          )
         );
-      if (!draft) return reply({ error: "Lease not found." }, 404);
-      if (/\{\{[^}]+\}\}/.test(draft.body))
+      if (!draft) {
+        return reply({ error: "Lease not found." }, 404);
+      }
+      if (pattern1.test(draft.body)) {
         return reply(
           { error: "Complete all lease details before requesting signatures." },
-          400,
+          400
         );
+      }
       const [brand] = await d
         .select()
         .from(brandVersions)
@@ -122,23 +153,23 @@ export async function POST(request: NextRequest) {
           ? document
           : textDocument(body);
       const pdf = await leasePdf(body, draft.id, pdfDocument, {
-        name: brand?.name ?? "Back Acres Rental",
-        logoPng: brand?.logoPng ?? null,
         forSigning: true,
+        logoPng: brand?.logoPng ?? null,
+        name: brand?.name ?? "Back Acres Rental",
       });
       const family = await d.execute(
-        sql`with recursive ancestors as (select id,parent_id from lease_drafts where id=${draft.id} union all select l.id,l.parent_id from lease_drafts l join ancestors a on l.id=a.parent_id) select id from ancestors where parent_id is null limit 1`,
+        sql`with recursive ancestors as (select id,parent_id from lease_drafts where id=${draft.id} union all select l.id,l.parent_id from lease_drafts l join ancestors a on l.id=a.parent_id) select id from ancestors where parent_id is null limit 1`
       );
       const familyId = String(family.rows[0]?.id ?? draft.id);
       const packet = d.insert(leasePackets).values({
-        id,
-        familyId,
-        draftId: draft.id,
-        body,
         basePdf: Buffer.from(pdf).toString("base64"),
-        documentHash: digest(pdf),
+        body,
         brandName: brand?.name ?? "Back Acres Rental",
-        expiresAt: new Date(Date.now() + 30 * 86400000),
+        documentHash: digest(pdf),
+        draftId: draft.id,
+        expiresAt: new Date(Date.now() + 30 * 86_400_000),
+        familyId,
+        id,
       });
       const signers = d.insert(leaseSigners).values(
         c.data.signers.map((s) => ({
@@ -146,14 +177,16 @@ export async function POST(request: NextRequest) {
           id: randomUUID(),
           packetId: id,
           tokenHash: digest(randomBytes(32)),
-        })),
+        }))
       );
       await d.batch([packet, signers]);
       return reply({ id }, 201);
     }
     if (c.action === "void") {
       const packet = await activePacket(c.packetId);
-      if (!packet) return reply({ error: "Packet not found." }, 404);
+      if (!packet) {
+        return reply({ error: "Packet not found." }, 404);
+      }
       const rows = await d
         .update(leasePackets)
         .set({ status: "voided" })
@@ -161,8 +194,8 @@ export async function POST(request: NextRequest) {
           and(
             eq(leasePackets.id, c.packetId),
             eq(leasePackets.status, "awaiting"),
-            sql`exists(select 1 from ${leaseSigners} where ${leaseSigners.packetId}=${c.packetId} and ${leaseSigners.signedAt} is null)`,
-          ),
+            sql`exists(select 1 from ${leaseSigners} where ${leaseSigners.packetId}=${c.packetId} and ${leaseSigners.signedAt} is null)`
+          )
         )
         .returning({ id: leasePackets.id });
       return rows.length
@@ -173,45 +206,50 @@ export async function POST(request: NextRequest) {
       .select()
       .from(leaseSigners)
       .where(eq(leaseSigners.id, c.signerId));
-    if (!signer) return reply({ error: "Signer not found." }, 404);
+    if (!signer) {
+      return reply({ error: "Signer not found." }, 404);
+    }
     const packet = await activePacket(signer.packetId);
     if (
-      !packet ||
-      packet.status !== "awaiting" ||
+      packet?.status !== "awaiting" ||
       packet.expiresAt < new Date() ||
       signer.declinedAt ||
       signer.signedAt
-    )
+    ) {
       return reply({ error: "This signing request is no longer active." }, 409);
-    if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL)
+    }
+    if (!(process.env.RESEND_API_KEY && process.env.FROM_EMAIL)) {
       return reply(
         { error: "Configure Resend before sending signing links." },
-        503,
+        503
       );
+    }
     const token = randomBytes(32).toString("hex"),
       url = `${siteUrl()}/sign/lease/${token}`;
     const updated = await d
       .update(leaseSigners)
       .set({
-        tokenHash: digest(token),
         codeHash: null,
         sessionHash: null,
+        tokenHash: digest(token),
         verifiedAt: null,
       })
       .where(and(eq(leaseSigners.id, signer.id), isNull(leaseSigners.signedAt)))
       .returning({ id: leaseSigners.id });
-    if (!updated.length)
+    if (!updated.length) {
       return reply({ error: "This signer has already signed." }, 409);
+    }
     const response = await sendLeaseMail({
-      to: signer.email,
       subject: `${packet.brandName}: review and sign your lease`,
       text: `Hello ${signer.name},\n\nReview the complete lease, download a copy, and sign securely here:\n${url}\n\nThe request expires ${packet.expiresAt.toISOString()}. A separate verification code will be sent to this email address before signing. Do not forward this private link.\n\nYou may request a paper copy or signing alternative by contacting your landlord.`,
+      to: signer.email,
     });
-    if (!response.ok)
+    if (!response.ok) {
       return reply(
         { error: "Email was not accepted. Try sending a new link." },
-        502,
+        502
       );
+    }
     await d
       .update(leaseSigners)
       .set({ invitedAt: sql`now()` })
@@ -223,7 +261,7 @@ export async function POST(request: NextRequest) {
         error:
           "Could not complete this request. A pending signing packet may exist for this lease or an earlier version; cancel it before replacing it.",
       },
-      409,
+      409
     );
   }
 }

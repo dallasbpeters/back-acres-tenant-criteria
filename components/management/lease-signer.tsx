@@ -1,26 +1,29 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+const pattern1 = /filename="([^"]+)"/;
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 const LeaseSignaturePad = dynamic(
   () => import("./lease-signature-pad").then((m) => m.LeaseSignaturePad),
-  { ssr: false, loading: () => <p>Loading signature pad…</p> },
+  { loading: () => <p>Loading signature pad…</p>, ssr: false }
 );
-type Record = {
-  verified: boolean;
-  name: string;
-  email: string;
-  brandName: string;
+interface Record {
   body?: string;
-  documentHash?: string;
-  finalHash?: string;
-  status?: string;
-  signedAt?: string;
-  declinedAt?: string;
+  brandName: string;
   consent?: string;
   consentVersion?: string;
-};
+  declinedAt?: string;
+  documentHash?: string;
+  email: string;
+  finalHash?: string;
+  name: string;
+  signedAt?: string;
+  status?: string;
+  verified: boolean;
+}
 export function LeaseSigner({ token }: { token: string }) {
   const [record, setRecord] = useState<Record | null>(null),
     [key, setKey] = useState(""),
@@ -34,30 +37,36 @@ export function LeaseSigner({ token }: { token: string }) {
     [message, setMessage] = useState(""),
     [withdrawn, setWithdrawn] = useState(false);
   const endpoint = `/api/lease-signing/${token}`;
-  async function load(session = key) {
-    const r = await fetch(endpoint, {
-        headers: session ? { Authorization: `Bearer ${session}` } : {},
-        cache: "no-store",
-      }),
-      data = await r.json();
-    if (!r.ok) throw Error(data.error);
-    setRecord(data);
-  }
+  const load = useCallback(
+    async (session = key) => {
+      const r = await fetch(endpoint, {
+          cache: "no-store",
+          headers: session ? { Authorization: `Bearer ${session}` } : {},
+        }),
+        data = await r.json();
+      if (!r.ok) {
+        throw new Error(data.error);
+      }
+      setRecord(data);
+    },
+    [endpoint, key]
+  );
+
   useEffect(() => {
     load().catch((e) => setError(e.message));
-  }, [token]);
+  }, [load]);
   async function act(body: unknown) {
     setBusy(true);
     setError("");
     setMessage("");
     try {
       const r = await fetch(endpoint, {
-          method: "POST",
+          body: JSON.stringify(body),
           headers: {
             "Content-Type": "application/json",
             ...(key ? { Authorization: `Bearer ${key}` } : {}),
           },
-          body: JSON.stringify(body),
+          method: "POST",
         }),
         data = await r.json();
       if (!r.ok) {
@@ -68,19 +77,20 @@ export function LeaseSigner({ token }: { token: string }) {
           setConsent(false);
           await load("");
         }
-        throw Error(data.error);
+        throw new Error(data.error);
       }
-      const action = (body as { action: string }).action;
+      const { action } = body as { action: string };
       if (action === "verify") {
         setKey(data.session);
         setCode("");
         await load(data.session);
-      } else if (action === "code")
+      } else if (action === "code") {
         setMessage(
-          "Check your email for a six-digit code. It expires in 10 minutes.",
+          "Check your email for a six-digit code. It expires in 10 minutes."
         );
-      else if (action === "withdraw") setWithdrawn(true);
-      else {
+      } else if (action === "withdraw") {
+        setWithdrawn(true);
+      } else {
         setSignature("");
         await load();
       }
@@ -106,17 +116,16 @@ export function LeaseSigner({ token }: { token: string }) {
           setConsent(false);
           await load("");
         }
-        throw Error(data.error);
+        throw new Error(data.error);
       }
       const url = URL.createObjectURL(await r.blob()),
         link = document.createElement("a");
       link.href = url;
       link.download =
-        r.headers
-          .get("Content-Disposition")
-          ?.match(/filename="([^"]+)"/)?.[1] ?? "lease.pdf";
+        r.headers.get("Content-Disposition")?.match(pattern1)?.[1] ??
+        "lease.pdf";
       link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setDownloaded(true);
       await load();
     } catch (e) {
@@ -125,23 +134,156 @@ export function LeaseSigner({ token }: { token: string }) {
       setBusy(false);
     }
   }
-  return (
-    <section className="lease-signer">
-      <p className="eyebrow">Private lease signing</p>
-      {error && <p role="alert">{error}</p>}
-      {message && <p role="status">{message}</p>}
-      {withdrawn ? (
+
+  const resolveResult1 = () => {
+    const resolveResult2 = () => {
+      if (!record) {
+        return null;
+      }
+      if (record.signedAt) {
+        return (
+          <p role="status">
+            Your signature was recorded at{" "}
+            {new Date(record.signedAt).toISOString()} (UTC).{" "}
+            {record.status === "completed"
+              ? "All required signatures are complete. Save your signed copy above."
+              : "Waiting for the other required signatures. Return here and verify your email again to download the completed copy."}
+          </p>
+        );
+      }
+      if (record.declinedAt) {
+        return (
+          <p>
+            Electronic signing was declined. Contact your landlord for a paper
+            copy.
+          </p>
+        );
+      }
+      return (
+        <>
+          <p>
+            Review the full lease below and download the PDF before signing. It
+            includes the precise document this signature will be attached to.
+            Use a browser and PDF reader that let you save or print a copy.
+          </p>
+          <pre className="lease-signing-document">{record.body}</pre>
+          <form
+            onSubmit={(e) => {
+              if (!record) {
+                return;
+              }
+              e.preventDefault();
+              act({
+                action: "sign",
+                consent,
+                consentVersion: record.consentVersion,
+                documentHash: record.documentHash,
+                name,
+                signature,
+              });
+            }}
+          >
+            <label className="field">
+              Confirm your full legal name
+              <input
+                autoComplete="name"
+                maxLength={150}
+                onChange={(e) => setName(e.target.value)}
+                required
+                value={name}
+              />
+            </label>
+            <LeaseSignaturePad
+              disabled={busy || !downloaded}
+              onChange={setSignature}
+            />
+            {!downloaded && (
+              <p className="small-note">
+                Download the lease PDF above to enable signing.
+              </p>
+            )}
+            <label className="check-row">
+              <input
+                checked={consent}
+                disabled={busy}
+                onChange={(e) => setConsent(e.target.checked)}
+                required
+                type="checkbox"
+              />
+              <span>{record.consent}</span>
+            </label>
+            <p className="small-note">
+              By choosing “Sign this lease,” you are signing a contract. Review
+              the terms before continuing. The website records the server’s UTC
+              time and signature evidence; it does not provide notarization or
+              government identity verification.
+            </p>
+            <Button
+              disabled={busy || !downloaded || !signature || !consent}
+              type="submit"
+              variant="primary"
+            >
+              {busy ? "Recording…" : "Sign this lease"}
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                if (
+                  /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+                    "Decline electronic signing and ask the landlord for a paper alternative?"
+                  )
+                ) {
+                  act({ action: "withdraw" });
+                }
+              }}
+              type="button"
+            >
+              Decline electronic signing
+            </Button>
+          </form>
+        </>
+      );
+    };
+    if (withdrawn) {
+      return (
         <p role="status">
           Electronic signing declined. Contact your landlord for a paper copy or
           another way to sign. No signature was added.
         </p>
-      ) : !record ? (
-        <p>
-          {error
-            ? "Contact your landlord if this problem continues."
-            : "Loading signing request…"}
-        </p>
-      ) : !record.verified ? (
+      );
+    }
+    if (record) {
+      if (record.verified) {
+        return (
+          <>
+            <h2>{record.brandName} · Residential lease</h2>
+            <p>
+              Signer: <strong>{record.name}</strong> · {record.email}
+            </p>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                download();
+              }}
+              type="submit"
+            >
+              {record.status === "completed"
+                ? "Download signed lease & audit record"
+                : "Download lease PDF"}
+            </Button>
+            <p className="document-fingerprint">
+              Original PDF SHA-256: {record.documentHash}
+            </p>
+            {!!record.finalHash && (
+              <p className="document-fingerprint">
+                Signed PDF SHA-256: {record.finalHash}
+              </p>
+            )}
+            {resolveResult2()}
+          </>
+        );
+      }
+      return (
         <>
           <h2>{record.name}, verify your email</h2>
           <p>
@@ -149,9 +291,11 @@ export function LeaseSigner({ token }: { token: string }) {
             accepting a signature. This confirms access to your mailbox.
           </p>
           <Button
-            type="submit"
             disabled={busy}
-            onClick={() => void act({ action: "code" })}
+            onClick={() => {
+              act({ action: "code" });
+            }}
+            type="submit"
           >
             Email verification code
           </Button>
@@ -159,22 +303,22 @@ export function LeaseSigner({ token }: { token: string }) {
             className="signing-verification"
             onSubmit={(e) => {
               e.preventDefault();
-              void act({ action: "verify", code });
+              act({ action: "verify", code });
             }}
           >
             <label className="field">
               Six-digit email code
               <input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
                 autoComplete="one-time-code"
                 inputMode="numeric"
+                maxLength={6}
+                onChange={(e) => setCode(e.target.value)}
                 pattern="[0-9]{6}"
                 required
-                maxLength={6}
+                value={code}
               />
             </label>
-            <Button type="submit" variant="primary" disabled={busy}>
+            <Button disabled={busy} type="submit" variant="primary">
               Verify and review lease
             </Button>
           </form>
@@ -183,121 +327,22 @@ export function LeaseSigner({ token }: { token: string }) {
             don’t forward it.
           </p>
         </>
-      ) : (
-        <>
-          <h2>{record.brandName} · Residential lease</h2>
-          <p>
-            Signer: <strong>{record.name}</strong> · {record.email}
-          </p>
-          <Button type="submit" disabled={busy} onClick={() => void download()}>
-            {record.status === "completed"
-              ? "Download signed lease & audit record"
-              : "Download lease PDF"}
-          </Button>
-          <p className="document-fingerprint">
-            Original PDF SHA-256: {record.documentHash}
-          </p>
-          {record.finalHash && (
-            <p className="document-fingerprint">
-              Signed PDF SHA-256: {record.finalHash}
-            </p>
-          )}
-          {record.signedAt ? (
-            <p role="status">
-              Your signature was recorded at{" "}
-              {new Date(record.signedAt).toISOString()} (UTC).{" "}
-              {record.status === "completed"
-                ? "All required signatures are complete. Save your signed copy above."
-                : "Waiting for the other required signatures. Return here and verify your email again to download the completed copy."}
-            </p>
-          ) : record.declinedAt ? (
-            <p>
-              Electronic signing was declined. Contact your landlord for a paper
-              copy.
-            </p>
-          ) : (
-            <>
-              <p>
-                Review the full lease below and download the PDF before signing.
-                It includes the precise document this signature will be attached
-                to. Use a browser and PDF reader that let you save or print a
-                copy.
-              </p>
-              <pre className="lease-signing-document">{record.body}</pre>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void act({
-                    action: "sign",
-                    signature,
-                    consent,
-                    consentVersion: record.consentVersion,
-                    documentHash: record.documentHash,
-                    name,
-                  });
-                }}
-              >
-                <label className="field">
-                  Confirm your full legal name
-                  <input
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    maxLength={150}
-                    autoComplete="name"
-                  />
-                </label>
-                <LeaseSignaturePad
-                  disabled={busy || !downloaded}
-                  onChange={setSignature}
-                />
-                {!downloaded && (
-                  <p className="small-note">
-                    Download the lease PDF above to enable signing.
-                  </p>
-                )}
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={consent}
-                    onChange={(e) => setConsent(e.target.checked)}
-                    disabled={busy}
-                  />
-                  <span>{record.consent}</span>
-                </label>
-                <p className="small-note">
-                  By choosing “Sign this lease,” you are signing a contract.
-                  Review the terms before continuing. The website records the
-                  server’s UTC time and signature evidence; it does not provide
-                  notarization or government identity verification.
-                </p>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={busy || !downloaded || !signature || !consent}
-                >
-                  {busy ? "Recording…" : "Sign this lease"}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Decline electronic signing and ask the landlord for a paper alternative?",
-                      )
-                    )
-                      void act({ action: "withdraw" });
-                  }}
-                >
-                  Decline electronic signing
-                </Button>
-              </form>
-            </>
-          )}
-        </>
-      )}
+      );
+    }
+    return (
+      <p>
+        {error
+          ? "Contact your landlord if this problem continues."
+          : "Loading signing request…"}
+      </p>
+    );
+  };
+  return (
+    <section className="lease-signer">
+      <p className="eyebrow">Private lease signing</p>
+      {!!error && <p role="alert">{error}</p>}
+      {!!message && <p role="status">{message}</p>}
+      {resolveResult1()}
     </section>
   );
 }

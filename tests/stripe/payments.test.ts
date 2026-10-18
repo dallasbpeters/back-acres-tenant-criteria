@@ -1,4 +1,7 @@
-import * as schema from "../../lib/db/schema";
+// biome-ignore-all lint/suspicious/useAwait: Async transport stubs intentionally preserve native promise and rejection behavior, including faults before the first await.
+// biome-ignore-all lint/performance/noAwaitInLoops: These stateful fixtures and assertions must finish each transition before the next request or cleanup.
+// Register isolated provider/database mocks before importing any payment route.
+import "./harness";
 import {
   afterAll,
   beforeAll,
@@ -8,39 +11,44 @@ import {
   it,
   vi,
 } from "vitest";
-import {
-  start,
-  reset,
-  pg,
-  state,
-  client,
-  invoice,
-  schedule,
-  property,
-  stored,
-  request,
-  webhookRequest,
-  event,
-  session,
-  bank,
-  readyBank,
-  id,
-  propertyId,
-} from "./harness";
-import { POST as checkout } from "../../app/api/payments/checkout/route";
-import { POST as enroll } from "../../app/api/payments/autopay/route";
-import { POST as webhook } from "../../app/api/payments/webhook/route";
-import { POST as manage } from "../../app/api/admin/management/route";
+import { requireValue } from "@/lib/required";
 import { POST as billing } from "../../app/api/admin/billing/route";
-import { linkToken, tokenId } from "../../lib/management/security";
-import { paymentReady, paymentMode, stripe } from "../../lib/management/stripe";
+import { POST as manage } from "../../app/api/admin/management/route";
+import { POST as enroll } from "../../app/api/payments/autopay/route";
+import { POST as checkout } from "../../app/api/payments/checkout/route";
+import { POST as webhook } from "../../app/api/payments/webhook/route";
+import { db } from "../../lib/db";
+// biome-ignore lint/performance/noNamespaceImport: Drizzle needs the complete schema object, including relationships, for this server-only database/test adapter.
+import * as schema from "../../lib/db/schema";
 import {
   activateAutopay,
-  stopAutopay,
   authorizationText,
+  handleAutopayEvent,
+  stopAutopay,
 } from "../../lib/management/autopay";
 import { handleBillingEvent } from "../../lib/management/billing-events";
-import { db } from "../../lib/db";
+import { linkToken, tokenId } from "../../lib/management/security";
+import { paymentMode, paymentReady, stripe } from "../../lib/management/stripe";
+import {
+  bank,
+  client,
+  event,
+  id,
+  invoice,
+  pg,
+  property,
+  propertyId,
+  readyBank,
+  request,
+  reset,
+  schedule,
+  session,
+  start,
+  state,
+  stored,
+  webhookRequest,
+} from "./harness";
+
 beforeAll(start);
 beforeEach(reset);
 afterAll(async () => {
@@ -53,27 +61,27 @@ const pay = (body: any = { token: linkToken("payment", id) }) =>
 const ach = (patch = {}) =>
   enroll(
     request("/api/payments/autopay", {
-      token: linkToken("autopay", id),
       action: "enroll",
       authorized: true,
+      token: linkToken("autopay", id),
       ...patch,
-    }),
+    })
   );
 const notify = (type = "checkout.session.completed", patch = {}) =>
   webhook(webhookRequest(event(type, session(patch))));
 const billingData = () => ({
-  propertyId,
-  payerName: "Tenant",
-  payerEmail: "tenant@example.invalid",
-  monthlyCents: 125000,
-  firstDate: "2099-01-10",
-  installments: 12,
   authorized: true,
   collection: "invoice",
+  firstDate: "2099-01-10",
+  installments: 12,
+  monthlyCents: 125_000,
+  payerEmail: "tenant@example.invalid",
+  payerName: "Tenant",
+  propertyId,
 });
 const create = (data = billingData(), recordId = id) =>
   billing(
-    request("/api/admin/billing", { action: "create", id: recordId, data }),
+    request("/api/admin/billing", { action: "create", data, id: recordId })
   );
 const cancel = () =>
   billing(request("/api/admin/billing", { action: "cancel", id }));
@@ -84,7 +92,7 @@ describe("configuration, authentication, and private links", () => {
       vi.stubEnv(key, "");
       expect(paymentReady()).toBe(false);
       expect(() => stripe()).toThrow();
-    },
+    }
   );
   it.each(["sk_live_fixture", "rk_live_fixture"])(
     "requires explicit live authorization for %s",
@@ -94,7 +102,7 @@ describe("configuration, authentication, and private links", () => {
       expect(paymentReady()).toBe(false);
       vi.stubEnv("PAYMENTS_LIVE_ENABLED", "true");
       expect(paymentReady()).toBe(true);
-    },
+    }
   );
   it("accepts test keys without enabling live payments", () => {
     expect(paymentMode()).toBe("test");
@@ -104,25 +112,26 @@ describe("configuration, authentication, and private links", () => {
     const token = linkToken("payment", id);
     expect(tokenId("payment", token)).toBe(id);
     for (const bad of [
-      token + "x",
-      token + ".extra",
+      `${token}x`,
+      `${token}.extra`,
       token.slice(0, -1),
       token.replace(id, propertyId),
       "",
       "x",
-    ])
+    ]) {
       expect(tokenId("payment", bad)).toBeNull();
+    }
     expect(tokenId("autopay", token)).toBeNull();
   });
   it.each([checkout, enroll, billing])(
     "rejects cross-origin mutations before Stripe or DB calls",
     async (route) => {
       const r = await route(
-        request("/api/test", {}, { origin: "https://evil.invalid" }),
+        request("/api/test", {}, { origin: "https://evil.invalid" })
       );
       expect(r.status).toBe(403);
       expect(client.customers.create).not.toHaveBeenCalled();
-    },
+    }
   );
   it("requires an allowed owner for billing", async () => {
     for (const s of [null, { user: { email: "outsider@example.invalid" } }]) {
@@ -135,20 +144,21 @@ describe("configuration, authentication, and private links", () => {
     async (route) => {
       vi.stubEnv("STRIPE_SECRET_KEY", "");
       expect((await route(request("/api/test", {}))).status).toBe(503);
-    },
+    }
   );
   it.each([checkout, enroll, billing])(
     "rejects malformed, oversized and non-JSON input",
     async (route) => {
       for (const [body, headers] of [
         ["{", {}],
-        ["x".repeat(65000), {}],
+        ["x".repeat(65_000), {}],
         ["{}", { "content-type": "text/plain" }],
-      ] as const)
+      ] as const) {
         expect((await route(request("/api/test", body, headers))).status).toBe(
-          400,
+          400
         );
-    },
+      }
+    }
   );
 });
 describe("one-time checkout", () => {
@@ -157,25 +167,25 @@ describe("one-time checkout", () => {
     expect((await pay()).status).toBe(200);
     expect(client.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        mode: "payment",
-        customer_email: "tenant@example.invalid",
         client_reference_id: id,
-        metadata: { invoiceId: id },
+        customer_email: "tenant@example.invalid",
         line_items: [
           {
-            quantity: 1,
             price_data: {
               currency: "usd",
-              unit_amount: 125000,
               product_data: { name: "Rent" },
+              unit_amount: 125_000,
             },
+            quantity: 1,
           },
         ],
+        metadata: { invoiceId: id },
+        mode: "payment",
         success_url: expect.stringContaining(
-          "https://rental.example.invalid/pay/",
+          "https://rental.example.invalid/pay/"
         ),
       }),
-      { idempotencyKey: `rental-invoice-${id}` },
+      { idempotencyKey: `rental-invoice-${id}` }
     );
     expect((await stored()).stripeSessionId).toBe("cs_fixture");
     expect((await pay()).status).toBe(200);
@@ -195,11 +205,11 @@ describe("one-time checkout", () => {
     expect((await pay()).status).toBe(409);
     await state.database.update(schema.invoices).set({ mode: "test" });
     await state.database.insert(schema.removedRecords).values({
+      actor: "fixture",
       entityId: id,
       groupId: id,
       kind: "invoice",
       label: "Fixture",
-      actor: "fixture",
     });
     expect((await pay()).status).toBe(404);
     expect((await pay({ token: "bad" })).status).toBe(404);
@@ -222,7 +232,7 @@ describe("one-time checkout", () => {
       client.checkout.sessions.retrieve.mockResolvedValue({ status });
       expect((await pay()).status).toBe(409);
       expect(client.checkout.sessions.create).not.toHaveBeenCalled();
-    },
+    }
   );
   it("rejects a provider session with no redirect URL", async () => {
     await invoice();
@@ -241,7 +251,9 @@ describe("one-time checkout", () => {
   });
   it("rate limits repeated attempts without preventing webhook settlement", async () => {
     await invoice({ stripeSessionId: "cs_fixture" });
-    for (let n = 0; n < 8; n++) expect((await pay()).status).toBe(200);
+    for (let n = 0; n < 8; n += 1) {
+      expect((await pay()).status).toBe(200);
+    }
     expect((await pay()).status).toBe(429);
     expect((await notify()).status).toBe(200);
     expect((await stored()).status).toBe("paid");
@@ -249,7 +261,7 @@ describe("one-time checkout", () => {
   it("keeps ambiguous provider failures locked against a duplicate charge", async () => {
     await invoice();
     client.checkout.sessions.create.mockRejectedValue(
-      new Error("timeout secret detail"),
+      new Error("timeout secret detail")
     );
     const r = await pay();
     expect(r.status).toBe(503);
@@ -262,7 +274,7 @@ describe("one-time checkout", () => {
     await invoice();
     client.checkout.sessions.create.mockImplementation(async () => {
       vi.spyOn(state.database, "update").mockImplementationOnce(() => {
-        throw Error("DB unavailable");
+        throw new Error("DB unavailable");
       });
       return {
         id: "cs_fixture",
@@ -277,7 +289,7 @@ describe("one-time checkout", () => {
   });
   it("returns a retryable response for database and session-retrieval outages", async () => {
     vi.mocked(db).mockImplementationOnce(() => {
-      throw Error("offline");
+      throw new Error("offline");
     });
     expect((await pay()).status).toBe(503);
     await invoice({ stripeSessionId: "cs_fixture" });
@@ -294,23 +306,29 @@ describe("signed checkout webhooks", () => {
       let req = webhookRequest(
         e,
         kind === "wrong secret" ? "wrong" : "whsec_isolated_fixture",
-        kind === "expired" ? 1 : undefined,
+        kind === "expired" ? 1 : undefined
       );
-      if (kind === "missing") req.headers.delete("stripe-signature");
-      if (kind === "tampered")
+      if (kind === "missing") {
+        req.headers.delete("stripe-signature");
+      }
+      if (kind === "tampered") {
         req = request("/api/payments/webhook", "{}", {
-          "stripe-signature": req.headers.get("stripe-signature")!,
+          "stripe-signature": requireValue(
+            req.headers.get("stripe-signature"),
+            "Expected req.headers.get(stripe-signature)"
+          ),
         });
+      }
       expect((await webhook(req)).status).toBe(400);
       expect((await stored()).status).toBe("open");
-    },
+    }
   );
   it("acknowledges unknown events and unrelated checkout without database writes", async () => {
     expect(
-      (await webhook(webhookRequest(event("customer.created", {})))).status,
+      (await webhook(webhookRequest(event("customer.created", {})))).status
     ).toBe(200);
     expect(
-      (await notify("checkout.session.completed", { metadata: {} })).status,
+      (await notify("checkout.session.completed", { metadata: {} })).status
     ).toBe(200);
   });
   it.each([
@@ -322,7 +340,7 @@ describe("signed checkout webhooks", () => {
   ])("rejects mismatched invoice/session identity %j", async (patch) => {
     await invoice({ stripeSessionId: "cs_fixture" });
     expect((await notify("checkout.session.completed", patch)).status).toBe(
-      400,
+      400
     );
     expect((await stored()).status).toBe("open");
   });
@@ -333,7 +351,7 @@ describe("signed checkout webhooks", () => {
     await invoice();
     expect(
       (await notify("checkout.session.completed", { payment_status: "unpaid" }))
-        .status,
+        .status
     ).toBe(200);
     expect((await stored()).status).toBe("processing");
     await notify("checkout.session.async_payment_failed", {
@@ -362,7 +380,7 @@ describe("signed checkout webhooks", () => {
   it("returns 503 on persistence failure so Stripe retries", async () => {
     await invoice();
     vi.spyOn(state.database, "update").mockImplementationOnce(() => {
-      throw Error("offline");
+      throw new Error("offline");
     });
     expect((await notify()).status).toBe(503);
     expect((await notify()).status).toBe(200);
@@ -389,7 +407,7 @@ describe("ACH enrollment and revocation", () => {
     async (patch) => {
       await schedule(patch);
       expect((await ach()).status).toBe(404);
-    },
+    }
   );
   it("creates ACH-only setup checkout with durable authorization and stable keys", async () => {
     const r = await schedule();
@@ -403,12 +421,12 @@ describe("ACH enrollment and revocation", () => {
     });
     expect(client.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        mode: "setup",
         allowed_payment_method_types: ["us_bank_account"],
         customer: "cus_fixture",
+        mode: "setup",
         setup_intent_data: { metadata: { rentScheduleId: id } },
       }),
-      { idempotencyKey: `ach-setup-${id}` },
+      { idempotencyKey: `ach-setup-${id}` }
     );
     expect((await ach()).status).toBe(200);
     expect(client.customers.create).toHaveBeenCalledTimes(1);
@@ -427,11 +445,11 @@ describe("ACH enrollment and revocation", () => {
         name === "customers.create"
           ? client.customers.create
           : client.checkout.sessions.create;
-      fn.mockRejectedValue(Error("timeout"));
+      fn.mockRejectedValue(new Error("timeout"));
       expect((await ach()).status).toBe(503);
       expect((await ach()).status).toBe(409);
       expect(fn).toHaveBeenCalledTimes(1);
-    },
+    }
   );
   it("expires checkout if stop wins the race before checkout is saved", async () => {
     await schedule();
@@ -450,15 +468,17 @@ describe("ACH enrollment and revocation", () => {
       setupSessionId: "cs_fixture",
       status: "awaiting_verification",
     });
-    for (let n = 0; n < 8; n++) await ach();
+    for (let n = 0; n < 8; n += 1) {
+      await ach();
+    }
     expect((await ach()).status).toBe(429);
     expect((await ach({ action: "stop" })).status).toBe(200);
     expect((await stored(schema.rentSchedules)).status).toBe("canceled");
   });
   it("cancels provider schedule, expires open checkout and cancels incomplete setup intent", async () => {
     await readyBank({
-      stripeScheduleId: "sub_sched_fixture",
       status: "active",
+      stripeScheduleId: "sub_sched_fixture",
     });
     client.subscriptionSchedules.retrieve.mockResolvedValue({
       id: "sub_sched_fixture",
@@ -466,8 +486,8 @@ describe("ACH enrollment and revocation", () => {
     });
     client.checkout.sessions.retrieve.mockResolvedValue({
       id: "cs_fixture",
-      status: "open",
       setup_intent: "seti_fixture",
+      status: "open",
     });
     client.setupIntents.retrieve.mockResolvedValue({
       id: "seti_fixture",
@@ -476,7 +496,7 @@ describe("ACH enrollment and revocation", () => {
     await stopAutopay(id);
     expect(client.subscriptionSchedules.cancel).toHaveBeenCalledWith(
       "sub_sched_fixture",
-      { invoice_now: false, prorate: false },
+      { invoice_now: false, prorate: false }
     );
     expect(client.setupIntents.cancel).toHaveBeenCalledWith("seti_fixture");
     expect((await stored(schema.rentSchedules)).status).toBe("canceled");
@@ -487,8 +507,8 @@ describe("ACH enrollment and revocation", () => {
     await readyBank();
     client.subscriptionSchedules.list.mockResolvedValue({
       data: [
-        { id: "orphan", status: "active", metadata: { rentScheduleId: id } },
-        { id: "unrelated", status: "active", metadata: {} },
+        { id: "orphan", metadata: { rentScheduleId: id }, status: "active" },
+        { id: "unrelated", metadata: {}, status: "active" },
       ],
       has_more: false,
     });
@@ -506,25 +526,29 @@ describe("ACH enrollment and revocation", () => {
       });
       client.checkout.sessions.retrieve.mockResolvedValue({
         id: "cs_fixture",
-        status: "open",
         setup_intent: "seti_fixture",
+        status: "open",
       });
       client.setupIntents.retrieve.mockResolvedValue({
         id: "seti_fixture",
         status: "requires_action",
       });
-      const fn =
-        at === "schedule"
-          ? client.subscriptionSchedules.cancel
-          : at === "checkout"
-            ? client.checkout.sessions.expire
-            : client.setupIntents.cancel;
-      fn.mockRejectedValueOnce(Error("timeout"));
+      const resolveFn1 = () => {
+        if (at === "schedule") {
+          return client.subscriptionSchedules.cancel;
+        }
+        if (at === "checkout") {
+          return client.checkout.sessions.expire;
+        }
+        return client.setupIntents.cancel;
+      };
+      const fn = resolveFn1();
+      fn.mockRejectedValueOnce(new Error("timeout"));
       await expect(stopAutopay(id)).rejects.toThrow();
       expect((await stored(schema.rentSchedules)).status).toBe("canceling");
       await stopAutopay(id);
       expect((await stored(schema.rentSchedules)).status).toBe("canceled");
-    },
+    }
   );
 });
 describe("verified mandate activation", () => {
@@ -536,11 +560,11 @@ describe("verified mandate activation", () => {
     expect(client.subscriptionSchedules.create).toHaveBeenCalledWith(
       expect.objectContaining({
         customer: "cus_fixture",
-        end_behavior: "cancel",
         default_settings: {
           collection_method: "charge_automatically",
           default_payment_method: "pm_fixture",
         },
+        end_behavior: "cancel",
         phases: [
           expect.objectContaining({
             duration: { interval: "month", interval_count: 12 },
@@ -549,8 +573,8 @@ describe("verified mandate activation", () => {
                 price_data: {
                   currency: "usd",
                   product: "prod_fixture",
-                  unit_amount: 125000,
                   recurring: { interval: "month" },
+                  unit_amount: 125_000,
                 },
                 quantity: 1,
               },
@@ -558,7 +582,7 @@ describe("verified mandate activation", () => {
           }),
         ],
       }),
-      { idempotencyKey: `ach-schedule-${id}` },
+      { idempotencyKey: `ach-schedule-${id}` }
     );
     await activateAutopay("seti_fixture");
     expect(client.subscriptionSchedules.create).toHaveBeenCalledTimes(1);
@@ -570,7 +594,7 @@ describe("verified mandate activation", () => {
       bank(patch);
       await activateAutopay("seti_fixture");
       expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
-    },
+    }
   );
   it.each([
     { consentedAt: null },
@@ -593,13 +617,13 @@ describe("verified mandate activation", () => {
       await readyBank();
       bank();
       client.checkout.sessions.retrieve.mockResolvedValue({
-        setup_intent: "seti_fixture",
         client_reference_id: id,
+        setup_intent: "seti_fixture",
         ...patch,
       });
       await activateAutopay("seti_fixture");
       expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
-    },
+    }
   );
   it.each(["requires_action", "processing", "canceled"])(
     "records %s verification without activating",
@@ -608,10 +632,10 @@ describe("verified mandate activation", () => {
       bank({ status });
       await activateAutopay("seti_fixture");
       expect((await stored(schema.rentSchedules)).status).toBe(
-        status === "canceled" ? "needs_review" : "awaiting_verification",
+        status === "canceled" ? "needs_review" : "awaiting_verification"
       );
       expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
-    },
+    }
   );
   it.each([
     "missing method",
@@ -621,20 +645,25 @@ describe("verified mandate activation", () => {
     "wrong customer",
   ])("refuses %s", async (kind) => {
     await readyBank();
-    bank(
-      kind === "missing method"
-        ? { payment_method: null }
-        : kind === "missing mandate"
-          ? { mandate: null }
-          : {},
-    );
-    if (kind === "inactive mandate")
+    const resolveResult2 = () => {
+      if (kind === "missing method") {
+        return { payment_method: null };
+      }
+      if (kind === "missing mandate") {
+        return { mandate: null };
+      }
+      return {};
+    };
+    bank(resolveResult2());
+    if (kind === "inactive mandate") {
       client.mandates.retrieve.mockResolvedValue({ status: "inactive" });
-    if (kind === "card" || kind === "wrong customer")
+    }
+    if (kind === "card" || kind === "wrong customer") {
       client.paymentMethods.retrieve.mockResolvedValue({
-        type: kind === "card" ? "card" : "us_bank_account",
         customer: kind === "wrong customer" ? "other" : "cus_fixture",
+        type: kind === "card" ? "card" : "us_bank_account",
       });
+    }
     await expect(activateAutopay("seti_fixture")).rejects.toThrow();
     expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
   });
@@ -650,12 +679,12 @@ describe("verified mandate activation", () => {
     bank();
     client.subscriptionSchedules.list.mockResolvedValue({
       data: [
-        { id: "recovered", status: "active", metadata: { rentScheduleId: id } },
+        { id: "recovered", metadata: { rentScheduleId: id }, status: "active" },
       ],
     });
     await activateAutopay("seti_fixture");
     expect((await stored(schema.rentSchedules)).stripeScheduleId).toBe(
-      "recovered",
+      "recovered"
     );
     expect(client.products.create).not.toHaveBeenCalled();
     expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
@@ -673,29 +702,32 @@ describe("verified mandate activation", () => {
     async (at) => {
       await readyBank();
       bank();
-      const fn = {
-        intent: client.setupIntents.retrieve,
-        session: client.checkout.sessions.retrieve,
-        mandate: client.mandates.retrieve,
-        method: client.paymentMethods.retrieve,
-        list: client.subscriptionSchedules.list,
-        product: client.products.create,
-        schedule: client.subscriptionSchedules.create,
-      }[at]!;
-      fn.mockRejectedValueOnce(Error("network"));
+      const fn = requireValue(
+        {
+          intent: client.setupIntents.retrieve,
+          list: client.subscriptionSchedules.list,
+          mandate: client.mandates.retrieve,
+          method: client.paymentMethods.retrieve,
+          product: client.products.create,
+          schedule: client.subscriptionSchedules.create,
+          session: client.checkout.sessions.retrieve,
+        }[at],
+        "Expected {         intent: client.setupIntents.retrieve,         list: client.s"
+      );
+      fn.mockRejectedValueOnce(new Error("network"));
       const req = () =>
         webhook(
           webhookRequest(
             event("setup_intent.succeeded", {
               id: "seti_fixture",
               metadata: { rentScheduleId: id },
-            }),
-          ),
+            })
+          )
         );
       expect((await req()).status).toBe(503);
       expect((await req()).status).toBe(200);
       expect((await stored(schema.rentSchedules)).status).toBe("not_started");
-    },
+    }
   );
   it("handles checkout setup completion and mandate revocation webhooks", async () => {
     await readyBank();
@@ -706,17 +738,17 @@ describe("verified mandate activation", () => {
           webhookRequest(
             event("checkout.session.completed", {
               id: "cs_fixture",
-              mode: "setup",
               metadata: { rentScheduleId: id },
-            }),
-          ),
+              mode: "setup",
+            })
+          )
         )
-      ).status,
+      ).status
     ).toBe(200);
     client.mandates.retrieve.mockResolvedValue({
-      status: "inactive",
-      payment_method: "pm_fixture",
       livemode: false,
+      payment_method: "pm_fixture",
+      status: "inactive",
     });
     client.subscriptionSchedules.retrieve.mockResolvedValue({
       id: "sub_sched_fixture",
@@ -725,9 +757,9 @@ describe("verified mandate activation", () => {
     expect(
       (
         await webhook(
-          webhookRequest(event("mandate.updated", { id: "mandate_fixture" })),
+          webhookRequest(event("mandate.updated", { id: "mandate_fixture" }))
         )
-      ).status,
+      ).status
     ).toBe(200);
     expect((await stored(schema.rentSchedules)).status).toBe("canceled");
   });
@@ -738,21 +770,21 @@ describe("owner billing schedules", () => {
     expect((await create()).status).toBe(200);
     expect(client.subscriptionSchedules.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        end_behavior: "cancel",
         default_settings: {
           collection_method: "send_invoice",
           invoice_settings: { days_until_due: 0 },
         },
+        end_behavior: "cancel",
         phases: [
           expect.objectContaining({
             duration: { interval: "month", interval_count: 12 },
           }),
         ],
       }),
-      { idempotencyKey: `rent-schedule-${id}` },
+      { idempotencyKey: `rent-schedule-${id}` }
     );
     expect((await stored(schema.rentSchedules)).stripeCustomerId).toBe(
-      "cus_fixture",
+      "cus_fixture"
     );
     expect((await create()).status).toBe(200);
     expect(client.subscriptionSchedules.create).toHaveBeenCalledTimes(1);
@@ -760,10 +792,10 @@ describe("owner billing schedules", () => {
   it("creates an ACH invitation without charging or creating a customer", async () => {
     await property();
     expect((await create({ ...billingData(), collection: "ach" })).status).toBe(
-      200,
+      200
     );
     expect((await stored(schema.rentSchedules)).status).toBe(
-      "awaiting_authorization",
+      "awaiting_authorization"
     );
     expect(client.customers.create).not.toHaveBeenCalled();
   });
@@ -780,7 +812,7 @@ describe("owner billing schedules", () => {
   ])("rejects invalid billing terms %j", async (patch) => {
     await property();
     expect((await create({ ...billingData(), ...patch } as any)).status).toBe(
-      400,
+      400
     );
     expect(client.customers.create).not.toHaveBeenCalled();
   });
@@ -799,23 +831,26 @@ describe("owner billing schedules", () => {
     "marks ambiguous %s creation failures for review and blocks a duplicate",
     async (at) => {
       await property();
-      const fn = {
-        customer: client.customers.create,
-        product: client.products.create,
-        schedule: client.subscriptionSchedules.create,
-      }[at]!;
-      fn.mockRejectedValueOnce(Error("timeout"));
+      const fn = requireValue(
+        {
+          customer: client.customers.create,
+          product: client.products.create,
+          schedule: client.subscriptionSchedules.create,
+        }[at],
+        "Expected {         customer: client.customers.create,         product: client.p"
+      );
+      fn.mockRejectedValueOnce(new Error("timeout"));
       expect((await create()).status).toBe(503);
       expect((await stored(schema.rentSchedules)).status).toBe("needs_review");
       expect((await create()).status).toBe(409);
       expect(fn).toHaveBeenCalledTimes(1);
-    },
+    }
   );
   it("keeps provider success/local-save failure in review", async () => {
     await property();
     client.subscriptionSchedules.create.mockImplementation(async () => {
       vi.spyOn(state.database, "update").mockImplementationOnce(() => {
-        throw Error("DB down");
+        throw new Error("DB down");
       });
       return { id: "sub_sched_fixture", status: "active" };
     });
@@ -825,13 +860,13 @@ describe("owner billing schedules", () => {
   it("cancels manual billing without prorations or immediate invoices", async () => {
     await schedule({
       collection: "invoice",
-      stripeScheduleId: "sub_sched_fixture",
       status: "active",
+      stripeScheduleId: "sub_sched_fixture",
     });
     expect((await cancel()).status).toBe(200);
     expect(client.subscriptionSchedules.cancel).toHaveBeenCalledWith(
       "sub_sched_fixture",
-      { invoice_now: false, prorate: false },
+      { invoice_now: false, prorate: false }
     );
     expect((await cancel()).status).toBe(200);
     expect(client.subscriptionSchedules.cancel).toHaveBeenCalledTimes(1);
@@ -842,24 +877,26 @@ describe("owner billing schedules", () => {
     await state.database
       .update(schema.rentSchedules)
       .set({ stripeScheduleId: "sub_sched_fixture" });
-    client.subscriptionSchedules.cancel.mockRejectedValueOnce(Error("timeout"));
+    client.subscriptionSchedules.cancel.mockRejectedValueOnce(
+      new Error("timeout")
+    );
     expect((await cancel()).status).toBe(503);
     expect((await stored(schema.rentSchedules)).status).toBe("active");
   });
 });
 const providerInvoice = (patch = {}) => ({
-  id: "in_fixture",
-  parent: { subscription_details: { metadata: { rentScheduleId: id } } },
-  customer: "cus_fixture",
-  livemode: false,
+  amount_due: 125_000,
+  created: 1_900_000_000,
   currency: "usd",
-  amount_due: 125000,
-  created: 1900000000,
-  due_date: 1900086400,
+  customer: "cus_fixture",
+  due_date: 1_900_086_400,
+  hosted_invoice_url: "https://invoice.stripe.com/fixture",
+  id: "in_fixture",
   lines: { data: [{ description: "Monthly rent" }] },
+  livemode: false,
+  parent: { subscription_details: { metadata: { rentScheduleId: id } } },
   status: "open",
   status_transitions: { paid_at: null },
-  hosted_invoice_url: "https://invoice.stripe.com/fixture",
   ...patch,
 });
 function invoicePayment(status: string, charge: any = null) {
@@ -869,20 +906,22 @@ function invoicePayment(status: string, charge: any = null) {
         invoice: "in_fixture",
         payment: {
           payment_intent: {
+            created: 1_900_000_000,
             id: "pi_fixture",
-            created: 1900000000,
-            status,
             last_payment_error:
               status === "requires_payment_method"
                 ? { message: "Bank failed" }
                 : null,
             latest_charge: charge ? "ch_fixture" : null,
+            status,
           },
         },
       },
     ],
   });
-  if (charge) client.charges.retrieve.mockResolvedValue(charge);
+  if (charge) {
+    client.charges.retrieve.mockResolvedValue(charge);
+  }
 }
 async function reconcile(patch = {}) {
   const i = providerInvoice(patch);
@@ -909,11 +948,11 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
       await reconcile({ status });
       const r = await stored();
       expect(r.status).toBe(expected);
-      expect(r.amountCents).toBe(125000);
+      expect(r.amountCents).toBe(125_000);
       expect(r.billingScheduleId).toBe(id);
       expect(r.stripeInvoiceId).toBe("in_fixture");
       expect(r.dueDate).toBe("2030-03-18");
-    },
+    }
   );
   it.each([
     { customer: "different" },
@@ -928,10 +967,10 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
   it("fetches current provider status rather than trusting a stale event snapshot", async () => {
     await readyBank();
     client.invoices.retrieve.mockResolvedValue(
-      providerInvoice({ status: "paid" }),
+      providerInvoice({ status: "paid" })
     );
     await handleBillingEvent(
-      event("invoice.payment_failed", providerInvoice()),
+      event("invoice.payment_failed", providerInvoice())
     );
     expect((await stored()).status).toBe("paid");
   });
@@ -953,16 +992,19 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
             ? "paid"
             : final,
       };
-      invoicePayment(
-        "succeeded",
-        final === "partially_refunded"
-          ? { amount_refunded: 500 }
-          : final === "refunded"
-            ? { refunded: true }
-            : final === "disputed"
-              ? { disputed: true }
-              : null,
-      );
+      const resolveResult3 = () => {
+        if (final === "partially_refunded") {
+          return { amount_refunded: 500 };
+        }
+        if (final === "refunded") {
+          return { refunded: true };
+        }
+        if (final === "disputed") {
+          return { disputed: true };
+        }
+        return null;
+      };
+      invoicePayment("succeeded", resolveResult3());
       await reconcile(patch);
       const previous = await stored();
       invoicePayment("processing");
@@ -971,9 +1013,9 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
       expect((await stored()).status).toBe(final);
       expect((await stored()).paidAt).toEqual(previous.paidAt);
       expect(await state.database.select().from(schema.invoices)).toHaveLength(
-        1,
+        1
       );
-    },
+    }
   );
   it("uses the most recent payment attempt and follows expanded or string charges", async () => {
     await readyBank();
@@ -982,20 +1024,20 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
         {
           payment: {
             payment_intent: {
-              id: "old",
               created: 1,
-              status: "requires_payment_method",
+              id: "old",
               last_payment_error: {},
+              status: "requires_payment_method",
             },
           },
         },
         {
           payment: {
             payment_intent: {
-              id: "new",
               created: 2,
-              status: "succeeded",
+              id: "new",
               latest_charge: { refunded: true },
+              status: "succeeded",
             },
           },
         },
@@ -1019,17 +1061,17 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
       .mockResolvedValueOnce({ data: [{ invoice: "in_fixture" }] })
       .mockResolvedValue({ data: [] });
     client.invoices.retrieve.mockResolvedValue(
-      providerInvoice({ status: "paid" }),
+      providerInvoice({ status: "paid" })
     );
     await handleBillingEvent(
       event(type, {
         id: type.startsWith("payment_intent.") ? "pi_fixture" : "ch_fixture",
         payment_intent: { id: "pi_fixture" },
-      }),
+      })
     );
     expect(client.invoicePayments.list.mock.calls[0][0]).toEqual({
-      payment: { type: "payment_intent", payment_intent: "pi_fixture" },
       limit: 100,
+      payment: { payment_intent: "pi_fixture", type: "payment_intent" },
     });
     expect((await stored()).status).toBe("paid");
   });
@@ -1038,25 +1080,29 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
     async (at) => {
       await readyBank();
       client.invoices.retrieve.mockResolvedValue(
-        providerInvoice({ status: "paid" }),
+        providerInvoice({ status: "paid" })
       );
       invoicePayment("succeeded", { status: "succeeded" });
-      if (at === "invoice")
-        client.invoices.retrieve.mockRejectedValueOnce(Error("offline"));
-      if (at === "payments")
-        client.invoicePayments.list.mockRejectedValueOnce(Error("offline"));
-      if (at === "charge")
-        client.charges.retrieve.mockRejectedValueOnce(Error("offline"));
-      if (at === "database")
+      if (at === "invoice") {
+        client.invoices.retrieve.mockRejectedValueOnce(new Error("offline"));
+      }
+      if (at === "payments") {
+        client.invoicePayments.list.mockRejectedValueOnce(new Error("offline"));
+      }
+      if (at === "charge") {
+        client.charges.retrieve.mockRejectedValueOnce(new Error("offline"));
+      }
+      if (at === "database") {
         vi.spyOn(state.database, "insert").mockImplementationOnce(() => {
-          throw Error("offline");
+          throw new Error("offline");
         });
+      }
       const send = () =>
         webhook(webhookRequest(event("invoice.paid", providerInvoice())));
       expect((await send()).status).toBe(503);
       expect((await send()).status).toBe(200);
       expect((await stored()).status).toBe("paid");
-    },
+    }
   );
   it.each(["canceled", "canceling", "completed", "released"])(
     "does not reopen a terminal %s schedule with a delayed active event",
@@ -1064,18 +1110,18 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
       await readyBank({ status });
       client.subscriptionSchedules.retrieve.mockResolvedValue({
         id: "sub_sched_fixture",
-        metadata: { rentScheduleId: id },
         livemode: false,
+        metadata: { rentScheduleId: id },
         status: "active",
       });
       await handleBillingEvent(
         event("subscription_schedule.updated", {
           id: "sub_sched_fixture",
           metadata: { rentScheduleId: id },
-        }),
+        })
       );
       expect((await stored(schema.rentSchedules)).status).toBe(status);
-    },
+    }
   );
   it.each(["active", "canceled", "completed", "released"])(
     "records current schedule status %s",
@@ -1083,35 +1129,35 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
       await readyBank();
       client.subscriptionSchedules.retrieve.mockResolvedValue({
         id: "sub_sched_fixture",
-        metadata: { rentScheduleId: id },
         livemode: false,
+        metadata: { rentScheduleId: id },
         status,
       });
       await handleBillingEvent(
         event("subscription_schedule.updated", {
           id: "sub_sched_fixture",
           metadata: { rentScheduleId: id },
-        }),
+        })
       );
       expect((await stored(schema.rentSchedules)).status).toBe(status);
-    },
+    }
   );
   it("does not mutate a schedule from the wrong environment", async () => {
     await readyBank();
     client.subscriptionSchedules.retrieve.mockResolvedValue({
       id: "sub_sched_fixture",
-      metadata: { rentScheduleId: id },
       livemode: true,
+      metadata: { rentScheduleId: id },
       status: "active",
     });
     await handleBillingEvent(
       event("subscription_schedule.updated", {
         id: "sub_sched_fixture",
         metadata: { rentScheduleId: id },
-      }),
+      })
     );
     expect((await stored(schema.rentSchedules)).status).toBe(
-      "awaiting_verification",
+      "awaiting_verification"
     );
   });
   it("returns a retryable failure for schedule retrieval outages", async () => {
@@ -1123,28 +1169,28 @@ describe("recurring invoice reconciliation, bank returns, refunds and disputes",
             event("subscription_schedule.updated", {
               id: "sub_sched_fixture",
               metadata: { rentScheduleId: id },
-            }),
-          ),
+            })
+          )
         )
-      ).status,
+      ).status
     ).toBe(503);
   });
 });
 describe("one-time bank returns, refunds, and disputes", () => {
   async function setup(patch = {}) {
-    await invoice({ stripeSessionId: "cs_fixture", status: "paid", ...patch });
+    await invoice({ status: "paid", stripeSessionId: "cs_fixture", ...patch });
     client.checkout.sessions.list.mockResolvedValue({ data: [session()] });
   }
   function intent(status = "succeeded", charge: any = { status: "succeeded" }) {
     client.paymentIntents.retrieve.mockResolvedValue({
-      id: "pi_fixture",
-      status,
-      amount: 125000,
+      amount: 125_000,
       currency: "usd",
-      livemode: false,
+      id: "pi_fixture",
       last_payment_error:
         status === "requires_payment_method" ? { message: "failed" } : null,
       latest_charge: charge,
+      livemode: false,
+      status,
     });
   }
   const send = () =>
@@ -1153,8 +1199,8 @@ describe("one-time bank returns, refunds, and disputes", () => {
         event("charge.refunded", {
           id: "ch_fixture",
           payment_intent: "pi_fixture",
-        }),
-      ),
+        })
+      )
     );
   it.each([
     ["refunded", { refunded: true }],
@@ -1175,17 +1221,19 @@ describe("one-time bank returns, refunds, and disputes", () => {
     "reconciles an unpaid checkout to %s from current intent",
     async (status) => {
       await setup({ status: "open" });
-      intent(
-        status === "paid"
-          ? "succeeded"
-          : status === "failed"
-            ? "requires_payment_method"
-            : "processing",
-        null,
-      );
+      const resolveResult4 = () => {
+        if (status === "paid") {
+          return "succeeded";
+        }
+        if (status === "failed") {
+          return "requires_payment_method";
+        }
+        return "processing";
+      };
+      intent(resolveResult4(), null);
       expect((await send()).status).toBe(200);
       expect((await stored()).status).toBe(status);
-    },
+    }
   );
   it("retrieves an unexpanded charge and preserves terminal states through stale reconciliations", async () => {
     await setup();
@@ -1223,7 +1271,7 @@ describe("one-time bank returns, refunds, and disputes", () => {
       });
       await send();
       expect((await stored()).status).toBe("paid");
-    },
+    }
   );
   it.each(["list", "intent", "charge", "save"])(
     "retries one-time %s failures without dropping the event",
@@ -1232,19 +1280,21 @@ describe("one-time bank returns, refunds, and disputes", () => {
       intent("succeeded", "ch_fixture");
       client.charges.retrieve.mockResolvedValue({ refunded: true });
       const fn = {
-        list: client.checkout.sessions.list,
-        intent: client.paymentIntents.retrieve,
         charge: client.charges.retrieve,
+        intent: client.paymentIntents.retrieve,
+        list: client.checkout.sessions.list,
       }[at];
-      if (fn) fn.mockRejectedValueOnce(Error("offline"));
-      else
+      if (fn) {
+        fn.mockRejectedValueOnce(new Error("offline"));
+      } else {
         vi.spyOn(state.database, "update").mockImplementationOnce(() => {
-          throw Error("offline");
+          throw new Error("offline");
         });
+      }
       expect((await send()).status).toBe(503);
       expect((await send()).status).toBe(200);
       expect((await stored()).status).toBe("refunded");
-    },
+    }
   );
 });
 describe("database and authorization edge failures", () => {
@@ -1257,7 +1307,7 @@ describe("database and authorization edge failures", () => {
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     expect(client.subscriptionSchedules.create).toHaveBeenCalledTimes(1);
     expect(
-      await state.database.select().from(schema.rentSchedules),
+      await state.database.select().from(schema.rentSchedules)
     ).toHaveLength(1);
   });
   it("fails closed if the link signing secret is missing", () => {
@@ -1278,16 +1328,16 @@ describe("database and authorization edge failures", () => {
     await schedule();
     client.customers.create.mockImplementation(async () => {
       vi.spyOn(state.database, "update").mockImplementationOnce(() => {
-        throw Error("DB offline");
+        throw new Error("DB offline");
       });
       return { id: "cus_fixture" };
     });
     expect((await ach()).status).toBe(503);
     expect((await stored(schema.rentSchedules)).status).toBe(
-      "creating_checkout",
+      "creating_checkout"
     );
     expect((await stored(schema.rentSchedules)).consentedAt).toBeInstanceOf(
-      Date,
+      Date
     );
     expect(client.checkout.sessions.create).not.toHaveBeenCalled();
   });
@@ -1296,7 +1346,7 @@ describe("database and authorization edge failures", () => {
     bank();
     client.subscriptionSchedules.create.mockImplementationOnce(async () => {
       vi.spyOn(state.database, "update").mockImplementationOnce(() => {
-        throw Error("offline");
+        throw new Error("offline");
       });
       return { id: "sub_sched_fixture", status: "active" };
     });
@@ -1306,8 +1356,8 @@ describe("database and authorization edge failures", () => {
       data: [
         {
           id: "sub_sched_fixture",
-          status: "active",
           metadata: { rentScheduleId: id },
+          status: "active",
         },
       ],
     });
@@ -1329,11 +1379,11 @@ describe("database and authorization edge failures", () => {
     await readyBank();
     bank();
     await state.database.insert(schema.removedRecords).values({
+      actor: "fixture",
       entityId: id,
       groupId: id,
       kind: "rentSchedule",
       label: "Fixture",
-      actor: "fixture",
     });
     await activateAutopay("seti_fixture");
     expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
@@ -1341,28 +1391,26 @@ describe("database and authorization edge failures", () => {
   it("supports both expanded and string Stripe object references", async () => {
     await readyBank();
     bank({
-      payment_method: { id: "pm_fixture" },
       mandate: { id: "mandate_fixture" },
+      payment_method: { id: "pm_fixture" },
     });
     client.checkout.sessions.retrieve.mockResolvedValue({
-      setup_intent: { id: "seti_fixture" },
       client_reference_id: id,
+      setup_intent: { id: "seti_fixture" },
     });
     await activateAutopay("seti_fixture");
     expect(client.subscriptionSchedules.create).toHaveBeenCalledTimes(1);
   });
 });
-
 describe("owner billing database availability", () => {
   it("returns a retryable response when the database connection cannot be opened", async () => {
     vi.mocked(db).mockImplementationOnce(() => {
-      throw Error("DB connection unavailable");
+      throw new Error("DB connection unavailable");
     });
     expect((await create()).status).toBe(503);
     expect(client.customers.create).not.toHaveBeenCalled();
   });
 });
-
 describe("provider pagination and recovery", () => {
   it("finds and cancels an orphan schedule beyond the first page", async () => {
     await readyBank();
@@ -1379,7 +1427,7 @@ describe("provider pagination and recovery", () => {
       });
     await stopAutopay(id);
     expect(
-      client.subscriptionSchedules.list.mock.calls[1][0].starting_after,
+      client.subscriptionSchedules.list.mock.calls[1][0].starting_after
     ).toBe("older");
     expect(client.subscriptionSchedules.cancel).toHaveBeenCalledWith("orphan", {
       invoice_now: false,
@@ -1406,7 +1454,7 @@ describe("provider pagination and recovery", () => {
       });
     await activateAutopay("seti_fixture");
     expect((await stored(schema.rentSchedules)).stripeScheduleId).toBe(
-      "recovered",
+      "recovered"
     );
     expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
   });
@@ -1423,10 +1471,10 @@ describe("provider pagination and recovery", () => {
             id: "ip_new",
             payment: {
               payment_intent: {
-                id: "pi_fixture",
                 created: 2,
-                status: "succeeded",
+                id: "pi_fixture",
                 latest_charge: { refunded: true },
+                status: "succeeded",
               },
             },
           },
@@ -1436,7 +1484,7 @@ describe("provider pagination and recovery", () => {
     await reconcile({ status: "paid" });
     expect((await stored()).status).toBe("refunded");
     expect(client.invoicePayments.list.mock.calls[1][0].starting_after).toBe(
-      "ip_old",
+      "ip_old"
     );
   });
   it("returns a retryable failure if pagination loops or claims an empty next page", async () => {
@@ -1451,60 +1499,59 @@ describe("provider pagination and recovery", () => {
     }
   });
 });
-
 describe("payment-request creation, cancellation and audit connection", () => {
   const command = (action: string, extra = {}) =>
     manage(request("/api/admin/management", { action, id, ...extra }));
   it("creates an immutable payment request and audit entry atomically; repeated creation is idempotent", async () => {
     await property();
     const data = {
-      propertyId,
-      payerName: "Tenant",
-      payerEmail: "tenant@example.invalid",
+      amountCents: 125_000,
       category: "deposit",
       description: "Deposit",
-      amountCents: 125000,
       dueDate: "2099-01-10",
+      payerEmail: "tenant@example.invalid",
+      payerName: "Tenant",
+      propertyId,
     };
     expect((await command("invoice", { data })).status).toBe(200);
     expect(
-      (await command("invoice", { data: { ...data, amountCents: 1 } })).status,
+      (await command("invoice", { data: { ...data, amountCents: 1 } })).status
     ).toBe(400);
     expect(
-      (await command("invoice", { data: { ...data, amountCents: 250000 } }))
-        .status,
+      (await command("invoice", { data: { ...data, amountCents: 250_000 } }))
+        .status
     ).toBe(200);
-    expect((await stored()).amountCents).toBe(125000);
+    expect((await stored()).amountCents).toBe(125_000);
     expect(
-      await state.database.select().from(schema.managementEvents),
+      await state.database.select().from(schema.managementEvents)
     ).toHaveLength(1);
     expect(client.checkout.sessions.create).not.toHaveBeenCalled();
   });
   it("rolls back the request if its audit entry cannot be stored", async () => {
     await property();
     await pg.exec(
-      `ALTER TABLE management_events ADD CONSTRAINT fixture_audit_failure CHECK (action <> 'invoice')`,
+      `ALTER TABLE management_events ADD CONSTRAINT fixture_audit_failure CHECK (action <> 'invoice')`
     );
     try {
       expect(
         (
           await command("invoice", {
             data: {
-              propertyId,
-              payerName: "Tenant",
-              payerEmail: "tenant@example.invalid",
+              amountCents: 125_000,
               category: "rent",
               description: "Rent",
-              amountCents: 125000,
               dueDate: "2099-01-10",
+              payerEmail: "tenant@example.invalid",
+              payerName: "Tenant",
+              propertyId,
             },
           })
-        ).status,
+        ).status
       ).toBe(409);
       expect(await stored()).toBeUndefined();
     } finally {
       await pg.exec(
-        "ALTER TABLE management_events DROP CONSTRAINT fixture_audit_failure",
+        "ALTER TABLE management_events DROP CONSTRAINT fixture_audit_failure"
       );
     }
   });
@@ -1514,7 +1561,7 @@ describe("payment-request creation, cancellation and audit connection", () => {
     expect(client.checkout.sessions.expire).toHaveBeenCalledWith("cs_fixture");
     expect((await stored()).status).toBe("void");
     expect(
-      await state.database.select().from(schema.managementEvents),
+      await state.database.select().from(schema.managementEvents)
     ).toHaveLength(1);
     expect((await command("voidInvoice")).status).toBe(200);
     expect(client.checkout.sessions.expire).toHaveBeenCalledTimes(1);
@@ -1525,7 +1572,7 @@ describe("payment-request creation, cancellation and audit connection", () => {
       await invoice({ status });
       expect((await command("voidInvoice")).status).toBe(409);
       expect(client.checkout.sessions.expire).not.toHaveBeenCalled();
-    },
+    }
   );
   it("refuses to void a submitted checkout", async () => {
     await invoice({ stripeSessionId: "cs_fixture" });
@@ -1544,19 +1591,23 @@ describe("payment-request creation, cancellation and audit connection", () => {
     "does not record local cancellation after a %s failure",
     async (at) => {
       await invoice({
-        stripeSessionId: at === "hosted invoice" ? null : "cs_fixture",
         stripeInvoiceId: at === "hosted invoice" ? "in_fixture" : null,
+        stripeSessionId: at === "hosted invoice" ? null : "cs_fixture",
       });
-      const fn =
-        at === "retrieve"
-          ? client.checkout.sessions.retrieve
-          : at === "expire"
-            ? client.checkout.sessions.expire
-            : client.invoices.voidInvoice;
-      fn.mockRejectedValue(Error("offline"));
+      const resolveFn5 = () => {
+        if (at === "retrieve") {
+          return client.checkout.sessions.retrieve;
+        }
+        if (at === "expire") {
+          return client.checkout.sessions.expire;
+        }
+        return client.invoices.voidInvoice;
+      };
+      const fn = resolveFn5();
+      fn.mockRejectedValue(new Error("offline"));
       expect((await command("voidInvoice")).status).toBe(409);
       expect((await stored()).status).toBe("open");
-    },
+    }
   );
   it("does not void a payment that settles during cancellation", async () => {
     await invoice({ stripeSessionId: "cs_fixture" });
@@ -1572,7 +1623,7 @@ describe("terminal states, sparse provider records, and event routing", () => {
   it("lets the owner stop ACH and repeat an untouched invitation safely", async () => {
     await schedule();
     expect((await create({ ...billingData(), collection: "ach" })).status).toBe(
-      200,
+      200
     );
     expect((await cancel()).status).toBe(200);
     expect((await stored(schema.rentSchedules)).status).toBe("canceled");
@@ -1584,10 +1635,10 @@ describe("terminal states, sparse provider records, and event routing", () => {
     try {
       await property();
       expect(
-        (await create({ ...billingData(), firstDate: "2030-01-10" })).status,
+        (await create({ ...billingData(), firstDate: "2030-01-10" })).status
       ).toBe(200);
       expect(
-        client.subscriptionSchedules.create.mock.calls[0][0].start_date,
+        client.subscriptionSchedules.create.mock.calls[0][0].start_date
       ).toBe("now");
     } finally {
       vi.useRealTimers();
@@ -1599,8 +1650,8 @@ describe("terminal states, sparse provider records, and event routing", () => {
       data: [
         {
           id: "finished",
-          status: "completed",
           metadata: { rentScheduleId: id },
+          status: "completed",
         },
       ],
     });
@@ -1615,7 +1666,7 @@ describe("terminal states, sparse provider records, and event routing", () => {
       await state.database
         .update(schema.rentSchedules)
         .set({ status: "canceled" });
-      return { type: "us_bank_account", customer: "cus_fixture" };
+      return { customer: "cus_fixture", type: "us_bank_account" };
     });
     await activateAutopay("seti_fixture");
     expect(client.subscriptionSchedules.create).not.toHaveBeenCalled();
@@ -1632,9 +1683,9 @@ describe("terminal states, sparse provider records, and event routing", () => {
     expect(
       (
         await webhook(
-          webhookRequest(event("mandate.updated", { id: "mandate_fixture" })),
+          webhookRequest(event("mandate.updated", { id: "mandate_fixture" }))
         )
-      ).status,
+      ).status
     ).toBe(200);
     expect(
       (
@@ -1643,39 +1694,39 @@ describe("terminal states, sparse provider records, and event routing", () => {
             event("setup_intent.succeeded", {
               id: "seti_fixture",
               metadata: {},
-            }),
-          ),
+            })
+          )
         )
-      ).status,
+      ).status
     ).toBe(200);
     expect(client.setupIntents.retrieve).not.toHaveBeenCalled();
   });
   it("revokes an expanded bank-method reference and respects the mandate environment", async () => {
-    await readyBank({ stripePaymentMethodId: "pm_fixture", status: "active" });
+    await readyBank({ status: "active", stripePaymentMethodId: "pm_fixture" });
     client.mandates.retrieve.mockResolvedValue({
-      status: "inactive",
-      payment_method: { id: "pm_fixture" },
       livemode: true,
+      payment_method: { id: "pm_fixture" },
+      status: "inactive",
     });
     expect(
       (
         await webhook(
-          webhookRequest(event("mandate.updated", { id: "mandate_fixture" })),
+          webhookRequest(event("mandate.updated", { id: "mandate_fixture" }))
         )
-      ).status,
+      ).status
     ).toBe(200);
     expect((await stored(schema.rentSchedules)).status).toBe("active");
     client.mandates.retrieve.mockResolvedValue({
-      status: "inactive",
-      payment_method: { id: "pm_fixture" },
       livemode: false,
+      payment_method: { id: "pm_fixture" },
+      status: "inactive",
     });
     expect(
       (
         await webhook(
-          webhookRequest(event("mandate.updated", { id: "mandate_fixture" })),
+          webhookRequest(event("mandate.updated", { id: "mandate_fixture" }))
         )
-      ).status,
+      ).status
     ).toBe(200);
     expect((await stored(schema.rentSchedules)).status).toBe("canceled");
   });
@@ -1683,8 +1734,8 @@ describe("terminal states, sparse provider records, and event routing", () => {
     await readyBank();
     bank();
     client.checkout.sessions.retrieve.mockResolvedValue({
-      setup_intent: { id: "seti_fixture" },
       client_reference_id: id,
+      setup_intent: { id: "seti_fixture" },
     });
     expect(
       (
@@ -1692,21 +1743,21 @@ describe("terminal states, sparse provider records, and event routing", () => {
           webhookRequest(
             event("checkout.session.completed", {
               id: "cs_fixture",
-              mode: "setup",
               metadata: { rentScheduleId: id },
-            }),
-          ),
+              mode: "setup",
+            })
+          )
         )
-      ).status,
+      ).status
     ).toBe(200);
     expect(client.subscriptionSchedules.create).toHaveBeenCalledTimes(1);
   });
   it("ignores subscription and charge events with no app relationship", async () => {
     await handleBillingEvent(
-      event("subscription_schedule.updated", { id: "other", metadata: {} }),
+      event("subscription_schedule.updated", { id: "other", metadata: {} })
     );
     await handleBillingEvent(
-      event("charge.failed", { id: "other", payment_intent: null }),
+      event("charge.failed", { id: "other", payment_intent: null })
     );
     expect(client.subscriptionSchedules.retrieve).not.toHaveBeenCalled();
     expect(client.invoicePayments.list).not.toHaveBeenCalled();
@@ -1717,7 +1768,7 @@ describe("terminal states, sparse provider records, and event routing", () => {
       event("subscription_schedule.updated", {
         id: "other",
         metadata: { rentScheduleId: id },
-      }),
+      })
     );
     expect(await stored()).toBeUndefined();
   });
@@ -1732,7 +1783,7 @@ describe("terminal states, sparse provider records, and event routing", () => {
       })
       .mockResolvedValue({ data: [] });
     await handleBillingEvent(
-      event("payment_intent.succeeded", { id: "pi_fixture" }),
+      event("payment_intent.succeeded", { id: "pi_fixture" })
     );
     expect((await stored()).status).toBe("paid");
     expect(client.invoices.retrieve).not.toHaveBeenCalled();
@@ -1740,7 +1791,7 @@ describe("terminal states, sparse provider records, and event routing", () => {
   it("ignores an invoice whose current parent metadata was removed", async () => {
     await readyBank();
     client.invoices.retrieve.mockResolvedValue(
-      providerInvoice({ parent: null }),
+      providerInvoice({ parent: null })
     );
     await handleBillingEvent(event("invoice.paid", providerInvoice()));
     expect(await stored()).toBeUndefined();
@@ -1748,9 +1799,9 @@ describe("terminal states, sparse provider records, and event routing", () => {
   it("uses safe fallbacks for optional invoice text, date and hosted URL", async () => {
     await readyBank();
     await reconcile({
-      lines: { data: [] },
       due_date: null,
       hosted_invoice_url: null,
+      lines: { data: [] },
     });
     const row = await stored();
     expect(row.description).toBe("Monthly rent");
@@ -1758,22 +1809,22 @@ describe("terminal states, sparse provider records, and event routing", () => {
     expect(row.hostedInvoiceUrl).toBeNull();
   });
   it("does not overwrite local status with an unfinished one-time authorization", async () => {
-    await invoice({ stripeSessionId: "cs_fixture", status: "open" });
+    await invoice({ status: "open", stripeSessionId: "cs_fixture" });
     client.checkout.sessions.list.mockResolvedValue({ data: [session()] });
     client.paymentIntents.retrieve.mockResolvedValue({
-      amount: 125000,
+      amount: 125_000,
       currency: "usd",
+      latest_charge: null,
       livemode: false,
       status: "requires_action",
-      latest_charge: null,
     });
     await handleBillingEvent(
-      event("payment_intent.processing", { id: "pi_fixture" }),
+      event("payment_intent.processing", { id: "pi_fixture" })
     );
     expect((await stored()).status).toBe("open");
   });
   it("follows all checkout-session pages when reconciling a one-time refund", async () => {
-    await invoice({ stripeSessionId: "cs_fixture", status: "paid" });
+    await invoice({ status: "paid", stripeSessionId: "cs_fixture" });
     client.checkout.sessions.list
       .mockResolvedValueOnce({
         data: [{ id: "unrelated", metadata: {} }],
@@ -1781,50 +1832,55 @@ describe("terminal states, sparse provider records, and event routing", () => {
       })
       .mockResolvedValueOnce({ data: [session()], has_more: false });
     client.paymentIntents.retrieve.mockResolvedValue({
-      amount: 125000,
+      amount: 125_000,
       currency: "usd",
+      latest_charge: { refunded: true },
       livemode: false,
       status: "succeeded",
-      latest_charge: { refunded: true },
     });
     await handleBillingEvent(
       event("charge.refunded", {
         id: "ch_fixture",
         payment_intent: "pi_fixture",
-      }),
+      })
     );
     expect((await stored()).status).toBe("refunded");
     expect(client.checkout.sessions.list.mock.calls[1][0].starting_after).toBe(
-      "unrelated",
+      "unrelated"
     );
   });
 });
-
 describe("cancellation environment boundary", () => {
   it("does not cancel or mutate a request from another payment environment", async () => {
     await invoice({ mode: "live" });
     expect(
       (
         await manage(
-          request("/api/admin/management", { action: "voidInvoice", id }),
+          request("/api/admin/management", { action: "voidInvoice", id })
         )
-      ).status,
+      ).status
     ).toBe(409);
     expect((await stored()).status).toBe("open");
     expect(client.invoices.voidInvoice).not.toHaveBeenCalled();
   });
 });
-
 describe("failure while recording a provider failure", () => {
   it("still returns a safe retryable response when the review-state write also fails", async () => {
     await property();
     client.customers.create.mockImplementationOnce(async () => {
-      vi.spyOn(pg, "query").mockRejectedValueOnce(Error("DB unavailable"));
-      throw Error("Stripe unavailable");
+      vi.spyOn(pg, "query").mockRejectedValueOnce(new Error("DB unavailable"));
+      throw new Error("Stripe unavailable");
     });
     expect((await create()).status).toBe(503);
     expect((await stored(schema.rentSchedules)).status).toBe("creating");
     expect((await create()).status).toBe(409);
     expect(client.customers.create).toHaveBeenCalledTimes(1);
   });
+});
+
+it("ignores checkout events without an ACH enrollment relationship", async () => {
+  await handleAutopayEvent(
+    event("checkout.session.completed", { metadata: {}, mode: "payment" })
+  );
+  expect(client.checkout.sessions.retrieve).not.toHaveBeenCalled();
 });

@@ -16,6 +16,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run check
       - run: npm run test:unit
       - run: npm run test:stripe:coverage
       - run: npm run typecheck

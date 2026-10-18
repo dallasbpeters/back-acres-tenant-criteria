@@ -297,4 +297,4 @@ No real provider calls, charges, emails, or Neon writes are made by this suite.
 
 Ultracite + Biome check source files; Husky runs staged-file fixes/lint and
 TypeScript before each commit. Use `npm run fix -- <files>` and
-`npm run check -- <files>`. See [setup and existing lint baseline](docs/code-checks.md).
+`npm run check -- <files>`. See [setup and lint policy](docs/code-checks.md).

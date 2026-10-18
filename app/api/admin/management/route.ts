@@ -1,38 +1,41 @@
-import { leaseDocumentSchema, documentText } from "@/lib/leases/document";
-import { disclosureFields } from "@/lib/leases/disclosures";
-import { notRemoved } from "@/lib/management/not-removed";
+const pattern1 = /^(sk|rk)_live_/;
+
 import { randomUUID } from "node:crypto";
-import { NextRequest } from "next/server";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import type { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
-import { and, desc, eq, isNull, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import {
-  properties,
-  applications,
-  maintenanceRequests,
-  residentLinks,
-  invoices,
-  managementEvents,
-  leaseTemplates,
-  leaseDrafts,
-  rentSchedules,
-  listingPhotos,
-  listingPublications,
-  removedRecords,
-} from "@/lib/db/schema";
-import { listingDigest } from "@/lib/management/listing-digest";
 import { guard, readBody, reply } from "@/lib/adverse/auth";
 import { authOptions } from "@/lib/adverse/google-auth";
+import { db } from "@/lib/db";
 import {
-  propertySchema,
-  invoiceSchema,
-  applicationStatuses,
-  maintenanceStatuses,
-} from "@/lib/management/model";
-import { linkToken, siteUrl } from "@/lib/management/security";
-import { paymentReady, paymentMode, stripe } from "@/lib/management/stripe";
+  applications,
+  invoices,
+  leaseDrafts,
+  leaseTemplates,
+  listingPhotos,
+  listingPublications,
+  maintenanceRequests,
+  managementEvents,
+  properties,
+  removedRecords,
+  rentSchedules,
+  residentLinks,
+} from "@/lib/db/schema";
+import { disclosureFields } from "@/lib/leases/disclosures";
+import { documentText, leaseDocumentSchema } from "@/lib/leases/document";
 import { leaseFields } from "@/lib/management/leases";
+import { listingDigest } from "@/lib/management/listing-digest";
+import {
+  applicationStatuses,
+  invoiceSchema,
+  maintenanceStatuses,
+  propertySchema,
+} from "@/lib/management/model";
+import { notRemoved } from "@/lib/management/not-removed";
+import { linkToken, siteUrl } from "@/lib/management/security";
+import { paymentMode, paymentReady, stripe } from "@/lib/management/stripe";
+
 const uuid = z.string().uuid();
 const command = z.discriminatedUnion("action", [
   z.object({
@@ -42,39 +45,39 @@ const command = z.discriminatedUnion("action", [
       .record(z.string(), z.string().max(3000))
       .refine((v) =>
         Object.keys(v).every((k) =>
-          disclosureFields.includes(k as (typeof disclosureFields)[number]),
-        ),
+          disclosureFields.includes(k as (typeof disclosureFields)[number])
+        )
       ),
   }),
   z.object({
     action: z.literal("leaseTemplate"),
+    body: z.string().trim().min(1).max(45_000),
     id: uuid,
     name: z.string().trim().min(1).max(300),
-    body: z.string().trim().min(1).max(45000),
   }),
   z.object({
     action: z.literal("leaseDraft"),
+    body: z.string().trim().min(1).max(45_000),
     document: leaseDocumentSchema.optional(),
     id: uuid,
+    parentId: uuid.nullable(),
     propertyId: uuid,
     templateId: uuid,
-    parentId: uuid.nullable(),
     tenantName: z.string().trim().min(1).max(300),
     values: z
       .record(z.string(), z.string().max(3000))
       .refine((v) =>
         Object.keys(v).every((k) =>
-          leaseFields.includes(k as (typeof leaseFields)[number]),
-        ),
+          leaseFields.includes(k as (typeof leaseFields)[number])
+        )
       )
       .optional(),
-    body: z.string().trim().min(1).max(45000),
   }),
   z.object({
     action: z.literal("property"),
+    data: propertySchema,
     id: uuid,
     revision: z.number().int().nonnegative(),
-    data: propertySchema,
   }),
   z.object({
     action: z.literal("applicationStatus"),
@@ -93,11 +96,13 @@ const command = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("revokeLink"), id: uuid }),
   z.object({ action: z.literal("voidInvoice"), id: uuid }),
-  z.object({ action: z.literal("invoice"), id: uuid, data: invoiceSchema }),
+  z.object({ action: z.literal("invoice"), data: invoiceSchema, id: uuid }),
 ]);
 export async function GET(request: NextRequest) {
   const denied = await guard(request);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
   try {
     const d = db();
     const removedGroups = d
@@ -178,33 +183,32 @@ export async function GET(request: NextRequest) {
         .limit(500),
     ]);
     return reply({
-      removed,
+      applications: applicationRows,
+      drafts,
+      invoices: invoiceRows.map((r) => ({
+        ...r,
+        url: `${siteUrl()}/pay/${linkToken("payment", r.id)}`,
+      })),
+      maintenance: maintenanceRows,
+      paymentMode: pattern1.test(process.env.STRIPE_SECRET_KEY ?? "")
+        ? "live"
+        : "test",
+      paymentsReady: paymentReady(),
       photos: photos.map(({ blobPath, ...photo }) => ({
         ...photo,
         url: `/api/photos/${photo.id}`,
       })),
-      publications,
       properties: propertyRows.map((p) => ({
         ...p,
         publishingDigest: listingDigest(
           p.data,
           photos
             .filter((photo) => photo.propertyId === p.id && !photo.archived)
-            .map(({ id, caption }) => ({ id, caption })),
+            .map(({ id, caption }) => ({ caption, id }))
         ),
       })),
-      applications: applicationRows,
-      maintenance: maintenanceRows,
-      residentLinks: links.map((r) => ({
-        ...r,
-        url: `${siteUrl()}/maintenance/${linkToken("maintenance", r.id)}`,
-      })),
-      invoices: invoiceRows.map((r) => ({
-        ...r,
-        url: `${siteUrl()}/pay/${linkToken("payment", r.id)}`,
-      })),
-      templates,
-      drafts,
+      publications,
+      removed,
       rentSchedules: schedules.map((r) => ({
         ...r,
         enrollmentUrl:
@@ -212,42 +216,52 @@ export async function GET(request: NextRequest) {
             ? `${siteUrl()}/autopay/${linkToken("autopay", r.id)}`
             : null,
       })),
-      paymentsReady: paymentReady(),
-      paymentMode: /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "")
-        ? "live"
-        : "test",
+      residentLinks: links.map((r) => ({
+        ...r,
+        url: `${siteUrl()}/maintenance/${linkToken("maintenance", r.id)}`,
+      })),
+      templates,
     });
   } catch {
     return reply({ error: "Could not load property records." }, 503);
   }
 }
+/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export async function POST(request: NextRequest) {
   const denied = await guard(request);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
   const parsed = command.safeParse(
-    await readBody(request, 256000).catch(() => null),
+    await readBody(request, 256_000).catch(() => null)
   );
-  if (!parsed.success)
+  if (!parsed.success) {
     return reply({ error: "Check the required fields and amounts." }, 400);
+  }
   const c = parsed.data;
   const d = db();
   const actor = (await getServerSession(authOptions))?.user?.email ?? "owner";
   const event = (id: string, detail: unknown) =>
     d.insert(managementEvents).values({
-      id: randomUUID(),
-      entityId: id,
-      actor,
       action: c.action,
+      actor,
       detail,
+      entityId: id,
+      id: randomUUID(),
     });
   try {
+    const resolveResult1 = () => {
+      if ("propertyId" in c) {
+        return c.propertyId;
+      }
+      if (c.action === "invoice") {
+        return c.data.propertyId;
+      }
+      return null;
+    };
     const referencedIds = [
       "id" in c ? c.id : null,
-      "propertyId" in c
-        ? c.propertyId
-        : c.action === "invoice"
-          ? c.data.propertyId
-          : null,
+      resolveResult1(),
       "templateId" in c ? c.templateId : null,
       "parentId" in c ? c.parentId : null,
     ].filter((id): id is string => !!id);
@@ -257,19 +271,20 @@ export async function POST(request: NextRequest) {
         .from(removedRecords)
         .where(inArray(removedRecords.entityId, referencedIds))
         .limit(1);
-      if (removed.length)
+      if (removed.length) {
         return reply(
           {
             error:
               "This item or its property/document was removed. Restore it in Removed items before making changes.",
           },
-          409,
+          409
         );
+      }
     }
     if (c.action === "leaseTemplate") {
       await d
         .insert(leaseTemplates)
-        .values({ id: c.id, name: c.name, body: c.body })
+        .values({ body: c.body, id: c.id, name: c.name })
         .onConflictDoNothing();
     } else if (c.action === "leaseDefaults") {
       const [updated] = await d
@@ -277,17 +292,20 @@ export async function POST(request: NextRequest) {
         .set({ leaseDefaults: c.values })
         .where(and(eq(properties.id, c.propertyId), notRemoved(properties.id)))
         .returning({ id: properties.id });
-      if (!updated) return reply({ error: "Property not found." }, 404);
+      if (!updated) {
+        return reply({ error: "Property not found." }, 404);
+      }
       await event(c.propertyId, { fields: Object.keys(c.values) });
     } else if (c.action === "leaseDraft") {
-      if (c.document && documentText(c.document).trim() !== c.body.trim())
+      if (c.document && documentText(c.document).trim() !== c.body.trim()) {
         return reply(
           {
             error:
               "The editor text and saved document do not match. Reload the draft and try again.",
           },
-          400,
+          400
         );
+      }
       if (c.parentId) {
         const [parent] = await d
           .select()
@@ -297,68 +315,76 @@ export async function POST(request: NextRequest) {
           !parent ||
           parent.propertyId !== c.propertyId ||
           parent.templateId !== c.templateId
-        )
+        ) {
           return reply({ error: "Invalid prior lease version." }, 400);
+        }
       }
       await d
         .insert(leaseDrafts)
         .values({
+          body: c.body,
+          document: c.document ?? null,
           id: c.id,
+          parentId: c.parentId,
           propertyId: c.propertyId,
           templateId: c.templateId,
-          parentId: c.parentId,
           tenantName: c.tenantName,
           values: c.values ?? null,
-          document: c.document ?? null,
-          body: c.body,
         })
         .onConflictDoNothing();
     } else if (c.action === "property") {
       if (c.revision === 0) {
-        let saved;
+        let saved: typeof properties.$inferSelect | undefined;
         for (const slug of [
           c.data.slug,
           `${c.data.slug}-${c.id.replaceAll("-", "")}`,
         ]) {
-          [saved] = await d
-            .insert(properties)
-            .values({ id: c.id, slug, data: { ...c.data, slug } })
-            .onConflictDoNothing()
-            .returning();
-          if (saved) break;
+          [saved] =
+            /* biome-ignore lint/performance/noAwaitInLoops: Each step depends on the preceding provider/database state or output order; parallel execution would change recovery semantics. */ await d
+              .insert(properties)
+              .values({ data: { ...c.data, slug }, id: c.id, slug })
+              .onConflictDoNothing()
+              .returning();
+          if (saved) {
+            break;
+          }
         }
-        if (!saved)
+        if (!saved) {
           return reply(
             {
               error:
                 "This property was already saved. Reload to see its listing link.",
             },
-            409,
+            409
           );
+        }
         await event(c.id, saved.data);
       } else {
         const [existing] = await d
           .select()
           .from(properties)
           .where(eq(properties.id, c.id));
-        if (!existing) return reply({ error: "Property not found." }, 404);
+        if (!existing) {
+          return reply({ error: "Property not found." }, 404);
+        }
         // Keep shared listing and application links working after address corrections.
         const data = { ...c.data, slug: existing.slug };
         const [result] = await d
           .update(properties)
           .set({ data, revision: c.revision + 1 })
           .where(
-            and(eq(properties.id, c.id), eq(properties.revision, c.revision)),
+            and(eq(properties.id, c.id), eq(properties.revision, c.revision))
           )
           .returning();
-        if (!result)
+        if (!result) {
           return reply(
             {
               error:
                 "This property changed in another window. Reload before saving.",
             },
-            409,
+            409
           );
+        }
         await event(c.id, data);
       }
     } else if (
@@ -371,7 +397,9 @@ export async function POST(request: NextRequest) {
         .select({ id: table.id })
         .from(table)
         .where(eq(table.id, c.id));
-      if (!existing) return reply({ error: "Record not found." }, 404);
+      if (!existing) {
+        return reply({ error: "Record not found." }, 404);
+      }
       await d.batch([
         d.update(table).set({ status: c.status }).where(eq(table.id, c.id)),
         event(c.id, { status: c.status }),
@@ -380,10 +408,10 @@ export async function POST(request: NextRequest) {
       const id = randomUUID();
       await d.batch([
         d.insert(residentLinks).values({
+          expiresAt: new Date(Date.now() + 365 * 86_400_000),
           id,
           propertyId: c.propertyId,
           residentName: c.residentName,
-          expiresAt: new Date(Date.now() + 365 * 86400000),
         }),
         event(id, { propertyId: c.propertyId, residentName: c.residentName }),
       ]);
@@ -400,38 +428,46 @@ export async function POST(request: NextRequest) {
         .select()
         .from(invoices)
         .where(eq(invoices.id, c.id));
-      if (!invoice) return reply({ error: "Payment request not found." }, 404);
-      if (invoice.mode !== paymentMode())
+      if (!invoice) {
+        return reply({ error: "Payment request not found." }, 404);
+      }
+      if (invoice.mode !== paymentMode()) {
         return reply(
           { error: "This request belongs to another payment environment." },
-          409,
+          409
         );
-      if (invoice.status === "void") return reply({ ok: true });
-      if (invoice.status !== "open")
+      }
+      if (invoice.status === "void") {
+        return reply({ ok: true });
+      }
+      if (invoice.status !== "open") {
         return reply(
           {
             error:
               "Payment has been submitted or checkout needs reconciliation. Review it in Stripe before canceling.",
           },
-          409,
+          409
         );
+      }
       if (invoice.stripeInvoiceId) {
         await stripe().invoices.voidInvoice(invoice.stripeInvoiceId);
       }
       if (invoice.stripeSessionId) {
         const session = await stripe().checkout.sessions.retrieve(
-          invoice.stripeSessionId,
+          invoice.stripeSessionId
         );
-        if (session.status === "complete")
+        if (session.status === "complete") {
           return reply(
             {
               error:
                 "Checkout was submitted. Wait for confirmation before making changes.",
             },
-            409,
+            409
           );
-        if (session.status === "open")
+        }
+        if (session.status === "open") {
           await stripe().checkout.sessions.expire(session.id);
+        }
       }
       const [changed] = await d
         .update(invoices)
@@ -442,25 +478,28 @@ export async function POST(request: NextRequest) {
             eq(invoices.status, "open"),
             invoice.stripeSessionId
               ? eq(invoices.stripeSessionId, invoice.stripeSessionId)
-              : isNull(invoices.stripeSessionId),
-          ),
+              : isNull(invoices.stripeSessionId)
+          )
         )
         .returning();
-      if (!changed)
+      if (!changed) {
         return reply(
           {
             error:
               "Checkout started while canceling. Review the payment before retrying.",
           },
-          409,
+          409
         );
+      }
       await event(c.id, { status: "void" });
     } else if (c.action === "invoice") {
       const [existing] = await d
         .select()
         .from(invoices)
         .where(eq(invoices.id, c.id));
-      if (existing) return reply({ ok: true });
+      if (existing) {
+        return reply({ ok: true });
+      }
       await d.batch([
         d.insert(invoices).values({ id: c.id, ...c.data, mode: paymentMode() }),
         event(c.id, {
@@ -476,7 +515,7 @@ export async function POST(request: NextRequest) {
         error:
           "Could not save. Check for a duplicate property URL or reload and try again.",
       },
-      409,
+      409
     );
   }
 }

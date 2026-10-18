@@ -1,51 +1,52 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
   allowedEmails,
   canSignIn,
   isAllowedEmail,
 } from "../lib/adverse/access";
+
 const env = { ADMIN_EMAILS: "Owner@example.com, second@example.com " };
 test("Google access requires an exact approved and verified email", () => {
   assert.equal(
     canSignIn(
       "google",
       { email: "owner@example.com", email_verified: true },
-      env,
+      env
     ),
-    true,
+    true
   );
   assert.equal(
     canSignIn(
       "google",
       { email: "outsider@example.com", email_verified: true },
-      env,
+      env
     ),
-    false,
+    false
   );
   assert.equal(
     canSignIn(
       "google",
       { email: "owner@example.com", email_verified: false },
-      env,
+      env
     ),
-    false,
+    false
   );
   assert.equal(
     canSignIn(
       "google",
       { email: "owner@example.com", email_verified: "true" },
-      env,
+      env
     ),
-    false,
+    false
   );
   assert.equal(
     canSignIn(
       "other",
       { email: "owner@example.com", email_verified: true },
-      env,
+      env
     ),
-    false,
+    false
   );
   assert.equal(canSignIn("google", undefined, env), false);
   assert.equal(isAllowedEmail("owner+alias@example.com", env), false);
@@ -58,30 +59,39 @@ test("empty configuration denies everyone; explicit list overrides owner default
       LANDLORD_EMAIL: "owner@example.com",
       TANDRA_EMAIL: "second@example.com",
     }),
-    ["owner@example.com", "second@example.com"],
+    ["owner@example.com", "second@example.com"]
   );
   assert.deepEqual(
     allowedEmails({ ADMIN_EMAILS: "", LANDLORD_EMAIL: "owner@example.com" }),
-    [],
+    []
   );
   assert.equal(
     isAllowedEmail("owner@example.com", {
       ADMIN_EMAILS: "different@example.com",
       LANDLORD_EMAIL: "owner@example.com",
     }),
-    false,
+    false
   );
 });
 
 test("additional approved accounts preserve both owner accounts", () => {
   const configured = {
+    ADDITIONAL_ADMIN_EMAILS: "dallaspeters@gmail.com",
     LANDLORD_EMAIL: "owner@example.com",
     TANDRA_EMAIL: "second@example.com",
-    ADDITIONAL_ADMIN_EMAILS: "dallaspeters@gmail.com",
   };
   assert.deepEqual(allowedEmails(configured), [
-    "owner@example.com", "second@example.com", "dallaspeters@gmail.com",
+    "owner@example.com",
+    "second@example.com",
+    "dallaspeters@gmail.com",
   ]);
-  assert.equal(canSignIn("google", { email: "dallaspeters@gmail.com", email_verified: true }, configured), true);
+  assert.equal(
+    canSignIn(
+      "google",
+      { email: "dallaspeters@gmail.com", email_verified: true },
+      configured
+    ),
+    true
+  );
   assert.deepEqual(allowedEmails({ ...configured, ADMIN_EMAILS: "" }), []);
 });

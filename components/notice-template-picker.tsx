@@ -1,15 +1,17 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
+import { type Notice, richText } from "@/lib/adverse/notice";
 import {
   applyNoticeTemplate,
-  noticeTemplates,
-  noticeTemplateSources,
-  noticeTemplateRevision,
   type NoticeTemplateId,
+  noticeTemplateRevision,
+  noticeTemplateSources,
+  noticeTemplates,
 } from "@/lib/adverse/templates";
-import { richText, type Notice } from "@/lib/adverse/notice";
+import { requireValue } from "@/lib/required";
 export function NoticeTemplatePicker({
   notice,
   disabled,
@@ -21,18 +23,31 @@ export function NoticeTemplatePicker({
 }) {
   const [open, setOpen] = useState(!richText(notice.reasons).trim());
   const [selected, setSelected] = useState<NoticeTemplateId>(
-      notice.template?.id ?? "report-denial",
+      notice.template?.id ?? "report-denial"
     ),
     [terms, setTerms] = useState(""),
     [reason, setReason] = useState("");
-  const template = noticeTemplates.find((t) => t.id === selected)!,
+  const template = requireValue(
+      noticeTemplates.find((t) => t.id === selected),
+      "Expected noticeTemplates.find((t) => t.id === selected)"
+    ),
     conditional = template.action !== "Application denied";
+
+  const resolveResult1 = () => {
+    if (selected === "report-deposit") {
+      return "Required total deposit and payment terms";
+    }
+    if (selected === "report-rent") {
+      return "Required monthly rent and applicable terms";
+    }
+    return "Required co-signer qualifications";
+  };
   return (
     <details
-      className="notice-template-panel"
       aria-label="Notice templates"
-      open={open}
+      className="notice-template-panel"
       onToggle={(e) => setOpen(e.currentTarget.open)}
+      open={open}
     >
       <summary>
         <span>Start with a template</span>
@@ -50,13 +65,13 @@ export function NoticeTemplatePicker({
           </div>
         </div>
         <AppSelect
-          label="Notice template"
-          value={selected}
           disabled={disabled}
+          label="Notice template"
           onValueChange={(id) => {
             setSelected(id as NoticeTemplateId);
             setTerms("");
           }}
+          value={selected}
         >
           {noticeTemplates.map((t) => (
             <option key={t.id} value={t.id}>
@@ -65,28 +80,24 @@ export function NoticeTemplatePicker({
           ))}
         </AppSelect>
         <p className="notice-template-wording">{template.reason}</p>
-        {conditional && (
+        {!!conditional && (
           <label className="field">
-            {selected === "report-deposit"
-              ? "Required total deposit and payment terms"
-              : selected === "report-rent"
-                ? "Required monthly rent and applicable terms"
-                : "Required co-signer qualifications"}
+            {resolveResult1()}
             <textarea
-              value={terms}
-              maxLength={2000}
               disabled={disabled}
+              maxLength={2000}
               onChange={(e) => setTerms(e.target.value)}
+              value={terms}
             />
           </label>
         )}
         <label className="field">
           Specific verified reason (optional)
           <input
-            value={reason}
-            maxLength={3000}
             disabled={disabled}
+            maxLength={3000}
             onChange={(e) => setReason(e.target.value)}
+            value={reason}
           />
           <span className="small-note">
             Use only wording that matches the actual decision and the criteria
@@ -95,12 +106,12 @@ export function NoticeTemplatePicker({
         </label>
         <div className="notice-template-footer">
           <Button
-            type="button"
             disabled={disabled || (conditional && !terms.trim())}
             onClick={() => {
               onApply(applyNoticeTemplate(notice, selected, terms, reason));
               setOpen(false);
             }}
+            type="button"
           >
             {richText(notice.reasons).trim()
               ? "Replace reasons with template"
@@ -118,7 +129,7 @@ export function NoticeTemplatePicker({
                 const source = noticeTemplateSources[key];
                 return (
                   <li key={key}>
-                    <a href={source.url} target="_blank" rel="noreferrer">
+                    <a href={source.url} rel="noreferrer" target="_blank">
                       {source.title} ↗
                     </a>
                   </li>

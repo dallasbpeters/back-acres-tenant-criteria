@@ -1,14 +1,14 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 export function Checkout({ token }: { token: string }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+
   return (
     <>
       <Button
-        type="submit"
         className="submit-button"
         disabled={busy}
         onClick={async () => {
@@ -16,24 +16,27 @@ export function Checkout({ token }: { token: string }) {
           setError("");
           try {
             const r = await fetch("/api/payments/checkout", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ token }),
+              headers: { "Content-Type": "application/json" },
+              method: "POST",
             });
             const data = await r.json();
-            if (!r.ok) throw new Error(data.error);
+            if (!r.ok) {
+              throw new Error(data.error);
+            }
             window.location.assign(data.url);
           } catch (e) {
             setError(
-              e instanceof Error ? e.message : "Unable to open checkout.",
+              e instanceof Error ? e.message : "Unable to open checkout."
             );
             setBusy(false);
           }
         }}
+        type="submit"
       >
         {busy ? "Opening secure checkout…" : "Pay securely with Stripe"}
       </Button>
-      {error && <p role="alert">{error}</p>}
+      {!!error && <p role="alert">{error}</p>}
     </>
   );
 }

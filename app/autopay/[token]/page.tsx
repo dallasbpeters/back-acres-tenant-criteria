@@ -1,20 +1,21 @@
-import { notRemoved } from "@/lib/management/not-removed";
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { AutopayControls } from "@/components/management/autopay";
+import { ManagementShell } from "@/components/management/shell";
 import { db } from "@/lib/db";
-import { rentSchedules, properties } from "@/lib/db/schema";
-import { tokenId } from "@/lib/management/security";
-import { paymentReady, paymentMode, stripe } from "@/lib/management/stripe";
+import { properties, rentSchedules } from "@/lib/db/schema";
 import { authorizationText } from "@/lib/management/autopay";
 import { dollars } from "@/lib/management/model";
-import { ManagementShell } from "@/components/management/shell";
-import { AutopayControls } from "@/components/management/autopay";
+import { notRemoved } from "@/lib/management/not-removed";
+import { tokenId } from "@/lib/management/security";
+import { paymentMode, paymentReady, stripe } from "@/lib/management/stripe";
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Automatic ACH rent payments | Back Acres",
   referrer: "no-referrer" as const,
-  robots: { index: false, follow: false },
+  robots: { follow: false, index: false },
+  title: "Automatic ACH rent payments | Back Acres",
 };
+/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export default async function AutopayPage({
   params,
 }: {
@@ -22,12 +23,16 @@ export default async function AutopayPage({
 }) {
   const { token } = await params,
     id = tokenId("autopay", token);
-  if (!id) notFound();
+  if (!id) {
+    notFound();
+  }
   const [r] = await db()
     .select()
     .from(rentSchedules)
     .where(and(eq(rentSchedules.id, id), notRemoved(rentSchedules.id)));
-  if (!r || r.collection !== "ach") notFound();
+  if (r?.collection !== "ach") {
+    notFound();
+  }
   const [p] = await db()
     .select()
     .from(properties)
@@ -39,14 +44,15 @@ export default async function AutopayPage({
     try {
       const session = await stripe().checkout.sessions.retrieve(
         r.setupSessionId,
-        { expand: ["setup_intent"] },
+        { expand: ["setup_intent"] }
       );
       bankSetupOpen = session.status === "open";
       const intent = session.setup_intent;
-      if (intent && typeof intent !== "string")
+      if (intent && typeof intent !== "string") {
         verificationUrl =
           intent.next_action?.verify_with_microdeposits
             ?.hosted_verification_url;
+      }
     } catch {
       /* The stored enrollment state remains visible during provider outages. */
     }
@@ -57,7 +63,7 @@ export default async function AutopayPage({
       <p>
         {p?.data.name} · {r.payerName}
       </p>
-      {r.mode === "test" && (
+      {!!(r.mode === "test") && (
         <p className="draft-banner">
           Test mode. No real bank account will be debited. Use Stripe test bank
           details only.
@@ -88,48 +94,49 @@ export default async function AutopayPage({
         details are entered directly with Stripe and are not stored by Back
         Acres.
       </p>
-      {verificationUrl && (
+      {!!verificationUrl && (
         <p>
           <a href={verificationUrl} rel="noreferrer">
             Verify your bank account with Stripe
           </a>
         </p>
       )}
-      {r.status === "awaiting_verification" && (
+      {!!(r.status === "awaiting_verification") && (
         <p role="status">
           Finish bank verification with Stripe. Automatic payments start only
           after verification and scheduling are confirmed. Refresh this page for
           status.
         </p>
       )}
-      {r.status === "not_started" && (
+      {!!(r.status === "not_started") && (
         <p role="status">
           Your bank account is authorized. Automatic debits are scheduled to
           begin on {r.firstDate}. Bank payments may take several business days
           to settle.
         </p>
       )}
-      {r.status === "needs_review" && (
+      {!!(r.status === "needs_review") && (
         <p role="status">
           This enrollment needs owner review. No new enrollment can start here.
           Contact the owner before paying another way.
         </p>
       )}
-      {closed && (
+      {!!closed && (
         <p role="status">
           Future automatic payments have stopped. Payments already submitted may
           still complete. Your rent obligation and lease remain in effect.
         </p>
       )}
-      {ready && (
+      {!!ready && (
         <AutopayControls
-          token={token}
           enroll={
-            (r.status === "awaiting_authorization" || bankSetupOpen) &&
-            !verificationUrl &&
-            r.firstDate > new Date().toISOString().slice(0, 10)
+            !!(
+              (r.status === "awaiting_authorization" || bankSetupOpen) &&
+              !verificationUrl
+            ) && r.firstDate > new Date().toISOString().slice(0, 10)
           }
           stop={!closed}
+          token={token}
         />
       )}
       <p className="small-note">

@@ -1,10 +1,10 @@
 export const ownerSections = [
-  { name: "Properties", key: "properties", label: "Properties" },
-  { name: "Applications", key: "applications", label: "Applications" },
-  { name: "Leases", key: "leases", label: "Leases" },
-  { name: "Payments", key: "payments", label: "Payments" },
-  { name: "Maintenance", key: "maintenance", label: "Maintenance" },
-  { name: "Publishing", key: "publishing", label: "Photos & publishing" },
-  { name: "Branding", key: "branding", label: "Branding" },
-  { name: "Removed", key: "removed", label: "Removed items" },
+  { key: "properties", label: "Properties", name: "Properties" },
+  { key: "applications", label: "Applications", name: "Applications" },
+  { key: "leases", label: "Leases", name: "Leases" },
+  { key: "payments", label: "Payments", name: "Payments" },
+  { key: "maintenance", label: "Maintenance", name: "Maintenance" },
+  { key: "publishing", label: "Photos & publishing", name: "Publishing" },
+  { key: "branding", label: "Branding", name: "Branding" },
+  { key: "removed", label: "Removed items", name: "Removed" },
 ] as const;

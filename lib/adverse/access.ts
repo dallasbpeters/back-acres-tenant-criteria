@@ -12,13 +12,13 @@ export function allowedEmails(env: AccessEnvironment = process.env): string[] {
       configured
         .split(",")
         .map((email) => email.trim().toLowerCase())
-        .filter(Boolean),
+        .filter(Boolean)
     ),
   ];
 }
 export function isAllowedEmail(
   email: unknown,
-  env: AccessEnvironment = process.env,
+  env: AccessEnvironment = process.env
 ): boolean {
   return (
     typeof email === "string" &&
@@ -28,7 +28,7 @@ export function isAllowedEmail(
 export function canSignIn(
   provider: unknown,
   profile: { email?: unknown; email_verified?: unknown } | undefined,
-  env: AccessEnvironment = process.env,
+  env: AccessEnvironment = process.env
 ): boolean {
   return (
     provider === "google" &&

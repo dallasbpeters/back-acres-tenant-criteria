@@ -1,24 +1,26 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Icon } from "@/components/ui/icon";
-import { Button } from "@/components/ui/button";
-import { useRef, useState } from "react";
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  KeyboardSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import {
-  SortableContext,
-  useSortable,
   arrayMove,
   rectSortingStrategy,
+  SortableContext,
   sortableKeyboardCoordinates,
+  useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Image from "next/image";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 function SortablePhoto({
   photo,
@@ -41,41 +43,47 @@ function SortablePhoto({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: photo.id, disabled: busy });
+  } = useSortable({ disabled: busy, id: photo.id });
+
   return (
     <div
-      ref={setNodeRef}
+      className={["photo-edit-item", isDragging ? "photo-dragging" : ""]
+        .filter(Boolean)
+        .join(" ")}
       data-photo-id={photo.id}
-      className={`photo-edit-item${isDragging ? " photo-dragging" : ""}`}
+      ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <div className="photo-preview">
         <button
-          ref={setActivatorNodeRef}
-          type="button"
           className="photo-drag-target"
           disabled={busy}
+          ref={setActivatorNodeRef}
+          type="button"
           {...attributes}
           {...listeners}
           aria-label={`Reorder photo ${index + 1}`}
         >
-          <img
-            src={photo.url}
+          <Image
             alt={photo.caption || `Listing photo ${index + 1}`}
-            loading="lazy"
             draggable={false}
+            height={800}
+            loading="lazy"
+            src={photo.url}
+            unoptimized
+            width={1200}
           />
-          <span className="photo-drag-hint" aria-hidden="true">
+          <span aria-hidden="true" className="photo-drag-hint">
             ⠿
           </span>
         </button>
         <Button
-          type="button"
+          aria-label={`Remove photo ${index + 1}`}
           className="photo-remove"
           disabled={busy || isDragging}
           onClick={onRemove}
-          aria-label={`Remove photo ${index + 1}`}
           title="Remove photo"
+          type="button"
         >
           <Icon name="close" size={18} />
         </Button>
@@ -88,47 +96,54 @@ function SortablePhoto({
         <input
           aria-label={`Caption for photo ${index + 1}`}
           defaultValue={photo.caption}
-          maxLength={300}
           disabled={busy}
+          maxLength={300}
           onBlur={(e) => {
-            if (e.target.value !== photo.caption) onCaption(e.target.value);
+            if (e.target.value !== photo.caption) {
+              onCaption(e.target.value);
+            }
           }}
         />
       </label>
     </div>
   );
 }
-export type PhotoRecord = {
-  id: string;
-  propertyId: string;
-  caption: string;
-  position: number;
+export interface PhotoRecord {
   archived: boolean;
+  caption: string;
+  id: string;
+  position: number;
+  propertyId: string;
   url: string;
-};
+}
 async function preparePhoto(file: File) {
-  if (file.size > 20_000_000)
-    throw Error(`${file.name}: choose a photo under 20 MB.`);
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))
-    throw Error(`${file.name}: use JPEG, PNG, or WebP.`);
+  if (file.size > 20_000_000) {
+    throw new Error(`${file.name}: choose a photo under 20 MB.`);
+  }
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    throw new Error(`${file.name}: use JPEG, PNG, or WebP.`);
+  }
   const bitmap = await createImageBitmap(file),
     scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height)),
     canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
   const context = canvas.getContext("2d");
-  if (!context) throw Error("This browser could not prepare the photo.");
+  if (!context) {
+    throw new Error("This browser could not prepare the photo.");
+  }
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(Error("Could not prepare photo."))),
+      (b) => (b ? resolve(b) : reject(new Error("Could not prepare photo."))),
       "image/jpeg",
-      0.87,
-    ),
+      0.87
+    )
   );
-  if (blob.size > 4_000_000)
-    throw Error(`${file.name}: this photo is too large after resizing.`);
+  if (blob.size > 4_000_000) {
+    throw new Error(`${file.name}: this photo is too large after resizing.`);
+  }
   return blob;
 }
 export function PhotoManager({
@@ -151,13 +166,13 @@ export function PhotoManager({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    })
   );
   const input = useRef<HTMLInputElement>(null);
   const savedActive = photos.filter((p) => !p.archived);
   const active = pendingOrder
       ? [...savedActive].sort(
-          (a, b) => pendingOrder.indexOf(a.id) - pendingOrder.indexOf(b.id),
+          (a, b) => pendingOrder.indexOf(a.id) - pendingOrder.indexOf(b.id)
         )
       : savedActive,
     removed = photos.filter((p) => p.archived);
@@ -166,12 +181,14 @@ export function PhotoManager({
     setError("");
     try {
       const r = await fetch("/api/admin/photos", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
         }),
         result = await r.json();
-      if (!r.ok) throw Error(result.error);
+      if (!r.ok) {
+        throw new Error(result.error);
+      }
       await onSaved();
       setMessage("Photo changes saved.");
     } catch (e) {
@@ -182,16 +199,21 @@ export function PhotoManager({
     }
   }
   function reorder(from: string, to: string) {
-    if (busy || from === to) return;
+    if (busy || from === to) {
+      return;
+    }
     const oldIndex = active.findIndex((p) => p.id === from),
       newIndex = active.findIndex((p) => p.id === to);
-    if (oldIndex < 0 || newIndex < 0) return;
+    if (oldIndex < 0 || newIndex < 0) {
+      return;
+    }
     const ids = arrayMove(active, oldIndex, newIndex).map((p) => p.id);
     setPendingOrder(ids);
-    update({ action: "order", propertyId, ids });
+    update({ action: "order", ids, propertyId });
   }
+
   return (
-    <section className="photo-manager" aria-label="Listing photos">
+    <section aria-label="Listing photos" className="photo-manager">
       <div className="section-heading-row">
         <div>
           <h3>Listing photos</h3>
@@ -201,21 +223,19 @@ export function PhotoManager({
           </p>
         </div>
         <Button
-          type="button"
           disabled={busy || active.length >= 24}
           onClick={() => input.current?.click()}
+          type="button"
         >
           Add photos
         </Button>
       </div>
       <input
-        ref={input}
-        className="visually-hidden"
-        aria-label="Upload listing photos"
-        type="file"
         accept="image/jpeg,image/png,image/webp"
-        multiple
+        aria-label="Upload listing photos"
+        className="visually-hidden"
         disabled={busy}
+        multiple
         onChange={async (e) => {
           const files = Array.from(e.target.files ?? []);
           if (files.length + active.length > 24) {
@@ -230,26 +250,40 @@ export function PhotoManager({
               setMessage(`Uploading photo ${i + 1} of ${files.length}…`);
               const data = new FormData();
               data.set("propertyId", propertyId);
-              data.set("file", await preparePhoto(file), "photo.jpg");
+              data.set(
+                "file",
+                /* biome-ignore lint/performance/noAwaitInLoops: Each step depends on the preceding provider/database state or output order; parallel execution would change recovery semantics. */ await preparePhoto(
+                  file
+                ),
+                "photo.jpg"
+              );
               const r = await fetch("/api/admin/photos", {
-                  method: "POST",
                   body: data,
+                  method: "POST",
                 }),
                 result = await r.json();
-              if (!r.ok) throw Error(result.error);
+              if (!r.ok) {
+                throw new Error(result.error);
+              }
             }
             setMessage("Photos uploaded.");
-          } catch (error) {
-            setError(error instanceof Error ? error.message : "Upload failed.");
+          } catch (errorLocal) {
+            setError(
+              errorLocal instanceof Error
+                ? errorLocal.message
+                : "Upload failed."
+            );
             setMessage("");
           } finally {
             e.target.value = "";
             await onSaved().catch(() =>
-              setError("Reload to see the latest photos."),
+              setError("Reload to see the latest photos.")
             );
             setBusy(false);
           }
         }}
+        ref={input}
+        type="file"
       />
       {!active.length && (
         <p className="management-empty">
@@ -258,18 +292,20 @@ export function PhotoManager({
         </p>
       )}
       <DndContext
-        id={`listing-photos-${propertyId}`}
-        sensors={sensors}
-        collisionDetection={closestCenter}
         accessibility={{
           screenReaderInstructions: {
             draggable:
               "To reorder a photo, press Space to pick it up, use the arrow keys to move, then press Space to drop. Press Escape to cancel.",
           },
         }}
+        collisionDetection={closestCenter}
+        id={`listing-photos-${propertyId}`}
         onDragEnd={({ active: dragged, over }) => {
-          if (over) reorder(String(dragged.id), String(over.id));
+          if (over) {
+            reorder(String(dragged.id), String(over.id));
+          }
         }}
+        sensors={sensors}
       >
         <SortableContext
           items={active.map((p) => p.id)}
@@ -278,16 +314,16 @@ export function PhotoManager({
           <div className="photo-edit-grid">
             {active.map((p, i) => (
               <SortablePhoto
-                key={p.id}
-                photo={p}
-                index={i}
                 busy={busy}
+                index={i}
+                key={p.id}
                 onCaption={(caption) =>
-                  update({ action: "caption", id: p.id, caption })
+                  update({ action: "caption", caption, id: p.id })
                 }
                 onRemove={() =>
-                  update({ action: "archive", id: p.id, archived: true })
+                  update({ action: "archive", archived: true, id: p.id })
                 }
+                photo={p}
               />
             ))}
           </div>
@@ -299,17 +335,20 @@ export function PhotoManager({
           <div className="photo-edit-grid">
             {removed.map((p) => (
               <div className="photo-edit-item" key={p.id}>
-                <img
-                  src={p.url}
+                <Image
                   alt={p.caption || "Removed listing photo"}
+                  height={800}
                   loading="lazy"
+                  src={p.url}
+                  unoptimized
+                  width={1200}
                 />
                 <Button
-                  type="button"
                   disabled={busy}
                   onClick={() =>
-                    update({ action: "archive", id: p.id, archived: false })
+                    update({ action: "archive", archived: false, id: p.id })
                   }
+                  type="button"
                 >
                   Restore photo
                 </Button>
@@ -318,8 +357,8 @@ export function PhotoManager({
           </div>
         </details>
       )}
-      {message && <p role="status">{message}</p>}
-      {error && <p role="alert">{error}</p>}
+      {!!message && <p role="status">{message}</p>}
+      {!!error && <p role="alert">{error}</p>}
     </section>
   );
 }

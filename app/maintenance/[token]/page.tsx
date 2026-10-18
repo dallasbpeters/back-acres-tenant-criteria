@@ -1,15 +1,15 @@
-import { notRemoved } from "@/lib/management/not-removed";
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { IntakeForm } from "@/components/management/intake";
+import { ManagementShell } from "@/components/management/shell";
 import { db } from "@/lib/db";
 import { properties, residentLinks } from "@/lib/db/schema";
+import { notRemoved } from "@/lib/management/not-removed";
 import { tokenId } from "@/lib/management/security";
-import { ManagementShell } from "@/components/management/shell";
-import { IntakeForm } from "@/components/management/intake";
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Maintenance request | Back Acres",
   referrer: "no-referrer" as const,
+  title: "Maintenance request | Back Acres",
 };
 export default async function MaintenancePage({
   params,
@@ -18,18 +18,23 @@ export default async function MaintenancePage({
 }) {
   const { token } = await params;
   const id = tokenId("maintenance", token);
-  if (!id) notFound();
+  if (!id) {
+    notFound();
+  }
   const [link] = await db()
     .select()
     .from(residentLinks)
     .where(and(eq(residentLinks.id, id), notRemoved(residentLinks.id)));
-  if (!link || link.revoked || link.expiresAt.getTime() < Date.now())
+  if (!link || link.revoked || link.expiresAt.getTime() < Date.now()) {
     notFound();
+  }
   const [p] = await db()
     .select()
     .from(properties)
     .where(and(eq(properties.id, link.propertyId), notRemoved(properties.id)));
-  if (!p) notFound();
+  if (!p) {
+    notFound();
+  }
   return (
     <ManagementShell title="Request maintenance">
       <p>

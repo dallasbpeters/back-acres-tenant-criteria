@@ -1,14 +1,16 @@
+import { requireValue } from "@/lib/required";
+
 import type { Notice, RichNode } from "./notice";
 
 export const noticeTemplateRevision = "2026-10-17.1";
 export const noticeTemplateSources = {
-  ftc: {
-    title: "FTC: Using Consumer Reports — What Landlords Need to Know",
-    url: "https://www.ftc.gov/business-guidance/resources/using-consumer-reports-what-landlords-need-know",
-  },
   fcra: {
     title: "15 U.S.C. § 1681m(a): Consumer-report adverse-action disclosures",
     url: "https://www.law.cornell.edu/uscode/text/15/1681m",
+  },
+  ftc: {
+    title: "FTC: Using Consumer Reports — What Landlords Need to Know",
+    url: "https://www.ftc.gov/business-guidance/resources/using-consumer-reports-what-landlords-need-know",
   },
   texas: {
     title: "Texas Property Code § 92.3515: Disclosed tenant selection criteria",
@@ -17,49 +19,49 @@ export const noticeTemplateSources = {
 };
 export const noticeTemplates = [
   {
-    id: "report-denial",
-    title: "Application denied · consumer report",
     action: "Application denied",
-    report: true,
+    id: "report-denial",
     reason:
       "Your rental application has been denied. Information from a consumer report contributed to this decision.",
+    report: true,
     sources: ["ftc", "fcra"],
+    title: "Application denied · consumer report",
   },
   {
-    id: "report-cosigner",
-    title: "Conditional approval · co-signer",
     action: "Co-signer required",
-    report: true,
+    id: "report-cosigner",
     reason:
       "Your rental application requires a co-signer. Information from a consumer report contributed to the requirement for a co-signer.",
+    report: true,
     sources: ["ftc", "fcra"],
+    title: "Conditional approval · co-signer",
   },
   {
-    id: "report-deposit",
-    title: "Conditional approval · higher deposit",
     action: "Higher security deposit required",
-    report: true,
+    id: "report-deposit",
     reason:
       "Your rental application requires a higher security deposit. Information from a consumer report contributed to this deposit requirement.",
+    report: true,
     sources: ["ftc", "fcra"],
+    title: "Conditional approval · higher deposit",
   },
   {
-    id: "report-rent",
-    title: "Conditional approval · higher rent",
     action: "Higher rent required",
-    report: true,
+    id: "report-rent",
     reason:
       "Your rental application requires a higher monthly rental amount. Information from a consumer report contributed to this rental requirement.",
+    report: true,
     sources: ["ftc", "fcra"],
+    title: "Conditional approval · higher rent",
   },
   {
-    id: "income-denial",
-    title: "Application denied · income criteria",
     action: "Application denied",
-    report: false,
+    id: "income-denial",
     reason:
       "Your rental application has been denied because the verified income information did not meet the income requirement in the tenant selection criteria provided for this property.",
+    report: false,
     sources: ["texas"],
+    title: "Application denied · income criteria",
   },
 ] as const;
 export const noticeTemplateIds = [
@@ -75,20 +77,24 @@ export function applyNoticeTemplate(
   notice: Notice,
   id: NoticeTemplateId,
   terms = "",
-  specificReason = "",
+  specificReason = ""
 ): Notice {
-  const template = noticeTemplates.find((t) => t.id === id)!;
-  if (template.action !== "Application denied" && !terms.trim())
-    throw Error(
-      "Enter the actual required terms before applying this template.",
+  const template = requireValue(
+    noticeTemplates.find((t) => t.id === id),
+    "Expected noticeTemplates.find((t) => t.id === id)"
+  );
+  if (template.action !== "Application denied" && !terms.trim()) {
+    throw new Error(
+      "Enter the actual required terms before applying this template."
     );
+  }
   const paragraphs = [template.reason, specificReason.trim()].filter(Boolean);
   const reasons: RichNode = {
-    type: "doc",
     content: paragraphs.map((text) => ({
+      content: [{ text, type: "text" }],
       type: "paragraph",
-      content: [{ type: "text", text }],
     })),
+    type: "doc",
   };
   return {
     ...notice,

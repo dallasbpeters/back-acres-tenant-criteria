@@ -1,6 +1,6 @@
+import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeControl } from "@/components/ui/theme";
-import type { ReactNode } from "react";
 export function ManagementShell({
   title,
   children,
@@ -23,10 +23,10 @@ export function ManagementShell({
               <small>Property management</small>
             </span>
           </a>
-          <nav className="management-nav" aria-label="Main navigation">
+          <nav aria-label="Main navigation" className="management-nav">
             <a href="/properties">Properties</a>
             <ThemeControl />
-            {owner && (
+            {!!owner && (
               <>
                 <a href="/admin">Workspace</a>
                 <a href="/admin/adverse-actions">Adverse-action notices</a>

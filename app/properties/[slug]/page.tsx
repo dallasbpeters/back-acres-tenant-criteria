@@ -1,16 +1,16 @@
-import { Icon } from "@/components/ui/icon";
-import { PropertyAmenities } from "@/components/management/amenities";
-import { availabilityDate } from "@/lib/management/display";
-import { PropertyDescription } from "@/components/management/property-description";
-import { notRemoved } from "@/lib/management/not-removed";
-import { ListingGallery } from "@/components/management/listing-gallery";
-import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { and, asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { PropertyAmenities } from "@/components/management/amenities";
+import { ListingGallery } from "@/components/management/listing-gallery";
+import { PropertyDescription } from "@/components/management/property-description";
+import { ManagementShell } from "@/components/management/shell";
+import { Icon } from "@/components/ui/icon";
 import { db } from "@/lib/db";
 import { listingPhotos, properties } from "@/lib/db/schema";
-import { ManagementShell } from "@/components/management/shell";
+import { availabilityDate } from "@/lib/management/display";
 import { dollars } from "@/lib/management/model";
+import { notRemoved } from "@/lib/management/not-removed";
+import { POLICY, selectionCriteriaText } from "@/lib/policy";
 export const dynamic = "force-dynamic";
 export default async function PropertyPage({
   params,
@@ -22,19 +22,18 @@ export default async function PropertyPage({
     .select()
     .from(properties)
     .where(and(eq(properties.slug, slug), notRemoved(properties.id)));
-  if (!p || !p.data.published) notFound();
+  if (!p?.data.published) {
+    notFound();
+  }
   const photos = await db()
-    .select({ id: listingPhotos.id, caption: listingPhotos.caption })
+    .select({ caption: listingPhotos.caption, id: listingPhotos.id })
     .from(listingPhotos)
     .where(
-      and(
-        eq(listingPhotos.propertyId, p.id),
-        eq(listingPhotos.archived, false),
-      ),
+      and(eq(listingPhotos.propertyId, p.id), eq(listingPhotos.archived, false))
     )
     .orderBy(asc(listingPhotos.position), asc(listingPhotos.createdAt));
   return (
-    <ManagementShell title={p.data.name} hideHeading>
+    <ManagementShell hideHeading title={p.data.name}>
       <a className="property-back" href="/properties">
         <Icon name="back" size={18} /> All properties
       </a>
@@ -69,7 +68,7 @@ export default async function PropertyPage({
           </p>
         </div>
       </header>
-      <nav className="property-section-nav" aria-label="Property information">
+      <nav aria-label="Property information" className="property-section-nav">
         <a href="#property-overview">Overview</a>
         <a href="#property-photos">Photos</a>
         <a href="#property-about">About</a>
@@ -82,9 +81,9 @@ export default async function PropertyPage({
       <div className="property-content-layout">
         <div>
           <section
-            id="property-overview"
-            className="property-overview"
             aria-label="Property overview"
+            className="property-overview"
+            id="property-overview"
           >
             <dl className="property-overview-grid">
               <div>
@@ -126,14 +125,14 @@ export default async function PropertyPage({
               </div>
             </dl>
           </section>
-          <section id="property-about" className="property-content-section">
+          <section className="property-content-section" id="property-about">
             <h2>About this property</h2>
-            <PropertyDescription text={p.data.description} grid />
+            <PropertyDescription grid text={p.data.description} />
           </section>
           <PropertyAmenities selected={p.data.amenities} />
           <section
-            id="property-criteria"
             className="property-content-section property-criteria-section"
+            id="property-criteria"
           >
             <h2>Selection criteria</h2>
             <p>{POLICY.version}</p>
@@ -141,9 +140,9 @@ export default async function PropertyPage({
           </section>
         </div>
         <aside
-          id="property-contact"
-          className="property-apply"
           aria-label="Contact and application"
+          className="property-apply"
+          id="property-contact"
         >
           <div className="property-apply-heading">
             <p className="eyebrow">Back Acres Rental</p>
@@ -164,8 +163,8 @@ export default async function PropertyPage({
           <a
             className="property-location-link"
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.data.address)}`}
-            target="_blank"
             rel="noreferrer"
+            target="_blank"
           >
             <Icon name="location" />
             View location

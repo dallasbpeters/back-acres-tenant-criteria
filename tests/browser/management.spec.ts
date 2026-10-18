@@ -1,9 +1,16 @@
-import { POLICY, selectionCriteriaText } from "../../lib/policy";
-import { test, expect } from "@playwright/test";
-import { loadEnvConfig } from "@next/env";
-import { encode } from "next-auth/jwt";
+// biome-ignore-all lint/performance/noAwaitInLoops: These stateful fixtures and assertions must finish each transition before the next request or cleanup.
+import { requireValue } from "@/lib/required";
+
+const pattern1 = /property/i;
+const pattern2 = /Lease document/;
+
 import { neon } from "@neondatabase/serverless";
+import { loadEnvConfig } from "@next/env";
+import { expect, test } from "@playwright/test";
+import { encode } from "next-auth/jwt";
 import Stripe from "stripe";
+import { POLICY, selectionCriteriaText } from "../../lib/policy";
+
 loadEnvConfig(process.cwd());
 const origin = "http://localhost:3191";
 const propertyId = crypto.randomUUID(),
@@ -15,7 +22,9 @@ const canceledInvoiceId = crypto.randomUUID();
 const duplicatePropertyId = crypto.randomUUID();
 let linkId = "",
   draftId = "";
-const sql = neon(process.env.DATABASE_URL!);
+const sql = neon(
+  requireValue(process.env.DATABASE_URL, "Expected process.env.DATABASE_URL")
+);
 test.afterAll(async () => {
   await sql`DELETE FROM maintenance_requests WHERE property_id=${propertyId}`;
   await sql`DELETE FROM resident_links WHERE property_id=${propertyId}`;
@@ -31,138 +40,144 @@ test("property lifecycle, private records, public applications, resident links, 
   page,
   request,
 }) => {
-  test.setTimeout(60000);
+  test.setTimeout(60_000);
   expect(
-    (await request.post("/api/admin/billing", { data: {} })).status(),
+    (await request.post("/api/admin/billing", { data: {} })).status()
   ).toBe(401);
   expect((await request.get("/api/admin/management")).status()).toBe(401);
   const token = await encode({
-    secret: process.env.NEXTAUTH_SECRET!,
-    token: {
-      email: process.env.ADMIN_EMAILS!.split(",")[0],
-      sub: "test-owner",
-      googleVerified: true,
-    },
     maxAge: 3600,
+    secret: requireValue(
+      process.env.NEXTAUTH_SECRET,
+      "Expected process.env.NEXTAUTH_SECRET"
+    ),
+    token: {
+      email: requireValue(
+        process.env.ADMIN_EMAILS,
+        "Expected process.env.ADMIN_EMAILS"
+      ).split(",")[0],
+      googleVerified: true,
+      sub: "test-owner",
+    },
   });
   await page.context().addCookies([
     {
-      name: "next-auth.session-token",
-      value: token,
-      url: origin,
       httpOnly: true,
+      name: "next-auth.session-token",
       sameSite: "Lax",
+      url: origin,
+      value: token,
     },
   ]);
-  const send = (data: unknown) =>
+  const send = (dataLocal: unknown) =>
     page.request.post("/api/admin/management", {
+      data: dataLocal,
       headers: { origin, "x-vercel-forwarded-for": propertyId },
-      data,
     });
   expect(
     (
       await page.request.post("/api/admin/management", {
-        headers: { origin: "https://evil.example" },
         data: {},
+        headers: { origin: "https://evil.example" },
       })
-    ).status(),
+    ).status()
   ).toBe(403);
   expect(
     (
       await page.request.post("/api/admin/billing", {
-        headers: { origin: "https://evil.example" },
         data: {},
+        headers: { origin: "https://evil.example" },
       })
-    ).status(),
+    ).status()
   ).toBe(403);
   expect(
     (
       await page.request.post("/api/admin/billing", {
-        headers: { origin },
         data: {
           action: "create",
-          id: crypto.randomUUID(),
           data: { authorized: false },
+          id: crypto.randomUUID(),
         },
+        headers: { origin },
       })
-    ).status(),
+    ).status()
   ).toBe(400);
   const property = {
-    name: "Test property",
-    slug,
+    acceptingApplications: false,
     address: `1 Test St, Unit ${propertyId.slice(0, 8)}`,
-    description: "A test listing",
-    rentCents: 250000,
-    bedrooms: 3,
-    bathrooms: 2,
     availableDate: "2026-11-01",
+    bathrooms: 2,
+    bedrooms: 3,
     contact: "owner@example.invalid",
-    emergencyContact: "Contact owner directly",
     criteria: "Test criteria version 1",
     criteriaVersion: "TEST-1",
+    description: "A test listing",
+    emergencyContact: "Contact owner directly",
+    name: "Test property",
     published: false,
-    acceptingApplications: false,
+    rentCents: 250_000,
+    slug,
   };
   expect(
     (
       await send({
         action: "property",
+        data: property,
         id: propertyId,
         revision: 0,
-        data: property,
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   expect((await request.get(`/properties/${slug}`)).status()).toBe(404);
   expect(
     (
       await send({
         action: "property",
+        data: { ...property, acceptingApplications: true, published: true },
         id: propertyId,
         revision: 1,
-        data: { ...property, published: true, acceptingApplications: true },
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   expect(
     (
       await send({
         action: "property",
+        data: property,
         id: propertyId,
         revision: 1,
-        data: property,
       })
-    ).status(),
+    ).status()
   ).toBe(409);
   await page.goto(`/properties/${slug}/apply`);
   await expect(
-    page.getByRole("heading", { name: "Selection criteria" }),
+    page.getByRole("heading", { name: "Selection criteria" })
   ).toBeVisible();
   const data = {
-    name: "Fixture applicant",
-    email: "fixture@example.invalid",
-    phone: "555-0100",
-    currentAddress: "2 Test St",
-    monthlyIncome: 8000,
-    incomeDetails: "Fixture income",
-    housingHistory: "Fixture history",
-    moveDate: "2026-11-01",
-    occupants: 2,
-    notes: "",
-    acknowledgment: true,
     accuracy: true,
+    acknowledgment: true,
+    currentAddress: "2 Test St",
+    email: "fixture@example.invalid",
+    housingHistory: "Fixture history",
+    incomeDetails: "Fixture income",
+    monthlyIncome: 8000,
+    moveDate: "2026-11-01",
+    name: "Fixture applicant",
+    notes: "",
+    occupants: 2,
+    phone: "555-0100",
   };
   const apply = (revision: number, criteriaVersion: string = POLICY.version) =>
     request.post("/api/applications", {
-      headers: { origin, "x-vercel-forwarded-for": propertyId },
       data: {
+        criteriaVersion,
+        data,
         id: applicationId,
         propertyId,
         revision,
-        criteriaVersion,
         website: "",
-        data,
       },
+      headers: { origin, "x-vercel-forwarded-for": propertyId },
     });
   expect((await apply(1)).status()).toBe(409);
   expect((await apply(2, "stale-version")).status()).toBe(409);
@@ -181,194 +196,195 @@ test("property lifecycle, private records, public applications, resident links, 
         propertyId,
         residentName: "Fixture resident",
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   let records = await (await page.request.get("/api/admin/management")).json();
   const link = records.residentLinks.find(
-    (l: { propertyId: string }) => l.propertyId === propertyId,
+    (l: { propertyId: string }) => l.propertyId === propertyId
   );
   linkId = link.id;
   const residentToken = link.url.split("/").pop();
   const maintenance = {
+    data: {
+      accessNotes: "Call first",
+      description: "Test only",
+      email: "fixture@example.invalid",
+      name: "Fixture resident",
+      phone: "555-0100",
+      priority: "routine",
+      subject: "Fixture repair",
+    },
     id: crypto.randomUUID(),
     token: residentToken,
     website: "",
-    data: {
-      name: "Fixture resident",
-      email: "fixture@example.invalid",
-      phone: "555-0100",
-      subject: "Fixture repair",
-      description: "Test only",
-      priority: "routine",
-      accessNotes: "Call first",
-    },
   };
   expect(
     (
       await request.post("/api/maintenance", {
+        data: { ...maintenance, token: `${residentToken}x` },
         headers: { origin, "x-vercel-forwarded-for": propertyId },
-        data: { ...maintenance, token: residentToken + "x" },
       })
-    ).status(),
+    ).status()
   ).toBe(404);
   expect(
     (
       await request.post("/api/maintenance", {
-        headers: { origin, "x-vercel-forwarded-for": propertyId },
         data: maintenance,
+        headers: { origin, "x-vercel-forwarded-for": propertyId },
       })
-    ).status(),
+    ).status()
   ).toBe(201);
   await send({ action: "revokeLink", id: link.id });
   expect(
     (
       await request.post("/api/maintenance", {
-        headers: { origin, "x-vercel-forwarded-for": propertyId },
         data: maintenance,
+        headers: { origin, "x-vercel-forwarded-for": propertyId },
       })
-    ).status(),
+    ).status()
   ).toBe(404);
   expect(
     (
       await send({
         action: "leaseTemplate",
+        body: "Lease for {{tenant_names}} at {{property_address}}.",
         id: templateId,
         name: "Fixture template",
-        body: "Lease for {{tenant_names}} at {{property_address}}.",
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   await page.goto("/admin");
-  await page.getByRole("link", { name: "Leases", exact: true }).click();
+  await page.getByRole("link", { exact: true, name: "Leases" }).click();
   await page
     .locator(".lease-form")
-    .getByRole("button", { name: /property/i })
+    .getByRole("button", { name: pattern1 })
     .click();
   await page
     .getByRole("option", {
       name: new RegExp(`Test property.*${propertyId.slice(0, 8)}`),
     })
     .click();
-  await page.getByRole("button", { name: /Lease document/ }).click();
+  await page.getByRole("button", { name: pattern2 }).click();
   await page
-    .getByRole("option", { name: "Fixture template", exact: true })
+    .getByRole("option", { exact: true, name: "Fixture template" })
     .click();
   await page.getByLabel("Landlord legal name").fill("Fixture owner");
   await page.getByLabel("Tenant legal names").fill("Fixture tenant");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { exact: true, name: "Continue" }).click();
   await page.getByLabel("Lease start date").fill("2026-11-01");
   await page.getByLabel("Lease end date").fill("2027-10-31");
   await page.getByLabel("Security deposit ($)", { exact: true }).fill("2500");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Review lease", exact: true }).click();
+  await page.getByRole("button", { exact: true, name: "Continue" }).click();
+  await page.getByRole("button", { exact: true, name: "Review lease" }).click();
   await page
-    .getByRole("button", { name: "Read document", exact: true })
+    .getByRole("button", { exact: true, name: "Read document" })
     .click();
   await expect(
-    page.getByRole("article", { name: "Lease draft preview" }),
+    page.getByRole("article", { name: "Lease draft preview" })
   ).toContainText(`Lease for Fixture tenant at ${property.address}.`);
   await page
-    .getByRole("button", { name: "Save lease draft", exact: true })
+    .getByRole("button", { exact: true, name: "Save lease draft" })
     .click();
   await expect(
-    page.getByRole("button", { name: "Draft saved", exact: true }),
+    page.getByRole("button", { exact: true, name: "Draft saved" })
   ).toBeVisible();
   records = await (await page.request.get("/api/admin/management")).json();
   draftId = records.drafts.find(
-    (d: { propertyId: string }) => d.propertyId === propertyId,
+    (d: { propertyId: string }) => d.propertyId === propertyId
   ).id;
   expect(
     (
       await send({
         action: "invoice",
-        id: invoiceId,
         data: {
-          propertyId,
-          payerName: "Fixture tenant",
-          payerEmail: "fixture@example.invalid",
+          amountCents: 250_000,
           category: "rent",
           description: "Test rent",
-          amountCents: 250000,
           dueDate: "2026-11-01",
+          payerEmail: "fixture@example.invalid",
+          payerName: "Fixture tenant",
+          propertyId,
         },
+        id: invoiceId,
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   expect(
     (
       await send({
         action: "invoice",
-        id: canceledInvoiceId,
         data: {
-          propertyId,
-          payerName: "Fixture",
-          payerEmail: "fixture@example.invalid",
+          amountCents: 1000,
           category: "rent",
           description: "Canceled fixture",
-          amountCents: 1000,
           dueDate: "2026-11-01",
+          payerEmail: "fixture@example.invalid",
+          payerName: "Fixture",
+          propertyId,
         },
+        id: canceledInvoiceId,
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   expect(
-    (await send({ action: "voidInvoice", id: canceledInvoiceId })).ok(),
+    (await send({ action: "voidInvoice", id: canceledInvoiceId })).ok()
   ).toBe(true);
   records = await (await page.request.get("/api/admin/management")).json();
   const canceled = records.invoices.find(
-    (i: { id: string }) => i.id === canceledInvoiceId,
+    (i: { id: string }) => i.id === canceledInvoiceId
   );
   expect(
     (
       await request.post("/api/payments/checkout", {
-        headers: { origin },
         data: { token: canceled.url.split("/").pop() },
+        headers: { origin },
       })
-    ).status(),
+    ).status()
   ).toBe(410);
   expect(
     (
       await request.post("/api/payments/webhook", {
         data: { type: "checkout.session.completed" },
       })
-    ).status(),
+    ).status()
   ).toBe(400);
   if (process.env.STRIPE_WEBHOOK_SECRET === "whsec_test_only") {
     const stripe = new Stripe("sk_test_fixture");
     const event = {
-      id: "evt_fixture",
-      object: "event",
-      type: "checkout.session.completed",
       data: {
         object: {
-          id: "cs_test_fixture",
-          object: "checkout.session",
-          livemode: false,
+          amount_total: 250_000,
           client_reference_id: invoiceId,
-          metadata: { invoiceId },
           currency: "usd",
-          amount_total: 250000,
+          id: "cs_test_fixture",
+          livemode: false,
+          metadata: { invoiceId },
+          object: "checkout.session",
           payment_status: "paid",
         },
       },
+      id: "evt_fixture",
+      object: "event",
+      type: "checkout.session.completed",
     };
     const payload = JSON.stringify(event);
     const signature = stripe.webhooks.generateTestHeaderString({
       payload,
       secret: "whsec_test_only",
     });
-    for (let i = 0; i < 2; i++)
+    for (let i = 0; i < 2; i += 1) {
       expect(
         (
           await request.post("/api/payments/webhook", {
-            headers: {
-              "stripe-signature": signature,
-              "Content-Type": "application/json",
-            },
             data: payload,
+            headers: {
+              "Content-Type": "application/json",
+              "stripe-signature": signature,
+            },
           })
-        ).status(),
+        ).status()
       ).toBe(200);
+    }
     const paid =
       await sql`SELECT status FROM rental_invoices WHERE id=${invoiceId}`;
     expect(paid[0].status).toBe("paid");
@@ -384,84 +400,84 @@ test("property lifecycle, private records, public applications, resident links, 
     (
       await send({
         action: "property",
+        data: automaticProperty,
         id: duplicatePropertyId,
         revision: 0,
-        data: automaticProperty,
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   let listingRecords = await (
     await page.request.get("/api/admin/management")
   ).json();
   const duplicate = listingRecords.properties.find(
-    (p: { id: string }) => p.id === duplicatePropertyId,
+    (p: { id: string }) => p.id === duplicatePropertyId
   );
   expect(duplicate.slug).toBe(
-    `${slug}-${duplicatePropertyId.replaceAll("-", "")}`,
+    `${slug}-${duplicatePropertyId.replaceAll("-", "")}`
   );
   expect(
     (
       await send({
         action: "property",
-        id: propertyId,
-        revision: 2,
         data: {
           ...automaticProperty,
           address: "Corrected address",
           published: true,
         },
+        id: propertyId,
+        revision: 2,
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   listingRecords = await (
     await page.request.get("/api/admin/management")
   ).json();
   expect(
     listingRecords.properties.find((p: { id: string }) => p.id === propertyId)
-      .slug,
+      .slug
   ).toBe(slug);
   expect((await request.get(`/properties/${slug}`)).ok()).toBe(true);
   await page.reload();
   await page
     .getByRole("navigation", { name: "Workspace sections" })
-    .getByRole("link", { name: "Properties", exact: true })
+    .getByRole("link", { exact: true, name: "Properties" })
     .click();
-  await page.getByRole("button", { name: "Add property", exact: true }).click();
+  await page.getByRole("button", { exact: true, name: "Add property" }).click();
   await expect(
-    page.getByLabel("Listing URL name", { exact: false }),
+    page.getByLabel("Listing URL name", { exact: false })
   ).toHaveCount(0);
   await expect(
     page.getByText(
-      "Your listing link is generated automatically from the property address when you save.",
-    ),
+      "Your listing link is generated automatically from the property address when you save."
+    )
   ).toBeVisible();
 
   await expect(
-    page.getByLabel("Urgent repair contact", { exact: true }),
+    page.getByLabel("Urgent repair contact", { exact: true })
   ).toHaveCount(0);
   await expect(
-    page.getByRole("link", { name: "Open maintenance portal", exact: true }),
+    page.getByRole("link", { exact: true, name: "Open maintenance portal" })
   ).toHaveAttribute("href", "/admin#maintenance");
   await expect(
-    page.getByLabel("Selection criteria for this property", { exact: true }),
+    page.getByLabel("Selection criteria for this property", { exact: true })
   ).toHaveCount(0);
   await expect(
-    page.getByLabel("Criteria version", { exact: true }),
+    page.getByLabel("Criteria version", { exact: true })
   ).toHaveCount(0);
   const portalPage = await page.context().newPage();
   await portalPage.goto("/admin#maintenance");
   await expect(
-    portalPage.getByRole("heading", { name: "Maintenance", exact: true }),
+    portalPage.getByRole("heading", { exact: true, name: "Maintenance" })
   ).toBeVisible();
   await portalPage.close();
   await page.screenshot({
-    path: "test-results/property-workspace.png",
     fullPage: true,
+    path: "test-results/property-workspace.png",
   });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
   ).toBe(true);
 });

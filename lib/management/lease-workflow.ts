@@ -1,11 +1,11 @@
 import { suppliedDisclosures } from "../leases/disclosures";
-import { dollars } from "./model";
 import {
-  leaseFields,
-  leaseFieldLabels,
-  templateFields,
   type LeaseValues,
+  leaseFieldLabels,
+  leaseFields,
+  templateFields,
 } from "./leases";
+import { dollars } from "./model";
 export type LeaseField = keyof typeof leaseFieldLabels;
 export const leaseSteps = [
   "Property & people",
@@ -56,18 +56,18 @@ export const moneyFields: LeaseField[] = [
   "move_out_fee",
 ];
 export const questionLabels: Partial<Record<LeaseField, string>> = {
-  tenant_names: "Tenant legal names",
-  security_deposit: "Security deposit",
-  monthly_parking: "Monthly parking",
-  pet_deposit: "Pet deposit",
-  move_in_fee: "Move-in fee",
-  move_out_fee: "Move-out fee",
-  late_rent_fee: "Late fee",
   enclosures: "Attachments provided with this lease",
+  late_rent_fee: "Late fee",
   lead_paint_knowledge: "Known lead paint or hazards",
   lead_paint_records: "Available lead paint records",
-  lead_records_receipt: "Tenant acknowledgment of lead records",
   lead_pamphlet_receipt: "Tenant acknowledgment of lead pamphlet",
+  lead_records_receipt: "Tenant acknowledgment of lead records",
+  monthly_parking: "Monthly parking",
+  move_in_fee: "Move-in fee",
+  move_out_fee: "Move-out fee",
+  pet_deposit: "Pet deposit",
+  security_deposit: "Security deposit",
+  tenant_names: "Tenant legal names",
 };
 export const fieldLabel = (key: string) =>
   questionLabels[key as LeaseField] ||
@@ -92,17 +92,17 @@ export function initialLeaseValues(property?: {
   emergencyContact?: string;
 }): LeaseValues {
   return {
-    lead_records_receipt: suppliedDisclosures.lead_records_receipt,
+    emergency_contact: property?.emergencyContact || "",
     lead_pamphlet_receipt: suppliedDisclosures.lead_pamphlet_receipt,
-    property_name: property?.name ?? "",
-    property_address: property?.address ?? "",
-    monthly_rent: property ? String(property.rentCents / 100) : "",
-    rent_due_day: "1",
+    lead_records_receipt: suppliedDisclosures.lead_records_receipt,
     monthly_parking: "0",
-    pet_deposit: "0",
+    monthly_rent: property ? String(property.rentCents / 100) : "",
     move_in_fee: "0",
     move_out_fee: "0",
-    emergency_contact: property?.emergencyContact || "",
+    pet_deposit: "0",
+    property_address: property?.address ?? "",
+    property_name: property?.name ?? "",
+    rent_due_day: "1",
   };
 }
 export function leaseFormValues(values: LeaseValues): LeaseValues {
@@ -112,38 +112,44 @@ export function leaseFormValues(values: LeaseValues): LeaseValues {
       moneyFields.includes(key as LeaseField)
         ? (value ?? "").replace(/[$,]/g, "")
         : value,
-    ]),
+    ])
   );
 }
 export function normalizedLeaseValues(values: LeaseValues): LeaseValues {
   const normalized = { ...values };
   for (const key of moneyFields) {
     const raw = normalized[key]?.trim();
-    if (!raw) continue;
+    if (!raw) {
+      continue;
+    }
     const amount = Number(raw.replace(/[$,]/g, ""));
     if (
       !Number.isFinite(amount) ||
       amount < 0 ||
-      amount > 100000 ||
-      Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001
-    )
-      throw Error(`Enter a valid amount for ${fieldLabel(key)}.`);
+      amount > 100_000 ||
+      Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000_001
+    ) {
+      throw new Error(`Enter a valid amount for ${fieldLabel(key)}.`);
+    }
     normalized[key] = dollars(Math.round(amount * 100));
   }
   if (
     normalized.start_date &&
     normalized.end_date &&
     normalized.end_date <= normalized.start_date
-  )
-    throw Error("The lease end date must be after the start date.");
+  ) {
+    throw new Error("The lease end date must be after the start date.");
+  }
   return normalized;
 }
 export function missingLeaseDetails(body: string, values: LeaseValues) {
   return templateFields(body)
     .filter(
       (key) =>
-        !leaseFields.includes(key as LeaseField) ||
-        !values[key as LeaseField]?.trim(),
+        !(
+          leaseFields.includes(key as LeaseField) &&
+          values[key as LeaseField]?.trim()
+        )
     )
     .map(fieldLabel);
 }

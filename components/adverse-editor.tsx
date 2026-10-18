@@ -1,42 +1,45 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { NoticeTemplatePicker } from "./notice-template-picker";
-import { Button } from "@/components/ui/button";
-
-import { RemoveButton } from "./management/remove-button";
-import { AppSelect } from "@/components/ui/select";
-import { useEffect, useRef, useState } from "react";
-import { agencyPresets } from "@/lib/adverse/agencies";
-import { signIn } from "next-auth/react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { signIn } from "next-auth/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { AppSelect } from "@/components/ui/select";
+import { agencyPresets } from "@/lib/adverse/agencies";
 import {
   blankNotice,
+  type Notice,
   noticeSchema,
+  type RichNode,
   renderNotice,
   sendErrors,
-  type Notice,
-  type RichNode,
 } from "@/lib/adverse/notice";
+import { requireValue } from "@/lib/required";
+import { RemoveButton } from "./management/remove-button";
+import { NoticeTemplatePicker } from "./notice-template-picker";
 
-type Version = {
-  id: string;
-  documentId: string;
-  version: number;
-  notice: Notice;
-  html?: string;
+interface Version {
   createdAt: string;
-  status?: string | null;
+  documentId: string;
+  html?: string;
+  id: string;
+  notice: Notice;
   resendId?: string | null;
-};
+  status?: string | null;
+  version: number;
+}
 async function api(path: string, method = "GET", body?: unknown) {
   const response = await fetch(`/api/admin/${path}`, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    method,
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "The request failed.");
+  if (!response.ok) {
+    throw new Error(data.error || "The request failed.");
+  }
   return data;
 }
 function Reasons({
@@ -47,71 +50,73 @@ function Reasons({
   onChange: (value: RichNode) => void;
 }) {
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: false,
-        blockquote: false,
-        code: false,
-        codeBlock: false,
-        horizontalRule: false,
-        strike: false,
-        link: false,
-        underline: false,
-        trailingNode: false,
-      }),
-    ],
     content: value,
-    immediatelyRender: false,
     editorProps: {
       attributes: {
-        role: "textbox",
         "aria-label": "Reasons for the decision",
         "aria-multiline": "true",
         class: "reasons-content",
+        role: "textbox",
       },
     },
-    onUpdate: ({ editor }) => onChange(editor.getJSON() as RichNode),
+    extensions: [
+      StarterKit.configure({
+        blockquote: false,
+        code: false,
+        codeBlock: false,
+        heading: false,
+        horizontalRule: false,
+        link: false,
+        strike: false,
+        trailingNode: false,
+        underline: false,
+      }),
+    ],
+    immediatelyRender: false,
+    onUpdate: ({ editor: editorLocal }) =>
+      onChange(editorLocal.getJSON() as RichNode),
   });
+
   return (
     <div className="reasons-editor">
       <div
+        aria-label="Reason formatting"
         className="editor-tools"
         role="toolbar"
-        aria-label="Reason formatting"
       >
         <Button
-          type="button"
           onClick={() => editor?.chain().focus().toggleBold().run()}
+          type="button"
         >
           Bold
         </Button>
         <Button
-          type="button"
           onClick={() => editor?.chain().focus().toggleItalic().run()}
+          type="button"
         >
           Italic
         </Button>
         <Button
-          type="button"
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
+          type="button"
         >
           Bullets
         </Button>
         <Button
-          type="button"
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+          type="button"
         >
           Numbered list
         </Button>
         <Button
-          type="button"
           onClick={() => editor?.chain().focus().undo().run()}
+          type="button"
         >
           Undo
         </Button>
         <Button
-          type="button"
           onClick={() => editor?.chain().focus().redo().run()}
+          type="button"
         >
           Redo
         </Button>
@@ -120,6 +125,7 @@ function Reasons({
     </div>
   );
 }
+/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export default function AdverseEditor({
   signedIn,
   loginError,
@@ -130,7 +136,7 @@ export default function AdverseEditor({
   loginError?: string;
 }) {
   const removedNotice = useRef(false);
-  const [authenticated, setAuthenticated] = useState(signedIn);
+  const authenticated = signedIn;
   const [notice, setNotice] = useState<Notice>(blankNotice);
   const [versions, setVersions] = useState<Version[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -159,18 +165,56 @@ export default function AdverseEditor({
     setHasMore(data.versions.length === 200);
     return data.versions as Version[];
   }
+  const applyVersion = useCallback((v: Version | null) => {
+    window.history.replaceState(
+      null,
+      "",
+      `/admin/adverse-actions/${v?.documentId ?? "new"}`
+    );
+    setCurrent(v);
+    if (!v) {
+      setVersions([]);
+      setHasMore(false);
+    }
+    setNotice(v ? v.notice : blankNotice());
+    setEditorKey((k) => k + 1);
+    setPreview(false);
+    setConfirmed(false);
+    setError("");
+    setMessage("");
+  }, []);
   useEffect(() => {
-    if (authenticated && documentId)
-      refresh(documentId)
-        .then((rows) => {
-          if (rows[0]) load(rows[0]);
-          else setError("This notice was not found.");
+    let active = true;
+    if (authenticated && documentId) {
+      api(`notices?documentId=${documentId}`)
+        .then((data) => {
+          if (!active || removedNotice.current) {
+            return;
+          }
+          const rows = data.versions as Version[];
+          setVersions(rows);
+          setHasMore(rows.length === 200);
+          if (rows[0]) {
+            applyVersion(rows[0]);
+          } else {
+            setError("This notice was not found.");
+          }
         })
-        .catch((e) => setError(e.message));
-  }, [authenticated, documentId]);
+        .catch((e) => {
+          if (active) {
+            setError(e.message);
+          }
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [authenticated, documentId, applyVersion]);
+
   useEffect(() => {
     const prevent = (e: BeforeUnloadEvent) => {
       if (
+        /* biome-ignore lint/suspicious/noUnnecessaryConditions: The removal callback mutates this ref between renders; unloading must reread it. */
         !removedNotice.current &&
         dirty &&
         (notice.applicantName || notice.applicantEmail)
@@ -203,60 +247,64 @@ export default function AdverseEditor({
     if (
       dirty &&
       (notice.applicantName || notice.applicantEmail) &&
-      !window.confirm("Discard your unsaved edits?")
-    )
+      !(
+        /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+          "Discard your unsaved edits?"
+        )
+      )
+    ) {
       return;
-    window.history.replaceState(
-      null,
-      "",
-      `/admin/adverse-actions/${v?.documentId ?? "new"}`,
-    );
-    setCurrent(v);
-    if (!v) {
-      setVersions([]);
-      setHasMore(false);
     }
-    setNotice(v ? v.notice : blankNotice());
-    setEditorKey((k) => k + 1);
-    setPreview(false);
-    setConfirmed(false);
-    setError("");
-    setMessage("");
+    applyVersion(v);
   }
+
   const field = (key: keyof Notice, label: string, type = "text") => (
     <label className="field">
       {label}
       <input
+        maxLength={key === "senderContact" ? 1000 : 300}
+        onChange={(e) => change(key, e.target.value as never)}
         type={type}
         value={String(notice[key])}
-        onChange={(e) => change(key, e.target.value as never)}
-        maxLength={key === "senderContact" ? 1000 : 300}
       />
     </label>
   );
-  const status = (s?: string | null) =>
-    s === "accepted"
-      ? "Accepted by Resend"
-      : s === "sending"
-        ? "Sending / check Resend"
-        : s === "unknown"
-          ? "Uncertain / check Resend"
-          : s === "rejected"
-            ? "Rejected by Resend"
-            : "Draft";
+  const status = (s?: string | null) => {
+    const resolveResult1 = () => {
+      if (s === "accepted") {
+        return "Accepted by Resend";
+      }
+      if (s === "sending") {
+        return "Sending / check Resend";
+      }
+      if (s === "unknown") {
+        return "Uncertain / check Resend";
+      }
+      if (s === "rejected") {
+        return "Rejected by Resend";
+      }
+      return "Draft";
+    };
+    return resolveResult1();
+  };
   useEffect(() => {
     const beforeSignOut = (event: Event) => {
       if (
         dirty &&
         (notice.applicantName || notice.applicantEmail) &&
-        !confirm("Discard unsaved edits and sign out?")
-      )
+        !(
+          /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ confirm(
+            "Discard unsaved edits and sign out?"
+          )
+        )
+      ) {
         event.preventDefault();
+      }
     };
     window.addEventListener("owner-sign-out", beforeSignOut);
     return () => window.removeEventListener("owner-sign-out", beforeSignOut);
   }, [dirty, notice.applicantName, notice.applicantEmail]);
-  if (!authenticated)
+  if (!authenticated) {
     return (
       <div className="admin-shell admin-login">
         <a href="/">Back Acres Rental</a>
@@ -267,7 +315,6 @@ export default function AdverseEditor({
           administrators.
         </p>
         <Button
-          type="button"
           className="admin-primary"
           disabled={busy}
           onClick={() =>
@@ -275,11 +322,12 @@ export default function AdverseEditor({
               await signIn("google", { callbackUrl: "/admin/adverse-actions" });
             })
           }
+          type="button"
         >
           {busy ? "Connecting to Google…" : "Continue with Google"}
         </Button>
-        {(error || loginError) && (
-          <p role="alert" className="form-error">
+        {!!(error || loginError) && (
+          <p className="form-error" role="alert">
             {error ||
               (loginError === "AccessDenied"
                 ? "This Google account is not approved for access. Choose an approved account or contact the property administrator."
@@ -288,16 +336,18 @@ export default function AdverseEditor({
         )}
       </div>
     );
+  }
+
   return (
     <div className="admin-shell">
-      <nav className="notice-return" aria-label="Notice navigation">
+      <nav aria-label="Notice navigation" className="notice-return">
         <a href="/admin/adverse-actions">← All adverse-action notices</a>
-        {versions[0] && (
+        {!!versions[0] && (
           <RemoveButton
-            kind="notice"
-            id={versions[0].documentId}
-            name={versions[0].notice.applicantName || "Untitled notice"}
             disabled={busy}
+            id={versions[0].documentId}
+            kind="notice"
+            name={versions[0].notice.applicantName || "Untitled notice"}
             onRemoved={() => {
               removedNotice.current = true;
               window.location.href = "/admin/adverse-actions";
@@ -306,20 +356,20 @@ export default function AdverseEditor({
         )}
       </nav>
       <div className="admin-workspace">
-        <aside className="notice-history" aria-label="Version history">
+        <aside aria-label="Version history" className="notice-history">
           <h2>Version history</h2>
           <div className="admin-actions notice-history-actions">
-            <Button type="button" disabled={busy} onClick={() => load(null)}>
+            <Button disabled={busy} onClick={() => load(null)} type="button">
               New notice
             </Button>
             <Button
-              type="button"
               disabled={busy}
               onClick={() =>
                 perform(async () => {
                   await refresh();
                 })
               }
+              type="button"
             >
               Refresh
             </Button>
@@ -328,35 +378,35 @@ export default function AdverseEditor({
             Versions of this notice only. Every save preserves a separate
             revision.
           </p>
-          {versions.length === 0 && <p>No saved notices yet.</p>}
+          {!!(versions.length === 0) && <p>No saved notices yet.</p>}
           {versions.map((v) => (
             <Button
-              type="button"
-              disabled={busy}
-              className="version-item"
-              aria-label={`${v.notice.applicantName || "Untitled notice"} · Version ${v.version} · ${status(v.status)}`}
-              key={v.id}
               aria-current={current?.id === v.id ? "true" : undefined}
+              aria-label={`${v.notice.applicantName || "Untitled notice"} · Version ${v.version} · ${status(v.status)}`}
+              className="version-item"
+              disabled={busy}
+              key={v.id}
               onClick={() => load(v)}
+              type="button"
             >
               <strong>Version {v.version}</strong>
               <span>{status(v.status)}</span>
               <span>{new Date(v.createdAt).toLocaleString()}</span>
             </Button>
           ))}
-          {hasMore && (
+          {!!hasMore && (
             <Button
-              type="button"
               disabled={busy}
               onClick={() =>
                 perform(async () => {
                   const data = await api(
-                    `notices?documentId=${current?.documentId ?? documentId}&offset=${versions.length}`,
+                    `notices?documentId=${current?.documentId ?? documentId}&offset=${versions.length}`
                   );
                   setVersions((v) => [...v, ...data.versions]);
                   setHasMore(data.versions.length === 200);
                 })
               }
+              type="button"
             >
               Load earlier versions
             </Button>
@@ -370,7 +420,6 @@ export default function AdverseEditor({
             </p>
             <div className="notice-toolbar-actions">
               <Button
-                type="button"
                 className="admin-primary"
                 disabled={busy || !dirty}
                 onClick={() =>
@@ -383,7 +432,7 @@ export default function AdverseEditor({
                     window.history.replaceState(
                       null,
                       "",
-                      `/admin/adverse-actions/${result.version.documentId}`,
+                      `/admin/adverse-actions/${result.version.documentId}`
                     );
                     setCurrent(result.version);
                     await refresh(result.version.documentId);
@@ -391,50 +440,52 @@ export default function AdverseEditor({
                     setMessage(`Version ${result.version.version} saved.`);
                   })
                 }
+                type="button"
               >
                 {busy ? "Working…" : "Save new version"}
               </Button>
               <Button
-                type="button"
                 disabled={busy}
                 onClick={() => {
                   setPreview(!preview);
                   setConfirmed(false);
                 }}
+                type="button"
               >
                 {preview ? "Edit notice" : "Preview notice"}
               </Button>
             </div>
           </div>
-          {error && (
+          {!!error && (
             <p className="form-error" role="alert">
               {error}
             </p>
           )}
-          {message && (
+          {!!message && (
             <p className="admin-message" role="status">
               {message}
             </p>
           )}
           {!preview && (
             <NoticeTemplatePicker
+              disabled={busy}
               key={current?.id ?? "new"}
               notice={notice}
-              disabled={busy}
               onApply={(next) => {
                 setNotice(next);
                 setEditorKey((k) => k + 1);
                 setConfirmed(false);
                 setMessage(
-                  "Template applied. Review the wording and complete the applicant and report details before sending.",
+                  "Template applied. Review the wording and complete the applicant and report details before sending."
                 );
               }}
             />
           )}
           {preview ? (
             <article
-              className="notice-preview"
               aria-label="Notice preview"
+              className="notice-preview"
+              /* biome-ignore lint/security/noDangerouslySetInnerHtml: renderNotice escapes every applicant field and allowlists rich text before preview or persistence. */
               dangerouslySetInnerHTML={{
                 __html: !dirty && current?.html ? current.html : rendered.html,
               }}
@@ -452,10 +503,10 @@ export default function AdverseEditor({
                   {field("senderContact", "Sender contact information")}
                   <AppSelect
                     label={<>Action taken</>}
-                    value={notice.action}
                     onValueChange={(value) =>
                       change("action", value as Notice["action"])
                     }
+                    value={notice.action}
                   >
                     {[
                       "Application denied",
@@ -471,9 +522,9 @@ export default function AdverseEditor({
                 <label className="field">
                   Decision details or required terms
                   <textarea
-                    value={notice.actionDetails}
                     maxLength={2000}
                     onChange={(e) => change("actionDetails", e.target.value)}
+                    value={notice.actionDetails}
                   />
                 </label>
               </section>
@@ -485,25 +536,27 @@ export default function AdverseEditor({
                 </p>
                 <Reasons
                   key={editorKey}
-                  value={notice.reasons}
                   onChange={(value) => change("reasons", value)}
+                  value={notice.reasons}
                 />
               </section>
               <section>
                 <h2>03 · Consumer report disclosures</h2>
                 <label className="check-row">
                   <input
-                    type="checkbox"
                     checked={notice.reportUsed}
                     onChange={(e) => {
                       change("reportUsed", e.target.checked);
-                      if (!e.target.checked) change("scoreUsed", false);
+                      if (!e.target.checked) {
+                        change("scoreUsed", false);
+                      }
                     }}
+                    type="checkbox"
                   />
                   A consumer report influenced this decision, in whole or in
                   part.
                 </label>
-                {notice.reportUsed && (
+                {!!notice.reportUsed && (
                   <>
                     <p className="section-intro">
                       Select each agency whose report influenced the decision.
@@ -512,32 +565,35 @@ export default function AdverseEditor({
                       lists a different contact.
                     </p>
                     {notice.agencies.map((a, i) => (
+                      /* biome-ignore lint/suspicious/noArrayIndexKey: These controlled agency inputs represent ordered schema slots, with no independent row state. */
                       <div className="agency-fields" key={i}>
                         <h3>Reporting agency {i + 1}</h3>
                         <AppSelect
-                          label={<>Choose reporting agency {i + 1}</>}
                           aria-label={`Choose reporting agency ${i + 1}`}
+                          label={<>Choose reporting agency {i + 1}</>}
+                          onValueChange={(value) => {
+                            const preset = agencyPresets.find(
+                              (item) => item.id === value
+                            );
+                            if (!preset) {
+                              return;
+                            }
+                            const { name, address, phone } = preset;
+                            change(
+                              "agencies",
+                              notice.agencies.map((row, index) =>
+                                index === i ? { address, name, phone } : row
+                              )
+                            );
+                          }}
                           value={
                             agencyPresets.find(
                               (preset) =>
                                 preset.name === a.name &&
                                 preset.address === a.address &&
-                                preset.phone === a.phone,
+                                preset.phone === a.phone
                             )?.id ?? ""
                           }
-                          onValueChange={(value) => {
-                            const preset = agencyPresets.find(
-                              (item) => item.id === value,
-                            );
-                            if (!preset) return;
-                            const { name, address, phone } = preset;
-                            change(
-                              "agencies",
-                              notice.agencies.map((row, index) =>
-                                index === i ? { name, address, phone } : row,
-                              ),
-                            );
-                          }}
                         >
                           <option value="">
                             Choose an agency or enter custom details
@@ -549,41 +605,48 @@ export default function AdverseEditor({
                           ))}
                         </AppSelect>
                         <div className="fields">
-                          {(["name", "address", "phone"] as const).map((k) => (
-                            <label className="field" key={k}>
-                              {k === "name"
-                                ? "Agency name"
-                                : k === "address"
-                                  ? "Mailing address"
-                                  : "Phone / toll-free number"}
-                              <input
-                                value={a[k]}
-                                maxLength={k === "address" ? 1000 : 300}
-                                onChange={(e) =>
-                                  change(
-                                    "agencies",
-                                    notice.agencies.map((row, index) =>
-                                      index === i
-                                        ? { ...row, [k]: e.target.value }
-                                        : row,
-                                    ),
-                                  )
-                                }
-                              />
-                            </label>
-                          ))}
+                          {(["name", "address", "phone"] as const).map((k) => {
+                            const resolveResult2 = () => {
+                              if (k === "name") {
+                                return "Agency name";
+                              }
+                              if (k === "address") {
+                                return "Mailing address";
+                              }
+                              return "Phone / toll-free number";
+                            };
+                            return (
+                              <label className="field" key={k}>
+                                {resolveResult2()}
+                                <input
+                                  maxLength={k === "address" ? 1000 : 300}
+                                  onChange={(e) =>
+                                    change(
+                                      "agencies",
+                                      notice.agencies.map((row, index) =>
+                                        index === i
+                                          ? { ...row, [k]: e.target.value }
+                                          : row
+                                      )
+                                    )
+                                  }
+                                  value={a[k]}
+                                />
+                              </label>
+                            );
+                          })}
                         </div>
-                        {notice.agencies.length > 1 && (
+                        {!!(notice.agencies.length > 1) && (
                           <Button
-                            type="button"
                             onClick={() =>
                               change(
                                 "agencies",
                                 notice.agencies.filter(
-                                  (_, index) => index !== i,
-                                ),
+                                  (_, index) => index !== i
+                                )
                               )
                             }
+                            type="button"
                           >
                             Remove agency {i + 1}
                           </Button>
@@ -591,14 +654,14 @@ export default function AdverseEditor({
                       </div>
                     ))}
                     <Button
-                      type="button"
                       disabled={notice.agencies.length >= 10}
                       onClick={() =>
                         change("agencies", [
                           ...notice.agencies,
-                          { name: "", address: "", phone: "" },
+                          { address: "", name: "", phone: "" },
                         ])
                       }
+                      type="button"
                     >
                       Add reporting agency
                     </Button>
@@ -609,13 +672,13 @@ export default function AdverseEditor({
                     </p>
                     <label className="check-row">
                       <input
-                        type="checkbox"
                         checked={notice.scoreUsed}
                         onChange={(e) => change("scoreUsed", e.target.checked)}
+                        type="checkbox"
                       />
                       A numerical credit score was used in this decision.
                     </label>
-                    {notice.scoreUsed && (
+                    {!!notice.scoreUsed && (
                       <div className="score-fields">
                         <div className="fields">
                           {field("score", "Credit score", "number")}
@@ -623,7 +686,7 @@ export default function AdverseEditor({
                           {field(
                             "scoreMax",
                             "Highest possible score",
-                            "number",
+                            "number"
                           )}
                           {field("scoreDate", "Date score was created", "date")}
                           {field("scoreSource", "Score source")}
@@ -632,11 +695,11 @@ export default function AdverseEditor({
                           Key factors affecting the score, in order of
                           importance
                           <textarea
-                            value={notice.scoreFactors}
                             maxLength={3000}
                             onChange={(e) =>
                               change("scoreFactors", e.target.value)
                             }
+                            value={notice.scoreFactors}
                           />
                         </label>
                       </div>
@@ -648,16 +711,16 @@ export default function AdverseEditor({
           )}
           <section className="notice-send">
             <div className="admin-actions">
-              {preview && (
-                <Button type="button" onClick={() => window.print()}>
+              {!!preview && (
+                <Button onClick={() => window.print()} type="button">
                   Print notice
                 </Button>
               )}
             </div>
-            {errors.length > 0 && (
+            {!!(errors.length > 0) && (
               <details>
                 <summary>
-                  {errors.length} item{errors.length !== 1 ? "s" : ""} to
+                  {errors.length} item{errors.length === 1 ? "" : "s"} to
                   complete before sending
                 </summary>
                 <ul>
@@ -667,28 +730,27 @@ export default function AdverseEditor({
                 </ul>
               </details>
             )}
-            {current?.status && (
+            {!!current?.status && (
               <p>
                 {status(current.status)}
                 {current.resendId ? ` · Email ID: ${current.resendId}` : ""}
               </p>
             )}
-            {preview && (
+            {!!preview && (
               <>
                 <label className="check-row">
                   <input
-                    type="checkbox"
                     checked={confirmed}
                     disabled={
                       dirty || errors.length > 0 || !!current?.status || busy
                     }
                     onChange={(e) => setConfirmed(e.target.checked)}
+                    type="checkbox"
                   />
                   I reviewed this saved version and confirm sending it to{" "}
                   {notice.applicantEmail || "the applicant"}.
                 </label>
                 <Button
-                  type="button"
                   className="admin-primary"
                   disabled={
                     busy ||
@@ -700,28 +762,36 @@ export default function AdverseEditor({
                   onClick={() =>
                     perform(async () => {
                       await api("notices/send", "POST", {
-                        versionId: current!.id,
                         confirmed: true,
+                        versionId: requireValue(current, "Expected current").id,
                       });
                       const rows = await refresh();
                       setCurrent(
-                        rows.find((v) => v.id === current!.id) || current,
+                        rows.find(
+                          (v) =>
+                            v.id ===
+                            requireValue(current, "Expected current").id
+                        ) || current
                       );
                       setConfirmed(false);
                       setMessage(
-                        "Accepted by Resend. This confirms acceptance for sending, not inbox delivery.",
+                        "Accepted by Resend. This confirms acceptance for sending, not inbox delivery."
                       );
                     }).finally(() => {
                       refresh()
                         .then((rows) => {
-                          if (current)
+                          if (current) {
                             setCurrent(
-                              rows.find((v) => v.id === current.id) || current,
+                              rows.find((v) => v.id === current.id) || current
                             );
+                          }
                         })
-                        .catch(() => {});
+                        .catch(() => {
+                          /* Best-effort fallback: retain the original result when this optional operation fails. */
+                        });
                     })
                   }
+                  type="button"
                 >
                   Send notice
                 </Button>

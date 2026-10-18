@@ -1,18 +1,26 @@
-import { readFileSync } from "node:fs";
-import { test, expect } from "@playwright/test";
-import { loadEnvConfig } from "@next/env";
-import { encode } from "next-auth/jwt";
-import { neon } from "@neondatabase/serverless";
+// biome-ignore-all lint/performance/noAwaitInLoops: These stateful fixtures and assertions must finish each transition before the next request or cleanup.
+const invitationPattern = /\/sign\/lease\/([a-f0-9]{64})/;
+const verificationPattern = /\b(\d{6})\b/;
+
 import { randomBytes } from "node:crypto";
-import { PDFDocument, PDFDict, PDFName } from "pdf-lib";
+import { readFileSync } from "node:fs";
+import { neon } from "@neondatabase/serverless";
+import { loadEnvConfig } from "@next/env";
+import { expect, test } from "@playwright/test";
+import { encode } from "next-auth/jwt";
+import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
 import sharp from "sharp";
+import { requireValue } from "@/lib/required";
 import {
-  digest,
   codeDigest,
+  digest,
   SIGNING_CONSENT_VERSION,
 } from "../../lib/leases/signing-model";
+
 loadEnvConfig(process.cwd());
-const sql = neon(process.env.DATABASE_URL!),
+const sql = neon(
+    requireValue(process.env.DATABASE_URL, "Expected process.env.DATABASE_URL")
+  ),
   origin = "http://localhost:3191",
   propertyId = crypto.randomUUID(),
   templateId = crypto.randomUUID(),
@@ -35,33 +43,39 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
   browser,
   request,
 }) => {
-  test.setTimeout(180000);
+  test.setTimeout(180_000);
   expect(
-    (await request.get(`/api/admin/lease-signing?draftId=${draftId}`)).status(),
+    (await request.get(`/api/admin/lease-signing?draftId=${draftId}`)).status()
   ).toBe(401);
   expect(
-    (await request.post("/api/admin/branding", { data: {} })).status(),
+    (await request.post("/api/admin/branding", { data: {} })).status()
   ).toBe(401);
-  await sql`INSERT INTO properties(id,slug,data)VALUES(${propertyId},${"signing-test-" + propertyId},${JSON.stringify({ name: "SIGNATURE TEST ONLY", address: "Test premises - not an offer", rentCents: 100, published: false, contact: "test@example.invalid" })}::jsonb)`;
+  await sql`INSERT INTO properties(id,slug,data)VALUES(${propertyId},${`signing-test-${propertyId}`},${JSON.stringify({ address: "Test premises - not an offer", contact: "test@example.invalid", name: "SIGNATURE TEST ONLY", published: false, rentCents: 100 })}::jsonb)`;
   await sql`INSERT INTO lease_templates(id,name,body)VALUES(${templateId},'SIGNING TEST ONLY',${body})`;
   await sql`INSERT INTO lease_drafts(id,property_id,template_id,tenant_name,body)VALUES(${draftId},${propertyId},${templateId},'Test Tenant',${body})`;
-  await sql`INSERT INTO lease_drafts(id,property_id,template_id,parent_id,tenant_name,body)VALUES(${childId},${propertyId},${templateId},${draftId},'Test Tenant',${body + "\nReplacement fixture."})`;
+  await sql`INSERT INTO lease_drafts(id,property_id,template_id,parent_id,tenant_name,body)VALUES(${childId},${propertyId},${templateId},${draftId},'Test Tenant',${`${body}\nReplacement fixture.`})`;
   const token = await encode({
-    secret: process.env.NEXTAUTH_SECRET!,
+    maxAge: 3600,
+    secret: requireValue(
+      process.env.NEXTAUTH_SECRET,
+      "Expected process.env.NEXTAUTH_SECRET"
+    ),
     token: {
-      email: process.env.ADMIN_EMAILS!.split(",")[0],
+      email: requireValue(
+        process.env.ADMIN_EMAILS,
+        "Expected process.env.ADMIN_EMAILS"
+      ).split(",")[0],
       googleVerified: true,
       sub: "signature-test",
     },
-    maxAge: 3600,
   });
   await page.context().addCookies([
     {
-      name: "next-auth.session-token",
-      value: token,
-      url: origin,
       httpOnly: true,
+      name: "next-auth.session-token",
       sameSite: "Lax",
+      url: origin,
+      value: token,
     },
   ]);
   let brandVersion = "";
@@ -70,19 +84,19 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
       await sql`SELECT count(*)::int as total FROM brand_versions`;
     expect(
       existing.total,
-      "Branding integration requires an empty test branding table.",
+      "Branding integration requires an empty test branding table."
     ).toBe(0);
     await page.goto("/admin#branding");
     await page.getByLabel("Business name").fill(brandName);
     await page.getByLabel("Upload logo").setInputFiles({
-      name: "test-logo.svg",
-      mimeType: "image/svg+xml",
       buffer: Buffer.from(
-        '<svg width="160" height="70"><rect width="160" height="70" style="fill:#215132"/><path d="M20 50L45 15L70 50Z" fill="white"/></svg>',
+        '<svg width="160" height="70"><rect width="160" height="70" style="fill:#215132"/><path d="M20 50L45 15L70 50Z" fill="white"/></svg>'
       ),
+      mimeType: "image/svg+xml",
+      name: "test-logo.svg",
     });
     await page
-      .getByRole("button", { name: "Save branding", exact: true })
+      .getByRole("button", { exact: true, name: "Save branding" })
       .click();
     await expect(page.getByRole("status")).toContainText("Branding saved");
     const current = await (
@@ -90,40 +104,40 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
     ).json();
     brandVersion = current.current.id;
     expect(
-      (await page.request.get("/api/branding/logo")).headers()["content-type"],
+      (await page.request.get("/api/branding/logo")).headers()["content-type"]
     ).toBe("image/png");
     await page.screenshot({
-      path: "test-results/lease-branding-admin.png",
       fullPage: false,
+      path: "test-results/lease-branding-admin.png",
     });
   }
   const signers = [
     {
-      name: "Test Tenant",
       email: `tenant-${propertyId}@example.invalid`,
+      name: "Test Tenant",
       role: "tenant",
     },
     {
-      name: "Test Owner",
       email: `owner-${propertyId}@example.invalid`,
+      name: "Test Owner",
       role: "landlord",
     },
   ];
   const create = (id: string) =>
     page.request.post("/api/admin/lease-signing", {
-      headers: { origin },
       data: {
         action: "create",
         data: { draftId: id, reviewed: true, signers },
       },
+      headers: { origin },
     });
   expect(
     (
       await page.request.post("/api/admin/lease-signing", {
-        headers: { origin: "https://example.invalid" },
         data: { action: "create", data: { draftId, reviewed: true, signers } },
+        headers: { origin: "https://example.invalid" },
       })
-    ).status(),
+    ).status()
   ).toBe(403);
   const created = await create(draftId);
   expect(created.status(), await created.text()).toBe(201);
@@ -131,30 +145,31 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
   expect((await create(childId)).status()).toBe(409);
   const [packet] = await sql`SELECT * FROM lease_packets WHERE id=${packetId}`;
   expect(packet.document_hash).toBe(
-    digest(Buffer.from(packet.base_pdf, "base64")),
+    digest(Buffer.from(packet.base_pdf, "base64"))
   );
   if (brandVersion) {
     const branded = await PDFDocument.load(
-      Buffer.from(packet.base_pdf, "base64"),
+      Buffer.from(packet.base_pdf, "base64")
     );
     expect(
-      branded
-        .getPage(0)
-        .node.Resources()!
+      requireValue(
+        branded.getPage(0).node.Resources(),
+        "Expected branded         .getPage(0)         .node.Resources()"
+      )
         .lookup(PDFName.of("XObject"), PDFDict)
-        .keys().length,
+        .keys().length
     ).toBeGreaterThan(0);
     await page
-      .getByRole("button", { name: "Remove logo", exact: true })
+      .getByRole("button", { exact: true, name: "Remove logo" })
       .click();
     await expect(
-      page.getByText("No logo uploaded yet.", { exact: true }),
+      page.getByText("No logo uploaded yet.", { exact: true })
     ).toBeVisible();
     const frozen = await page.request.get(`/api/admin/leases/${draftId}/pdf`);
     expect(digest(await frozen.body())).toBe(packet.document_hash);
     const restore = await page.request.post("/api/admin/branding", {
-      multipart: { name: brandName, restore: brandVersion },
       headers: { origin },
+      multipart: { name: brandName, restore: brandVersion },
     });
     expect(restore.status()).toBe(200);
     const restored = await (
@@ -166,8 +181,8 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
     await sql`SELECT * FROM lease_signers WHERE packet_id=${packetId} ORDER BY role DESC`;
   const ink = await sharp(
       Buffer.from(
-        '<svg width="300" height="100"><path d="M20 70 Q60 0 100 60T280 50" fill="none" stroke="black" stroke-width="4"/></svg>',
-      ),
+        '<svg width="300" height="100"><path d="M20 70 Q60 0 100 60T280 50" fill="none" stroke="black" stroke-width="4"/></svg>'
+      )
     )
       .png()
       .toBuffer(),
@@ -177,35 +192,52 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
       code = "123456";
     if (process.env.LEASE_SIGNING_TEST_OUTBOX) {
       const messages = () =>
-        readFileSync(process.env.LEASE_SIGNING_TEST_OUTBOX!, "utf8")
+        readFileSync(
+          requireValue(
+            process.env.LEASE_SIGNING_TEST_OUTBOX,
+            "Expected process.env.LEASE_SIGNING_TEST_OUTBOX"
+          ),
+          "utf8"
+        )
           .trim()
           .split("\n")
           .filter(Boolean)
           .map((line) => JSON.parse(line) as { to: string[]; text: string });
       const invitation = await page.request.post("/api/admin/lease-signing", {
-        headers: { origin },
         data: { action: "invite", signerId: signer.id },
+        headers: { origin },
       });
       expect(invitation.status()).toBe(200);
       const message = messages()
         .reverse()
         .find(
-          (m) => m.to.includes(signer.email) && m.text.includes("/sign/lease/"),
+          (m) => m.to.includes(signer.email) && m.text.includes("/sign/lease/")
         );
-      access = message!.text.match(/\/sign\/lease\/([a-f0-9]{64})/)![1];
+      [, access] = requireValue(
+        requireValue(message, "Expected invitation email").text.match(
+          invitationPattern
+        ),
+        "Expected signing invitation link"
+      );
       const issued = await request.post(`/api/lease-signing/${access}`, {
-        headers: { origin },
         data: { action: "code" },
+        headers: { origin },
       });
       expect(issued.status()).toBe(200);
-      code = messages()
-        .reverse()
-        .find(
-          (m) =>
-            m.to.includes(signer.email) &&
-            m.text.includes("verification code is"),
-        )!
-        .text.match(/\b(\d{6})\b/)![1];
+      const verification = requireValue(
+        messages()
+          .reverse()
+          .find(
+            (m) =>
+              m.to.includes(signer.email) &&
+              m.text.includes("verification code is")
+          ),
+        "Expected verification email"
+      );
+      [, code] = requireValue(
+        verification.text.match(verificationPattern),
+        "Expected verification code"
+      );
     } else {
       // Ordinary regression runs seed mailbox verification; test:signing exercises delivery through an isolated mail transport.
       await sql`UPDATE lease_signers SET token_hash=${digest(access)},code_hash=${codeDigest(access, code)},code_expires_at=now()+interval '10 minutes',code_attempts=0 WHERE id=${signer.id}`;
@@ -213,8 +245,8 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
     const context = await browser.newContext({
         viewport:
           signer.role === "tenant"
-            ? { width: 390, height: 844 }
-            : { width: 1440, height: 900 },
+            ? { height: 844, width: 390 }
+            : { height: 900, width: 1440 },
       }),
       signPage = await context.newPage(),
       errors: string[] = [];
@@ -223,40 +255,41 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
     const hidden = await context.request.get(origin + endpoint);
     expect((await hidden.json()).body).toBeUndefined();
     expect(
-      (await context.request.get(origin + endpoint + "?format=pdf")).status(),
+      (await context.request.get(`${origin + endpoint}?format=pdf`)).status()
     ).toBe(401);
     expect(
       (
         await context.request.post(origin + endpoint, {
-          headers: { origin },
           data: {
             action: "sign",
-            signature,
             consent: true,
             consentVersion: SIGNING_CONSENT_VERSION,
             documentHash: packet.document_hash,
             name: signer.name,
+            signature,
           },
+          headers: { origin },
         })
-      ).status(),
+      ).status()
     ).toBe(401);
     if (signer.role === "tenant") {
-      for (let attempt = 0; attempt < 5; attempt++)
+      for (let attempt = 0; attempt < 5; attempt += 1) {
         expect(
           (
             await context.request.post(origin + endpoint, {
-              headers: { origin },
               data: { action: "verify", code: "000000" },
+              headers: { origin },
             })
-          ).status(),
+          ).status()
         ).toBe(400);
+      }
       expect(
         (
           await context.request.post(origin + endpoint, {
-            headers: { origin },
             data: { action: "verify", code },
+            headers: { origin },
           })
-        ).status(),
+        ).status()
       ).toBe(400);
       await sql`UPDATE lease_signers SET code_attempts=0 WHERE id=${signer.id}`;
     }
@@ -265,44 +298,44 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
     const verification = signPage.waitForResponse(
       (r) =>
         r.url().endsWith(endpoint) &&
-        r.request().postDataJSON()?.action === "verify",
+        r.request().postDataJSON()?.action === "verify"
     );
     await signPage
-      .getByRole("button", { name: "Verify and review lease", exact: true })
+      .getByRole("button", { exact: true, name: "Verify and review lease" })
       .click();
     const verified = await (await verification).json(),
       authorization = `Bearer ${verified.session}`;
     await expect(signPage.getByText(body, { exact: true })).toBeVisible();
     const payload = {
       action: "sign",
-      signature,
       consent: true,
       consentVersion: SIGNING_CONSENT_VERSION,
       documentHash: packet.document_hash,
       name: signer.name,
+      signature,
     };
     expect(
       (
         await context.request.post(origin + endpoint, {
-          headers: { origin, authorization },
           data: payload,
+          headers: { authorization, origin },
         })
-      ).status(),
+      ).status()
     ).toBe(400);
     const download = signPage.waitForEvent("download");
     await signPage
-      .getByRole("button", { name: "Download lease PDF", exact: true })
+      .getByRole("button", { exact: true, name: "Download lease PDF" })
       .click();
-    await (
-      await download
-    ).saveAs(`test-results/lease-signing-original-${signer.role}.pdf`);
+    await (await download).saveAs(
+      `test-results/lease-signing-original-${signer.role}.pdf`
+    );
     expect(
       (
         await context.request.post(origin + endpoint, {
-          headers: { origin, authorization },
           data: { ...payload, documentHash: "0".repeat(64) },
+          headers: { authorization, origin },
         })
-      ).status(),
+      ).status()
     ).toBe(400);
     await signPage.getByLabel("Confirm your full legal name").fill(signer.name);
     await expect(signPage.locator(".signature-capture")).toBeEnabled();
@@ -311,23 +344,27 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
       await canvas.scrollIntoViewIfNeeded();
       const rect = await canvas.boundingBox();
       expect(rect).toBeTruthy();
-      await signPage.mouse.move(rect!.x + 30, rect!.y + 80);
+      await signPage.mouse.move(
+        requireValue(rect, "Expected rect").x + 30,
+        requireValue(rect, "Expected rect").y + 80
+      );
       await signPage.mouse.down();
-      for (let x = 40; x <= 250; x += 10)
+      for (let x = 40; x <= 250; x += 10) {
         await signPage.mouse.move(
-          rect!.x + x,
-          rect!.y + 55 + Math.sin(x / 25) * 25,
+          requireValue(rect, "Expected rect").x + x,
+          requireValue(rect, "Expected rect").y + 55 + Math.sin(x / 25) * 25
         );
+      }
       await signPage.mouse.up();
-      await signPage.setViewportSize({ width: 600, height: 844 });
-      await signPage.setViewportSize({ width: 390, height: 844 });
+      await signPage.setViewportSize({ height: 844, width: 600 });
+      await signPage.setViewportSize({ height: 844, width: 390 });
       await signPage.screenshot({
-        path: "test-results/lease-signature-mobile.png",
         fullPage: false,
+        path: "test-results/lease-signature-mobile.png",
       });
     } else {
       await signPage
-        .getByRole("button", { name: "Type signature", exact: true })
+        .getByRole("button", { exact: true, name: "Type signature" })
         .click();
       await signPage
         .getByLabel("Type your full name to adopt as your signature")
@@ -335,35 +372,35 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
     }
     await signPage.getByRole("checkbox").check();
     await expect(
-      signPage.getByRole("button", { name: "Sign this lease", exact: true }),
+      signPage.getByRole("button", { exact: true, name: "Sign this lease" })
     ).toBeEnabled();
     await signPage
-      .getByRole("button", { name: "Sign this lease", exact: true })
+      .getByRole("button", { exact: true, name: "Sign this lease" })
       .click();
     await expect(signPage.getByRole("status")).toContainText(
-      "Your signature was recorded",
+      "Your signature was recorded"
     );
     expect(
       (
         await context.request.post(origin + endpoint, {
-          headers: { origin, authorization },
           data: payload,
+          headers: { authorization, origin },
         })
-      ).status(),
+      ).status()
     ).toBe(409);
     expect(
       await signPage.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
+        () => document.documentElement.scrollWidth <= innerWidth
+      )
     ).toBe(true);
     expect(errors).toEqual([]);
     await context.close();
     const inProgress = await page.request.get(
-      `/api/admin/leases/${draftId}/pdf?preview=1`,
+      `/api/admin/leases/${draftId}/pdf?preview=1`
     );
     expect(inProgress.status()).toBe(200);
     expect(
-      Number(inProgress.headers()["x-lease-signature-page"]),
+      Number(inProgress.headers()["x-lease-signature-page"])
     ).toBeGreaterThan(1);
     const progressPdf = await PDFDocument.load(await inProgress.body());
     expect(progressPdf.getPageCount()).toBeGreaterThan(1);
@@ -375,7 +412,7 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
       expect(progressPdf.getTitle()).toContain("awaiting signatures");
       await page.goto("/admin#leases");
       const card = page.locator(".lease-saved .record").filter({
-        has: page.getByRole("heading", { name: "Test Tenant", exact: true }),
+        has: page.getByRole("heading", { exact: true, name: "Test Tenant" }),
       });
       await card
         .locator("summary")
@@ -383,20 +420,20 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
         .click();
       const earlier = card.locator(".lease-history-row").first();
       await earlier
-        .getByRole("button", { name: "Preview PDF", exact: true })
+        .getByRole("button", { exact: true, name: "Preview PDF" })
         .click();
       const viewer = earlier.getByRole("region", { name: "Lease PDF preview" });
       await expect(viewer.locator(".react-pdf__Page__canvas")).toBeVisible({
-        timeout: 30000,
+        timeout: 30_000,
       });
       await viewer
-        .getByRole("button", { name: "View signatures", exact: true })
+        .getByRole("button", { exact: true, name: "View signatures" })
         .click();
       await expect(
-        viewer.locator(".react-pdf__Page__textContent"),
+        viewer.locator(".react-pdf__Page__textContent")
       ).toContainText("Awaiting signature");
       await expect(
-        viewer.locator(".react-pdf__Page__textContent"),
+        viewer.locator(".react-pdf__Page__textContent")
       ).toContainText("Signed:");
       await viewer.scrollIntoViewIfNeeded();
       await page.screenshot({
@@ -409,7 +446,7 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
   expect(completed.status).toBe("completed");
   expect(completed.base_pdf).toBe(packet.base_pdf);
   expect(completed.final_hash).toBe(
-    digest(Buffer.from(completed.final_pdf, "base64")),
+    digest(Buffer.from(completed.final_pdf, "base64"))
   );
   const recorded =
     await sql`SELECT * FROM lease_signers WHERE packet_id=${packetId}`;
@@ -431,16 +468,16 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
     .then((b) =>
       require("node:fs").writeFileSync(
         "test-results/lease-signature-complete.pdf",
-        b,
-      ),
+        b
+      )
     );
   expect(
     (
       await page.request.post("/api/admin/lease-signing", {
-        headers: { origin },
         data: { action: "void", packetId },
+        headers: { origin },
       })
-    ).status(),
+    ).status()
   ).toBe(409);
   expect((await create(childId)).status()).toBe(201);
   const [pending] =
@@ -449,30 +486,30 @@ test("frozen lease, verified individual signatures, cancellation, durable audit 
   await sql`UPDATE lease_signers SET token_hash=${digest(expiredToken)} WHERE id=(SELECT id FROM lease_signers WHERE packet_id=${pending.id} LIMIT 1)`;
   await sql`UPDATE lease_packets SET expires_at=now()-interval '1 minute' WHERE id=${pending.id}`;
   expect(
-    (await request.get(`/api/lease-signing/${expiredToken}`)).status(),
+    (await request.get(`/api/lease-signing/${expiredToken}`)).status()
   ).toBe(404);
   await sql`UPDATE lease_packets SET expires_at=now()+interval '1 day' WHERE id=${pending.id}`;
   expect(
     (
       await page.request.post("/api/admin/lease-signing", {
-        headers: { origin },
         data: { action: "void", packetId: pending.id },
+        headers: { origin },
       })
-    ).status(),
+    ).status()
   ).toBe(200);
   expect(
-    (await request.get(`/api/lease-signing/${expiredToken}`)).status(),
+    (await request.get(`/api/lease-signing/${expiredToken}`)).status()
   ).toBe(404);
   expect(
-    (await page.request.get(`/api/admin/leases/${draftId}/pdf`)).body(),
+    (await page.request.get(`/api/admin/leases/${draftId}/pdf`)).body()
   ).toBeTruthy();
   await page.goto("/admin#branding");
   await expect(
-    page.getByRole("heading", { name: "Branding", exact: true }),
+    page.getByRole("heading", { exact: true, name: "Branding" })
   ).toBeVisible();
   await expect(page.getByLabel("Upload logo")).toHaveAttribute(
     "accept",
-    "image/png,image/svg+xml,.png,.svg",
+    "image/png,image/svg+xml,.png,.svg"
   );
 });
 
@@ -481,32 +518,38 @@ test("visible send flow emails every signer, retains successes on partial failur
 }) => {
   test.skip(
     !process.env.LEASE_SIGNING_TEST_OUTBOX,
-    "Use test:signing for isolated email delivery.",
+    "Use test:signing for isolated email delivery."
   );
-  test.setTimeout(120000);
+  test.setTimeout(120_000);
   const deliveryId = crypto.randomUUID(),
     tenant = `DELIVERY TEST ${propertyId}`,
     tenantEmail = `delivery-tenant-${propertyId}@example.invalid`,
     ownerEmail = `delivery-owner-${propertyId}@example.invalid`;
-  await sql`INSERT INTO properties(id,slug,data)VALUES(${propertyId},${"signing-test-" + propertyId},${JSON.stringify({ name: "SIGNATURE TEST ONLY", address: "Test premises - not an offer", rentCents: 100, published: false, contact: "test@example.invalid" })}::jsonb) ON CONFLICT(id) DO NOTHING`;
+  await sql`INSERT INTO properties(id,slug,data)VALUES(${propertyId},${`signing-test-${propertyId}`},${JSON.stringify({ address: "Test premises - not an offer", contact: "test@example.invalid", name: "SIGNATURE TEST ONLY", published: false, rentCents: 100 })}::jsonb) ON CONFLICT(id) DO NOTHING`;
   await sql`INSERT INTO lease_templates(id,name,body)VALUES(${templateId},'SIGNING TEST ONLY',${body}) ON CONFLICT(id) DO NOTHING`;
-  await sql`INSERT INTO lease_drafts(id,property_id,template_id,tenant_name,body,"values")VALUES(${deliveryId},${propertyId},${templateId},${tenant},${body},${JSON.stringify({ landlord_name: "Delivery Owner", landlord_email: ownerEmail })}::jsonb)`;
+  await sql`INSERT INTO lease_drafts(id,property_id,template_id,tenant_name,body,"values")VALUES(${deliveryId},${propertyId},${templateId},${tenant},${body},${JSON.stringify({ landlord_email: ownerEmail, landlord_name: "Delivery Owner" })}::jsonb)`;
   const token = await encode({
-    secret: process.env.NEXTAUTH_SECRET!,
+    maxAge: 3600,
+    secret: requireValue(
+      process.env.NEXTAUTH_SECRET,
+      "Expected process.env.NEXTAUTH_SECRET"
+    ),
     token: {
-      email: process.env.ADMIN_EMAILS!.split(",")[0],
+      email: requireValue(
+        process.env.ADMIN_EMAILS,
+        "Expected process.env.ADMIN_EMAILS"
+      ).split(",")[0],
       googleVerified: true,
       sub: "lease-delivery-test",
     },
-    maxAge: 3600,
   });
   await page.context().addCookies([
     {
-      name: "next-auth.session-token",
-      value: token,
-      url: origin,
       httpOnly: true,
+      name: "next-auth.session-token",
       sameSite: "Lax",
+      url: origin,
+      value: token,
     },
   ]);
   await page.emulateMedia({ colorScheme: "dark" });
@@ -515,32 +558,32 @@ test("visible send flow emails every signer, retains successes on partial failur
   await page.goto("/admin#leases");
   const card = page
     .locator(".lease-saved .record")
-    .filter({ has: page.getByRole("heading", { name: tenant, exact: true }) });
-  await card.getByRole("button", { name: "Preview PDF", exact: true }).click();
+    .filter({ has: page.getByRole("heading", { exact: true, name: tenant }) });
+  await card.getByRole("button", { exact: true, name: "Preview PDF" }).click();
   const viewer = card.getByRole("region", { name: "Lease PDF preview" });
   await expect(viewer.locator(".react-pdf__Page__canvas")).toBeVisible({
-    timeout: 30000,
+    timeout: 30_000,
   });
   await expect(viewer.locator(".react-pdf__Page__textContent")).toContainText(
-    "TEST ONLY",
+    "TEST ONLY"
   );
   await expect(
-    viewer.getByRole("button", { name: "View signatures", exact: true }),
+    viewer.getByRole("button", { exact: true, name: "View signatures" })
   ).toHaveCount(0);
   await viewer
-    .getByRole("button", { name: "Close preview", exact: true })
+    .getByRole("button", { exact: true, name: "Close preview" })
     .click();
-  await card.getByRole("button", { name: "Send lease", exact: true }).click();
+  await card.getByRole("button", { exact: true, name: "Send lease" }).click();
   const panel = card.getByRole("region", {
-    name: `Send lease to ${tenant}`,
     exact: true,
+    name: `Send lease to ${tenant}`,
   });
   await panel
     .getByLabel("Email address", { exact: true })
     .first()
     .fill(tenantEmail);
   await expect(
-    panel.getByLabel("Email address", { exact: true }).nth(1),
+    panel.getByLabel("Email address", { exact: true }).nth(1)
   ).toHaveValue(ownerEmail);
   await panel.getByRole("checkbox").check();
   let rejected = false;
@@ -553,18 +596,20 @@ test("visible send flow emails every signer, retains successes on partial failur
     ) {
       rejected = true;
       await route.fulfill({
-        status: 502,
-        contentType: "application/json",
         body: JSON.stringify({ error: "Isolated test email rejection." }),
+        contentType: "application/json",
+        status: 502,
       });
-    } else await route.continue();
+    } else {
+      await route.continue();
+    }
   });
   await panel
-    .getByRole("button", { name: "Send lease for signature", exact: true })
+    .getByRole("button", { exact: true, name: "Send lease for signature" })
     .click();
   await expect(panel.getByRole("alert")).toContainText(
     "Some emails could not be sent",
-    { timeout: 30000 },
+    { timeout: 30_000 }
   );
   const [pending] =
     await sql`SELECT id,base_pdf,document_hash FROM lease_packets WHERE draft_id=${deliveryId}`;
@@ -572,18 +617,24 @@ test("visible send flow emails every signer, retains successes on partial failur
     await sql`SELECT email,invited_at FROM lease_signers WHERE packet_id=${pending.id}`;
   expect(states.filter((s) => s.invited_at)).toHaveLength(1);
   await page.reload();
-  await card.getByRole("button", { name: "Send lease", exact: true }).click();
+  await card.getByRole("button", { exact: true, name: "Send lease" }).click();
   await panel
-    .getByRole("button", { name: "Send unsent emails", exact: true })
+    .getByRole("button", { exact: true, name: "Send unsent emails" })
     .click();
   await expect(panel.getByRole("status")).toContainText(
     "1 signing email accepted",
-    { timeout: 30000 },
+    { timeout: 30_000 }
   );
   await expect(
-    panel.getByText("No email send recorded", { exact: true }),
+    panel.getByText("No email send recorded", { exact: true })
   ).toHaveCount(0);
-  const messages = readFileSync(process.env.LEASE_SIGNING_TEST_OUTBOX!, "utf8")
+  const messages = readFileSync(
+    requireValue(
+      process.env.LEASE_SIGNING_TEST_OUTBOX,
+      "Expected process.env.LEASE_SIGNING_TEST_OUTBOX"
+    ),
+    "utf8"
+  )
     .trim()
     .split("\n")
     .filter(Boolean)
@@ -593,35 +644,35 @@ test("visible send flow emails every signer, retains successes on partial failur
   expect(
     messages
       .filter((m) => m.to.includes(ownerEmail) || m.to.includes(tenantEmail))
-      .every((m) => m.to.length === 1),
+      .every((m) => m.to.length === 1)
   ).toBe(true);
-  await card.getByRole("button", { name: "Preview PDF", exact: true }).click();
+  await card.getByRole("button", { exact: true, name: "Preview PDF" }).click();
   await expect(viewer.locator(".react-pdf__Page__canvas")).toBeVisible();
   const frozen = await page.request.get(
-    `/api/admin/leases/${deliveryId}/pdf?preview=1`,
+    `/api/admin/leases/${deliveryId}/pdf?preview=1`
   );
   expect(digest(await frozen.body())).toBe(pending.document_hash);
   await viewer.scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/lease-delivery-dark.png" });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   await expect(viewer.locator(".react-pdf__Page__canvas")).toBeVisible();
   await viewer
-    .getByRole("button", { name: "Zoom in PDF", exact: true })
+    .getByRole("button", { exact: true, name: "Zoom in PDF" })
     .click();
   await expect(viewer.getByText("125%", { exact: true })).toBeVisible();
   await expect
     .poll(() =>
       viewer
         .locator(".lease-pdf-canvas")
-        .evaluate((e) => e.scrollWidth > e.clientWidth),
+        .evaluate((e) => e.scrollWidth > e.clientWidth)
     )
     .toBe(true);
-  await viewer.getByRole("button", { name: "Fit width", exact: true }).click();
+  await viewer.getByRole("button", { exact: true, name: "Fit width" }).click();
   await expect(viewer.getByText("100%", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
+      () => document.documentElement.scrollWidth <= innerWidth
+    )
   ).toBe(true);
   await viewer.scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/lease-delivery-mobile.png" });

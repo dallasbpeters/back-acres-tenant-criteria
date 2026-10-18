@@ -1,3 +1,5 @@
+// biome-ignore-all lint/performance/noAwaitInLoops: These stateful fixtures and assertions must finish each transition before the next request or cleanup.
+"use strict";
 const { spawn } = require("node:child_process"),
   fs = require("node:fs"),
   os = require("node:os"),
@@ -9,44 +11,50 @@ fs.writeFileSync(outbox, "");
 const env = {
   ...process.env,
   ADMIN_EMAILS: "admin-test@example.invalid",
-  RESEND_API_KEY: "test-no-external-delivery",
   FROM_EMAIL: "owner@example.invalid",
-  NEXTAUTH_URL: "http://localhost:3191",
   LEASE_SIGNING_TEST_OUTBOX: outbox,
+  NEXTAUTH_URL: "http://localhost:3191",
+  RESEND_API_KEY: "test-no-external-delivery",
 };
 let server;
 async function run() {
   try {
     await fetch(env.NEXTAUTH_URL);
-    throw Error(
-      "Port 3191 is in use. Stop the local test server before running test:signing.",
+    throw new Error(
+      "Port 3191 is in use. Stop the local test server before running test:signing."
     );
   } catch (e) {
-    if (!String(e.message).includes("fetch failed")) throw e;
+    if (!String(e.message).includes("fetch failed")) {
+      throw e;
+    }
   }
   server = spawn(
     process.execPath,
     ["node_modules/next/dist/bin/next", "dev", "-p", "3191"],
     {
-      stdio: "inherit",
       env: {
         ...env,
         NODE_OPTIONS: `${env.NODE_OPTIONS ?? ""} --require=${path.join(process.cwd(), "tests/support/lease-mail-preload.cjs")}`,
       },
-    },
+      stdio: "inherit",
+    }
   );
   let ready = false;
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const result = await fetch(env.NEXTAUTH_URL + "/api/branding");
+      const result = await fetch(`${env.NEXTAUTH_URL}/api/branding`);
       if (result.ok) {
         ready = true;
         break;
       }
-    } catch {}
+    } catch {
+      /* Best-effort fallback: retain the original result when this optional operation fails. */
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  if (!ready) throw Error("The local signing test server did not start.");
+  if (!ready) {
+    throw new Error("The local signing test server did not start.");
+  }
   const code = await new Promise((resolve) => {
     const tests = spawn(
       process.execPath,
@@ -56,7 +64,7 @@ async function run() {
         "tests/browser/lease-signing.spec.ts",
         ...process.argv.slice(2),
       ],
-      { stdio: "inherit", env },
+      { env, stdio: "inherit" }
     );
     tests.on("exit", resolve);
   });
@@ -69,7 +77,7 @@ run()
   })
   .finally(() => {
     server?.kill("SIGTERM");
-    fs.rmSync(directory, { recursive: true, force: true });
+    fs.rmSync(directory, { force: true, recursive: true });
   });
 process.on("SIGINT", () => {
   server?.kill("SIGTERM");

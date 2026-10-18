@@ -1,9 +1,11 @@
+const pattern1 = /^[a-f0-9]{64}$/;
+
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
-import { signaturePdf } from "./signature-pdf";
 import { db } from "@/lib/db";
-import { leasePackets, leaseSigners, leaseDrafts } from "@/lib/db/schema";
+import { leaseDrafts, leasePackets, leaseSigners } from "@/lib/db/schema";
 import { notRemoved } from "@/lib/management/not-removed";
+import { signaturePdf } from "./signature-pdf";
 import { digest } from "./signing-model";
 export async function activePacket(id: string) {
   const [packet] = await db()
@@ -14,52 +16,63 @@ export async function activePacket(id: string) {
       and(
         eq(leasePackets.id, id),
         notRemoved(leaseDrafts.id),
-        notRemoved(leaseDrafts.propertyId),
-      ),
+        notRemoved(leaseDrafts.propertyId)
+      )
     );
   return packet?.packet ?? null;
 }
 export async function tokenSigner(token: string) {
-  if (!/^[a-f0-9]{64}$/.test(token)) return null;
+  if (!pattern1.test(token)) {
+    return null;
+  }
   const [signer] = await db()
     .select()
     .from(leaseSigners)
     .where(eq(leaseSigners.tokenHash, digest(token)));
-  if (!signer) return null;
+  if (!signer) {
+    return null;
+  }
   const packet = await activePacket(signer.packetId);
   if (
     !packet ||
     packet.status === "voided" ||
     (packet.expiresAt < new Date() && packet.status !== "completed")
-  )
+  ) {
     return null;
-  return { signer, packet };
+  }
+  return { packet, signer };
 }
 export async function completePacket(id: string) {
   const packet = await activePacket(id);
-  if (!packet) return null;
-  if (packet.finalPdf || packet.status === "voided") return packet;
+  if (!packet) {
+    return null;
+  }
+  if (packet.finalPdf || packet.status === "voided") {
+    return packet;
+  }
   const signers = await db()
     .select()
     .from(leaseSigners)
     .where(eq(leaseSigners.packetId, id))
     .orderBy(leaseSigners.id);
-  if (!signers.length || signers.some((s) => !s.signedAt)) return packet;
+  if (!signers.length || signers.some((s) => !s.signedAt)) {
+    return packet;
+  }
   const bytes = await signaturePdf(packet, signers, true),
     hash = digest(bytes);
   await db()
     .update(leasePackets)
     .set({
-      status: "completed",
-      finalPdf: Buffer.from(bytes).toString("base64"),
       finalHash: hash,
+      finalPdf: Buffer.from(bytes).toString("base64"),
+      status: "completed",
     })
     .where(
       and(
         eq(leasePackets.id, id),
         eq(leasePackets.status, "awaiting"),
-        sql`not exists(select 1 from ${leaseSigners} where ${leaseSigners.packetId}=${id} and ${leaseSigners.signedAt} is null)`,
-      ),
+        sql`not exists(select 1 from ${leaseSigners} where ${leaseSigners.packetId}=${id} and ${leaseSigners.signedAt} is null)`
+      )
     );
   return activePacket(id);
 }

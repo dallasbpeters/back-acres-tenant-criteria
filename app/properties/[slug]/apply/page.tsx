@@ -1,11 +1,11 @@
-import { notRemoved } from "@/lib/management/not-removed";
-import { POLICY, selectionCriteriaText } from "@/lib/policy";
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { IntakeForm } from "@/components/management/intake";
+import { ManagementShell } from "@/components/management/shell";
 import { db } from "@/lib/db";
 import { properties } from "@/lib/db/schema";
-import { ManagementShell } from "@/components/management/shell";
-import { IntakeForm } from "@/components/management/intake";
+import { notRemoved } from "@/lib/management/not-removed";
+import { POLICY, selectionCriteriaText } from "@/lib/policy";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Rental application | Back Acres" };
 export default async function ApplyPage({
@@ -18,7 +18,9 @@ export default async function ApplyPage({
     .select()
     .from(properties)
     .where(and(eq(properties.slug, slug), notRemoved(properties.id)));
-  if (!p || !p.data.published) notFound();
+  if (!p?.data.published) {
+    notFound();
+  }
   return (
     <ManagementShell title={`Apply · ${p.data.name}`}>
       <p>{p.data.address}</p>
@@ -26,9 +28,9 @@ export default async function ApplyPage({
         <IntakeForm
           kind="application"
           property={{
+            contact: p.data.contact,
             criteria: selectionCriteriaText(),
             criteriaVersion: POLICY.version,
-            contact: p.data.contact,
             emergencyContact: "",
           }}
           propertyId={p.id}

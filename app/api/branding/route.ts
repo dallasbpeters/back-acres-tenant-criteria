@@ -1,24 +1,24 @@
 import { desc } from "drizzle-orm";
+import { reply } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import { brandVersions } from "@/lib/db/schema";
-import { reply } from "@/lib/adverse/auth";
 export async function GET() {
   try {
     const [brand] = await db()
       .select({
         id: brandVersions.id,
-        name: brandVersions.name,
         logo: brandVersions.logoPng,
+        name: brandVersions.name,
       })
       .from(brandVersions)
       .orderBy(desc(brandVersions.createdAt))
       .limit(1);
     return reply({
-      name: brand?.name ?? "Back Acres",
       hasLogo: !!brand?.logo,
+      name: brand?.name ?? "Back Acres",
       revision: brand?.id ?? "",
     });
   } catch {
-    return reply({ name: "Back Acres", hasLogo: false, revision: "" });
+    return reply({ hasLogo: false, name: "Back Acres", revision: "" });
   }
 }

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "check": "ultracite check",
+    "check": "ultracite check --error-on-warnings",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dev": "next dev",
@@ -17,7 +17,7 @@
     "test:signing": "node tests/support/run-lease-signing.cjs",
     "test:stripe": "vitest run --config vitest.stripe.config.mts",
     "test:stripe:coverage": "npm run test:stripe -- --coverage",
-    "test:unit": "tsx --test tests/*.test.ts",
+    "test:unit": "tsx --tsconfig tests/tsconfig.json --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "overrides": {
@@ -69,8 +69,8 @@
     "@types/sanitize-html": "^2.16.2",
     "@vitest/coverage-v8": "^5.0.5",
     "drizzle-kit": "^0.31.11",
-    "husky": "latest",
-    "lint-staged": "latest",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.0",
     "ultracite": "7.10.2",

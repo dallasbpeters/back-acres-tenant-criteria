@@ -1,12 +1,12 @@
-import { Icon } from "@/components/ui/icon";
+import { asc, eq } from "drizzle-orm";
 import { ListingGallery } from "@/components/management/listing-gallery";
 import { PropertyDescription } from "@/components/management/property-description";
-import { notRemoved } from "@/lib/management/not-removed";
-import { asc, eq } from "drizzle-orm";
+import { ManagementShell } from "@/components/management/shell";
+import { Icon } from "@/components/ui/icon";
 import { db } from "@/lib/db";
 import { listingPhotos, properties } from "@/lib/db/schema";
-import { ManagementShell } from "@/components/management/shell";
 import { dollars } from "@/lib/management/model";
+import { notRemoved } from "@/lib/management/not-removed";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Available properties | Back Acres" };
 export default async function PropertiesPage() {
@@ -16,9 +16,9 @@ export default async function PropertiesPage() {
     .where(notRemoved(properties.id));
   const photos = await db()
     .select({
+      caption: listingPhotos.caption,
       id: listingPhotos.id,
       propertyId: listingPhotos.propertyId,
-      caption: listingPhotos.caption,
     })
     .from(listingPhotos)
     .where(eq(listingPhotos.archived, false))
@@ -65,7 +65,7 @@ export default async function PropertiesPage() {
               </div>
               <section className="property-about">
                 <h3>About this property</h3>
-                <PropertyDescription text={p.data.description} grid />
+                <PropertyDescription grid text={p.data.description} />
               </section>
             </article>
           ))

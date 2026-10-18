@@ -1,17 +1,19 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-
 import { useState } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
-import { removalLabels, type RemovalKind } from "@/lib/management/removal";
+import { Button } from "@/components/ui/button";
+import { type RemovalKind, removalLabels } from "@/lib/management/removal";
 export async function removalCommand(body: unknown) {
   const response = await fetch("/api/admin/removed", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   });
   const data = await response.json();
-  if (!response.ok) throw Error(data.error || "Could not update this item.");
+  if (!response.ok) {
+    throw new Error(data.error || "Could not update this item.");
+  }
 }
 export function RemoveButton({
   kind,
@@ -24,7 +26,7 @@ export function RemoveButton({
   kind: RemovalKind;
   id: string;
   name: string;
-  onRemoved: () => Promise<unknown> | void;
+  onRemoved: () => unknown;
   disabled?: boolean;
   cancelFirst?: boolean;
 }) {
@@ -32,27 +34,42 @@ export function RemoveButton({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const label = removalLabels[kind].toLowerCase();
+
+  const resolveResult1 = () => {
+    if (busy) {
+      return "Removing…";
+    }
+    if (cancelFirst) {
+      if (kind === "invoice") {
+        return "Cancel request & remove";
+      }
+      return "Stop payments & remove";
+    }
+    return `Remove ${label}`;
+  };
   return (
     <>
       <Button
-        type="button"
+        aria-label={`Remove ${label}: ${name}`}
         className="remove-record-button"
         disabled={disabled}
-        aria-label={`Remove ${label}: ${name}`}
         onClick={() => {
           setError("");
           setOpen(true);
         }}
+        type="button"
       >
         Remove
       </Button>
       <ModalOverlay
         className="remove-overlay"
+        isDismissable={!busy}
         isOpen={open}
         onOpenChange={(v) => {
-          if (!busy) setOpen(v);
+          if (!busy) {
+            setOpen(v);
+          }
         }}
-        isDismissable={!busy}
       >
         <Modal className="remove-modal">
           <Dialog aria-describedby={`remove-description-${id}`}>
@@ -63,7 +80,7 @@ export function RemoveButton({
                 This item will leave the workspace. You can restore it from
                 Removed items; its history is retained.
               </p>
-              {kind === "property" && (
+              {!!(kind === "property") && (
                 <p>
                   The listing will be unpublished, applications closed, and
                   resident links revoked. Related records stay in their own
@@ -72,30 +89,30 @@ export function RemoveButton({
                   removing this property.
                 </p>
               )}
-              {kind === "residentLink" && (
+              {!!(kind === "residentLink") && (
                 <p>
                   The private link will stop working. Restoring it keeps it
                   revoked; create a new link to give access again.
                 </p>
               )}
-              {kind === "leaseDraft" && (
+              {!!(kind === "leaseDraft") && (
                 <p>
                   All saved versions of this lease will be removed together.
                 </p>
               )}
-              {kind === "leaseTemplate" && (
+              {!!(kind === "leaseTemplate") && (
                 <p>
                   Existing lease drafts keep their original text. Restore this
                   document before using it for another draft.
                 </p>
               )}
-              {kind === "notice" && (
+              {!!(kind === "notice") && (
                 <p>
                   All versions leave the notice list. Emails already sent cannot
                   be recalled; delivery history is retained.
                 </p>
               )}
-              {kind === "invoice" && (
+              {!!(kind === "invoice") && (
                 <p>
                   {cancelFirst
                     ? "The open payment request will be canceled before removal. "
@@ -104,7 +121,7 @@ export function RemoveButton({
                   processing first.
                 </p>
               )}
-              {kind === "rentSchedule" && (
+              {!!(kind === "rentSchedule") && (
                 <p>
                   {cancelFirst
                     ? "Future rent payments will be stopped before removal. "
@@ -113,8 +130,8 @@ export function RemoveButton({
                 </p>
               )}
             </div>
-            {error && (
-              <p role="alert" className="form-error">
+            {!!error && (
+              <p className="form-error" role="alert">
                 {error}
               </p>
             )}
@@ -138,39 +155,35 @@ export function RemoveButton({
                           ? "/api/admin/management"
                           : "/api/admin/billing",
                         {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
                             action:
                               kind === "invoice" ? "voidInvoice" : "cancel",
                             id,
                           }),
-                        },
+                          headers: { "Content-Type": "application/json" },
+                          method: "POST",
+                        }
                       );
                       const result = await response.json();
-                      if (!response.ok) throw Error(result.error);
+                      if (!response.ok) {
+                        throw new Error(result.error);
+                      }
                     }
-                    await removalCommand({ action: "remove", kind, id });
+                    await removalCommand({ action: "remove", id, kind });
                     await onRemoved();
                     setOpen(false);
                   } catch (e) {
                     setError(
                       e instanceof Error
                         ? e.message
-                        : "Could not remove this item.",
+                        : "Could not remove this item."
                     );
                   } finally {
                     setBusy(false);
                   }
                 }}
               >
-                {busy
-                  ? "Removing…"
-                  : cancelFirst
-                    ? kind === "invoice"
-                      ? "Cancel request & remove"
-                      : "Stop payments & remove"
-                    : `Remove ${label}`}
+                {resolveResult1()}
               </Button>
             </div>
           </Dialog>
@@ -179,13 +192,13 @@ export function RemoveButton({
     </>
   );
 }
-export type RemovedRecord = {
+export interface RemovedRecord {
   entityId: string;
   groupId: string;
   kind: RemovalKind;
   label: string;
   removedAt: string;
-};
+}
 export function RemovedWorkspace({
   records,
   onSaved,
@@ -202,7 +215,7 @@ export function RemovedWorkspace({
         Restore items to their original section. Properties stay unpublished,
         resident links stay revoked, and canceled payments stay canceled.
       </p>
-      {error && <p role="alert">{error}</p>}
+      {!!error && <p role="alert">{error}</p>}
       {!records.length && <p className="management-empty">No removed items.</p>}
       {[...records]
         .sort((a, b) => b.removedAt.localeCompare(a.removedAt))
@@ -216,7 +229,6 @@ export function RemovedWorkspace({
               </p>
             </div>
             <Button
-              type="submit"
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -226,12 +238,13 @@ export function RemovedWorkspace({
                   await onSaved();
                 } catch (e) {
                   setError(
-                    e instanceof Error ? e.message : "Could not restore.",
+                    e instanceof Error ? e.message : "Could not restore."
                   );
                 } finally {
                   setBusy(false);
                 }
               }}
+              type="submit"
             >
               Restore {removalLabels[r.kind].toLowerCase()}
             </Button>

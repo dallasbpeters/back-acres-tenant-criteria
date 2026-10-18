@@ -1,13 +1,13 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-
-import { LeaseDetail, wordingDocument } from "@/lib/leases/wording";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
-import { leaseFields } from "@/lib/management/leases";
+import { LeaseDetail, wordingDocument } from "@/lib/leases/wording";
 import { fieldLabel } from "@/lib/management/lease-workflow";
+import { leaseFields } from "@/lib/management/leases";
 export function LeaseWordingEditor({
   body,
   onChange,
@@ -19,46 +19,47 @@ export function LeaseWordingEditor({
 }) {
   const [detail, setDetail] = useState("property_address");
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: false,
-        blockquote: false,
-        bulletList: false,
-        orderedList: false,
-        code: false,
-        codeBlock: false,
-        horizontalRule: false,
-        bold: false,
-        italic: false,
-        strike: false,
-        link: false,
-        underline: false,
-        trailingNode: false,
-      }),
-      LeaseDetail,
-    ],
     content: wordingDocument(body),
-    immediatelyRender: false,
+    editable: !disabled,
     editorProps: {
       attributes: {
-        role: "textbox",
         "aria-label": "Lease wording",
         "aria-multiline": "true",
         class: "lease-wording-content",
+        role: "textbox",
       },
     },
-    onUpdate: ({ editor }) =>
-      onChange(editor.getText({ blockSeparator: "\n" })),
-    editable: !disabled,
+    extensions: [
+      StarterKit.configure({
+        blockquote: false,
+        bold: false,
+        bulletList: false,
+        code: false,
+        codeBlock: false,
+        heading: false,
+        horizontalRule: false,
+        italic: false,
+        link: false,
+        orderedList: false,
+        strike: false,
+        trailingNode: false,
+        underline: false,
+      }),
+      LeaseDetail,
+    ],
+    immediatelyRender: false,
+    onUpdate: ({ editor: editorLocal }) =>
+      onChange(editorLocal.getText({ blockSeparator: "\n" })),
   });
+
   return (
     <div className="lease-wording-editor">
       <div className="lease-wording-tools">
         <AppSelect
-          label="Insert a lease detail"
-          value={detail}
-          onValueChange={setDetail}
           disabled={disabled}
+          label="Insert a lease detail"
+          onValueChange={setDetail}
+          value={detail}
         >
           {leaseFields.map((key) => (
             <option key={key} value={key}>
@@ -67,15 +68,15 @@ export function LeaseWordingEditor({
           ))}
         </AppSelect>
         <Button
-          type="button"
           disabled={!editor || disabled}
           onClick={() =>
             editor
               ?.chain()
               .focus()
-              .insertContent({ type: "leaseDetail", attrs: { field: detail } })
+              .insertContent({ attrs: { field: detail }, type: "leaseDetail" })
               .run()
           }
+          type="button"
         >
           Insert detail
         </Button>

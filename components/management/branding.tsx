@@ -1,14 +1,16 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { useEffect, useState } from "react";
-type Brand = {
-  id: string;
-  name: string;
-  logoPng?: string | null;
-  hasLogo?: boolean;
+interface Brand {
   createdAt: string;
-};
+  hasLogo?: boolean;
+  id: string;
+  logoPng?: string | null;
+  name: string;
+}
 export function BrandingWorkspace() {
   const [current, setCurrent] = useState<Brand | null>(null),
     [history, setHistory] = useState<Brand[]>([]),
@@ -16,32 +18,37 @@ export function BrandingWorkspace() {
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
-  async function load() {
+  const load = useCallback(async () => {
     const r = await fetch("/api/admin/branding"),
       data = await r.json();
-    if (!r.ok) throw Error(data.error);
+    if (!r.ok) {
+      throw new Error(data.error);
+    }
     setCurrent(data.current);
     setHistory(data.history);
     setName(data.current?.name ?? "Back Acres Rental");
-  }
+  }, []);
+
   useEffect(() => {
     load().catch((e) => setError(e.message));
-  }, []);
+  }, [load]);
   async function save(data: FormData) {
     setBusy(true);
     setMessage("");
     setError("");
     try {
       const r = await fetch("/api/admin/branding", {
-          method: "POST",
           body: data,
+          method: "POST",
         }),
         result = await r.json();
-      if (!r.ok) throw Error(result.error);
+      if (!r.ok) {
+        throw new Error(result.error);
+      }
       await load();
       window.dispatchEvent(new Event("branding-updated"));
       setMessage(
-        "Branding saved. New signing packets and draft PDFs will use this version.",
+        "Branding saved. New signing packets and draft PDFs will use this version."
       );
     } catch (e) {
       setError((e as Error).message);
@@ -49,6 +56,7 @@ export function BrandingWorkspace() {
       setBusy(false);
     }
   }
+
   return (
     <section className="branding-workspace">
       <h2>Branding</h2>
@@ -56,8 +64,8 @@ export function BrandingWorkspace() {
         Your logo appears in the owner navbar and lease PDFs. Signed leases keep
         the branding used when their signing packet was created.
       </p>
-      {error && <p role="alert">{error}</p>}
-      {message && <p role="status">{message}</p>}
+      {!!error && <p role="alert">{error}</p>}
+      {!!message && <p role="status">{message}</p>}
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -69,18 +77,21 @@ export function BrandingWorkspace() {
         <label className="field">
           Business name
           <input
+            maxLength={120}
             name="name"
-            value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            maxLength={120}
+            value={name}
           />
         </label>
         {current?.logoPng ? (
-          <img
-            className="branding-logo"
-            src={`data:image/png;base64,${current.logoPng}`}
+          <Image
             alt={`${current.name} current logo`}
+            className="branding-logo"
+            height={800}
+            src={`data:image/png;base64,${current.logoPng}`}
+            unoptimized
+            width={1200}
           />
         ) : (
           <p className="small-note">No logo uploaded yet.</p>
@@ -88,9 +99,9 @@ export function BrandingWorkspace() {
         <label className="field">
           Upload logo
           <input
-            type="file"
-            name="logo"
             accept="image/png,image/svg+xml,.png,.svg"
+            name="logo"
+            type="file"
           />
         </label>
         <p className="small-note">
@@ -99,26 +110,26 @@ export function BrandingWorkspace() {
           for best results.
         </p>
         <div className="management-actions">
-          <Button type="submit" variant="primary" disabled={busy}>
+          <Button disabled={busy} type="submit" variant="primary">
             {busy ? "Saving…" : "Save branding"}
           </Button>
-          {current?.logoPng && (
+          {!!current?.logoPng && (
             <Button
-              type="button"
               disabled={busy}
               onClick={() => {
                 const data = new FormData();
                 data.set("name", name);
                 data.set("remove", "true");
-                void save(data);
+                save(data);
               }}
+              type="button"
             >
               Remove logo
             </Button>
           )}
         </div>
       </form>
-      {history.length > 1 && (
+      {!!(history.length > 1) && (
         <details>
           <summary>Previous branding</summary>
           {history.slice(1).map((b) => (
@@ -129,13 +140,13 @@ export function BrandingWorkspace() {
               </span>
               <Button
                 disabled={busy}
-                type="button"
                 onClick={() => {
                   const data = new FormData();
                   data.set("name", b.name);
                   data.set("restore", b.id);
-                  void save(data);
+                  save(data);
                 }}
+                type="button"
               >
                 Restore version
               </Button>

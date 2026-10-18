@@ -1,11 +1,11 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-
-import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
-import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import type { PhotoRecord } from "./photos";
-
 export function ListingGallery({
   photos,
   name,
@@ -17,13 +17,15 @@ export function ListingGallery({
   const [open, setOpen] = useState(false);
   const touchStart = useRef<number | null>(null);
   useEffect(() => {
-    if (!open || photos.length < 2) return;
+    if (!open || photos.length < 2) {
+      return;
+    }
     const browse = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault();
         const direction = event.key === "ArrowLeft" ? -1 : 1;
         setSelected(
-          (index) => (index + direction + photos.length) % photos.length,
+          (index) => (index + direction + photos.length) % photos.length
         );
       }
     };
@@ -31,30 +33,36 @@ export function ListingGallery({
     return () => window.removeEventListener("keydown", browse);
   }, [open, photos.length]);
   const current = photos[selected] ?? photos[0];
-  if (!current) return null;
+  if (!current) {
+    return null;
+  }
   const move = (direction: number) =>
     setSelected((index) => (index + direction + photos.length) % photos.length);
+
   return (
-    <section className="listing-gallery" aria-label="Property photos">
+    <section aria-label="Property photos" className="listing-gallery">
       <div
         className={`listing-photo-grid listing-photo-grid--${Math.min(photos.length, 5)}`}
       >
         {photos.slice(0, 5).map((photo, index) => (
           <Button
-            key={photo.id}
-            className="listing-photo-tile"
             aria-label={`View photo ${index + 1}${photo.caption ? `: ${photo.caption}` : ""}`}
+            className="listing-photo-tile"
+            key={photo.id}
             onPress={() => {
               setSelected(index);
               setOpen(true);
             }}
           >
-            <img
-              src={photo.url}
+            <Image
               alt=""
+              height={800}
               loading={index === 0 ? "eager" : "lazy"}
+              src={photo.url}
+              unoptimized
+              width={1200}
             />
-            {index === 4 && photos.length > 5 && (
+            {!!(index === 4 && photos.length > 5) && (
               <span className="listing-photo-more">
                 +{photos.length - 5} photos
               </span>
@@ -78,18 +86,18 @@ export function ListingGallery({
       </div>
       <ModalOverlay
         className="listing-photo-overlay"
+        isDismissable
         isOpen={open}
         onOpenChange={setOpen}
-        isDismissable
       >
         <Modal className="listing-photo-modal">
           <Dialog className="listing-photo-dialog">
             <div className="listing-photo-toolbar">
               <Heading slot="title">{name} · Photos</Heading>
               <Button
+                aria-label="Close photos"
                 className="icon-button"
                 onPress={() => setOpen(false)}
-                aria-label="Close photos"
                 title="Close photos"
               >
                 <Icon name="close" size={24} />
@@ -98,9 +106,6 @@ export function ListingGallery({
             <figure className="listing-photo-viewer">
               <div
                 className="listing-photo-stage"
-                onTouchStart={(event) => {
-                  touchStart.current = event.touches[0]?.clientX ?? null;
-                }}
                 onTouchEnd={(event) => {
                   const start = touchStart.current;
                   touchStart.current = null;
@@ -109,54 +114,68 @@ export function ListingGallery({
                     start !== null &&
                     end !== undefined &&
                     Math.abs(end - start) > 50
-                  )
+                  ) {
                     move(end < start ? 1 : -1);
+                  }
+                }}
+                onTouchStart={(event) => {
+                  touchStart.current = event.touches[0]?.clientX ?? null;
                 }}
               >
-                <img
-                  src={current.url}
+                <Image
                   alt={
                     current.caption || `${name} property photo ${selected + 1}`
                   }
+                  height={800}
+                  src={current.url}
+                  unoptimized
+                  width={1200}
                 />
               </div>
-              <figcaption aria-live="polite" aria-atomic="true">
+              <figcaption aria-atomic="true" aria-live="polite">
                 <span>
                   Photo {selected + 1} of {photos.length}
                 </span>
-                {current.caption && <span>{current.caption}</span>}
+                {!!current.caption && <span>{current.caption}</span>}
               </figcaption>
             </figure>
-            {photos.length > 1 && (
+            {!!(photos.length > 1) && (
               <div className="listing-photo-controls">
-                <Button onPress={() => move(-1)} aria-label="Previous photo">
+                <Button aria-label="Previous photo" onPress={() => move(-1)}>
                   <Icon name="back" />
                   Previous
                 </Button>
                 <p>Use the arrow keys or swipe to browse.</p>
-                <Button onPress={() => move(1)} aria-label="Next photo">
+                <Button aria-label="Next photo" onPress={() => move(1)}>
                   Next
                   <Icon name="next" />
                 </Button>
               </div>
             )}
-            {photos.length > 1 && (
-              <div
-                className="listing-photo-filmstrip"
+            {!!(photos.length > 1) && (
+              <section
                 aria-label="Choose photo"
+                className="listing-photo-filmstrip"
               >
                 {photos.map((photo, index) => (
                   <Button
-                    key={photo.id}
-                    className="listing-photo-thumb"
                     aria-label={`Show photo ${index + 1}${photo.caption ? `: ${photo.caption}` : ""}`}
                     aria-pressed={index === selected}
+                    className="listing-photo-thumb"
+                    key={photo.id}
                     onPress={() => setSelected(index)}
                   >
-                    <img src={photo.url} alt="" loading="lazy" />
+                    <Image
+                      alt=""
+                      height={800}
+                      loading="lazy"
+                      src={photo.url}
+                      unoptimized
+                      width={1200}
+                    />
                   </Button>
                 ))}
-              </div>
+              </section>
             )}
           </Dialog>
         </Modal>

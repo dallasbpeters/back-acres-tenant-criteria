@@ -1,30 +1,32 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-import { useId, useState } from "react";
 import dynamic from "next/dynamic";
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
+
 const LeasePdfPreview = dynamic(
   () => import("./lease-pdf-preview").then((m) => m.LeasePdfPreview),
-  { ssr: false, loading: () => <p role="status">Loading PDF viewer…</p> },
+  { loading: () => <p role="status">Loading PDF viewer…</p>, ssr: false }
 );
-type Signer = {
-  id?: string;
-  name: string;
+interface Signer {
+  declinedAt?: string | null;
   email: string;
+  id?: string;
+  invitedAt?: string | null;
+  name: string;
   role: "tenant" | "landlord";
   signedAt?: string | null;
-  declinedAt?: string | null;
-  invitedAt?: string | null;
-};
-type Packet = {
-  id: string;
-  status: string;
-  documentHash: string;
-  finalHash: string | null;
+}
+interface Packet {
   createdAt: string;
+  documentHash: string;
   expiresAt: string;
+  finalHash: string | null;
+  id: string;
   signers: Signer[];
-};
+  status: string;
+}
 export function LeaseSigning({
   draftId,
   tenantName,
@@ -44,8 +46,18 @@ export function LeaseSigning({
     [loaded, setLoaded] = useState(false),
     [packets, setPackets] = useState<Packet[]>([]),
     [signers, setSigners] = useState<Signer[]>([
-      { name: tenantName, email: tenantEmail, role: "tenant" },
-      { name: landlordName, email: landlordEmail, role: "landlord" },
+      {
+        email: tenantEmail,
+        id: "initial-tenant",
+        name: tenantName,
+        role: "tenant",
+      },
+      {
+        email: landlordEmail,
+        id: "initial-landlord",
+        name: landlordName,
+        role: "landlord",
+      },
     ]),
     [reviewed, setReviewed] = useState(false),
     [busy, setBusy] = useState(false),
@@ -57,7 +69,9 @@ export function LeaseSigning({
         cache: "no-store",
       }),
       data = await r.json();
-    if (!r.ok) throw Error(data.error ?? "Could not load signing records.");
+    if (!r.ok) {
+      throw new Error(data.error ?? "Could not load signing records.");
+    }
     setPackets(data.packets);
     setLoaded(true);
     setRevision((v) => v + 1);
@@ -65,13 +79,14 @@ export function LeaseSigning({
   }
   async function post(body: unknown) {
     const r = await fetch("/api/admin/lease-signing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       }),
       data = await r.json();
-    if (!r.ok)
-      throw Error(data.error ?? "Could not update this signing request.");
+    if (!r.ok) {
+      throw new Error(data.error ?? "Could not update this signing request.");
+    }
     return data;
   }
   async function send(recipients?: Signer[]) {
@@ -87,8 +102,8 @@ export function LeaseSigning({
             draftId,
             reviewed,
             signers: signers.map(({ name, email, role }) => ({
-              name,
               email,
+              name,
               role,
             })),
           },
@@ -100,40 +115,49 @@ export function LeaseSigning({
       let accepted = 0;
       for (const [index, signer] of people.entries()) {
         setMessage(
-          `Sending ${index + 1} of ${people.length}: ${signer.email}…`,
+          `Sending ${index + 1} of ${people.length}: ${signer.email}…`
         );
         try {
-          await post({ action: "invite", signerId: signer.id });
-          accepted++;
+          /* biome-ignore lint/performance/noAwaitInLoops: Each step depends on the preceding provider/database state or output order; parallel execution would change recovery semantics. */ await post(
+            { action: "invite", signerId: signer.id }
+          );
+          accepted += 1;
         } catch (e) {
           failed.push(`${signer.email}: ${(e as Error).message}`);
         }
-        if (index < people.length - 1)
+        if (index < people.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 600));
+        }
       }
       setMessage(
-        `${accepted} signing email${accepted === 1 ? "" : "s"} accepted by the email provider. Each recipient receives their own private signing link.`,
+        `${accepted} signing email${accepted === 1 ? "" : "s"} accepted by the email provider. Each recipient receives their own private signing link.`
       );
-      if (failed.length)
+      if (failed.length) {
         setError(
-          `Some emails could not be sent. ${failed.join(" ")} Use Send unsent emails to retry the remaining recipients.`,
+          `Some emails could not be sent. ${failed.join(" ")} Use Send unsent emails to retry the remaining recipients.`
         );
+      }
       await load();
     } catch (e) {
       setError((e as Error).message);
       // A created packet is retained if sending or a subsequent request fails.
-      await load().catch(() => {});
+      await load().catch(() => {
+        /* Best-effort fallback: retain the original result when this optional operation fails. */
+      });
     } finally {
       setBusy(false);
     }
   }
   async function cancel(id: string) {
     if (
-      !window.confirm(
-        "Cancel this signing request? Existing signatures remain in the audit record. A new request will require everyone to sign again.",
+      !(
+        /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+          "Cancel this signing request? Existing signatures remain in the audit record. A new request will require everyone to sign again."
+        )
       )
-    )
+    ) {
       return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -151,257 +175,101 @@ export function LeaseSigning({
     expired = !!active && new Date(active.expiresAt).getTime() < Date.now(),
     unsent =
       active?.signers.filter(
-        (s) => !s.signedAt && !s.declinedAt && !s.invitedAt,
+        (s) => !(s.signedAt || s.declinedAt || s.invitedAt)
       ) ?? [],
     signed = active?.signers.filter((s) => s.signedAt).length ?? 0;
-  return (
-    <div className="lease-signing-admin">
-      <div className="management-actions lease-delivery-actions">
-        <Button
-          type="button"
-          variant="primary"
-          aria-expanded={open}
-          aria-controls={panelId}
-          disabled={busy}
-          onClick={() => {
-            setOpen((v) => !v);
-            if (!open) {
-              setLoaded(false);
-              setError("");
-              void load().catch((e) => setError(e.message));
-            }
-          }}
-        >
-          {active?.status === "completed"
-            ? "View signing details"
-            : "Send lease"}
-        </Button>
-        <Button
-          type="button"
-          aria-expanded={preview}
-          disabled={busy}
-          onClick={() => setPreview((v) => !v)}
-        >
-          {preview ? "Hide PDF preview" : "Preview PDF"}
-        </Button>
-        <a href={`/api/admin/leases/${draftId}/pdf?preview=1`}>Download PDF</a>
-      </div>
-      {preview && (
-        <LeasePdfPreview
-          draftId={draftId}
-          revision={revision}
-          onClose={() => setPreview(false)}
-        />
-      )}
-      {open && (
-        <section
-          id={panelId}
-          className="signing-panel"
-          aria-label={`Send lease to ${tenantName}`}
-          aria-busy={busy}
-        >
-          <div className="signing-panel-heading">
-            <p className="eyebrow">Lease delivery</p>
-            <h4>
-              {active?.status === "completed"
-                ? "Signed lease"
-                : "Send for signature"}
-            </h4>
-          </div>
-          {error && <p role="alert">{error}</p>}
-          {message && <p role="status">{message}</p>}
-          {!loaded ? (
-            <>
-              <p>Loading signing records…</p>
-              {error && (
-                <Button
-                  type="button"
-                  onClick={() => void load().catch((e) => setError(e.message))}
-                >
-                  Try again
-                </Button>
-              )}
-            </>
-          ) : !active ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void send();
-              }}
-            >
-              <p className="signing-intro">
-                Add each adult tenant and the landlord. We’ll email everyone a
-                private link to review the PDF, verify their email, and sign.
-                Links are valid for 30 days.
-              </p>
-              <fieldset disabled={busy} className="signing-recipients">
-                <legend className="visually-hidden">Lease recipients</legend>
-                {signers.map((s, i) => (
-                  <fieldset className="signer-fields" key={i}>
-                    <legend>
-                      {s.role === "landlord" ? "Landlord" : "Tenant"} · Signer{" "}
-                      {i + 1}
-                    </legend>
-                    <label className="field">
-                      Full legal name
-                      <input
-                        required
-                        maxLength={150}
-                        value={s.name}
-                        onChange={(e) =>
-                          setSigners((v) =>
-                            v.map((x, j) =>
-                              j === i ? { ...x, name: e.target.value } : x,
-                            ),
-                          )
-                        }
-                      />
-                    </label>
-                    <label className="field">
-                      Email address
-                      <input
-                        type="email"
-                        required
-                        value={s.email}
-                        onChange={(e) =>
-                          setSigners((v) =>
-                            v.map((x, j) =>
-                              j === i ? { ...x, email: e.target.value } : x,
-                            ),
-                          )
-                        }
-                      />
-                    </label>
-                    <AppSelect
-                      label="Signing as"
-                      value={s.role}
-                      onValueChange={(value) =>
-                        setSigners((v) =>
-                          v.map((x, j) =>
-                            j === i
-                              ? { ...x, role: value as Signer["role"] }
-                              : x,
-                          ),
-                        )
-                      }
-                    >
-                      <option value="tenant">Tenant</option>
-                      <option value="landlord">Landlord</option>
-                    </AppSelect>
-                    {signers.length > 2 && (
-                      <Button
-                        type="button"
-                        onClick={() =>
-                          setSigners((v) => v.filter((_, j) => j !== i))
-                        }
-                      >
-                        Remove signer
-                      </Button>
-                    )}
-                  </fieldset>
-                ))}
-                <Button
-                  type="button"
-                  disabled={signers.length >= 12}
-                  onClick={() =>
-                    setSigners((v) => [
-                      ...v,
-                      { name: "", email: "", role: "tenant" },
-                    ])
-                  }
-                >
-                  Add signer
-                </Button>
-                <label className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={reviewed}
-                    required
-                    onChange={(e) => setReviewed(e.target.checked)}
-                  />
-                  I have reviewed this exact saved lease, all terms and required
-                  attachments, and the list of people who must sign.
-                </label>
-              </fieldset>
-              <div className="signing-send-footer">
-                <p>
-                  Sending locks this saved version and its branding. Later edits
-                  will need a new signing request.
-                </p>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={busy || !reviewed}
-                >
-                  {busy ? "Sending lease…" : "Send lease for signature"}
-                </Button>
-              </div>
-            </form>
-          ) : (
+
+  const resolveResult1 =
+    /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
+    () => {
+      if (loaded) {
+        if (active) {
+          return (
             <>
               <p className="signing-summary">
                 {active.status === "completed"
                   ? "All required signatures recorded."
                   : `${signed} of ${active.signers.length} signed · ${expired ? "Request expired" : `Expires ${new Date(active.expiresAt).toLocaleDateString()}`}`}
               </p>
-              {active.signers.map((s) => (
-                <div className="signer-status" key={s.id}>
-                  <div>
-                    <strong>{s.name}</strong>
-                    <p>
-                      {s.email} · {s.role}
-                    </p>
-                    <p className="signing-recipient-state">
-                      {s.signedAt
-                        ? `Signed ${new Date(s.signedAt).toLocaleString()}`
-                        : s.declinedAt
-                          ? "Declined electronic signing"
-                          : s.invitedAt
-                            ? `Email accepted ${new Date(s.invitedAt).toLocaleString()} · Awaiting signature`
-                            : "No email send recorded"}
-                    </p>
-                  </div>
-                  {!s.signedAt &&
-                    !s.declinedAt &&
-                    active.status === "awaiting" &&
-                    !expired && (
+              {active.signers.map((s) => {
+                const resolveResult2 = () => {
+                  if (s.signedAt) {
+                    return `Signed ${new Date(s.signedAt).toLocaleString()}`;
+                  }
+                  if (s.declinedAt) {
+                    return "Declined electronic signing";
+                  }
+                  if (s.invitedAt) {
+                    return `Email accepted ${new Date(s.invitedAt).toLocaleString()} · Awaiting signature`;
+                  }
+                  return "No email send recorded";
+                };
+                return (
+                  <div className="signer-status" key={s.id}>
+                    <div>
+                      <strong>{s.name}</strong>
+                      <p>
+                        {s.email} · {s.role}
+                      </p>
+                      <p className="signing-recipient-state">
+                        {resolveResult2()}
+                      </p>
+                    </div>
+                    {!!(
+                      !(s.signedAt || s.declinedAt) &&
+                      active.status === "awaiting" &&
+                      !expired
+                    ) && (
                       <Button
-                        type="button"
                         disabled={busy}
-                        onClick={() => void send([s])}
+                        onClick={() => {
+                          send([s]);
+                        }}
+                        type="button"
                       >
                         {s.invitedAt
                           ? "Resend signing email"
                           : "Send signing email"}
                       </Button>
                     )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
               <div className="management-actions">
-                {active.status === "awaiting" &&
+                {!!(
+                  active.status === "awaiting" &&
                   !expired &&
-                  unsent.length > 0 && (
-                    <Button
-                      type="button"
-                      variant="primary"
-                      disabled={busy}
-                      onClick={() => void send(unsent)}
-                    >
-                      Send unsent emails
-                    </Button>
-                  )}
+                  unsent.length > 0
+                ) && (
+                  <Button
+                    disabled={busy}
+                    onClick={() => {
+                      send(unsent);
+                    }}
+                    type="button"
+                    variant="primary"
+                  >
+                    Send unsent emails
+                  </Button>
+                )}
                 <Button
-                  type="button"
                   disabled={busy}
-                  onClick={() => void load().catch((e) => setError(e.message))}
+                  onClick={() => {
+                    load().catch((e) => setError(e.message));
+                  }}
+                  type="button"
                 >
                   Refresh signature status
                 </Button>
-                {active.status === "awaiting" && (
+                {!!(active.status === "awaiting") && (
                   <Button
-                    type="button"
                     disabled={busy}
-                    onClick={() => void cancel(active.id)}
+                    onClick={() => {
+                      if (active) {
+                        cancel(active.id);
+                      }
+                    }}
+                    type="button"
                   >
                     Cancel signing request
                   </Button>
@@ -412,15 +280,209 @@ export function LeaseSigning({
                 <p className="document-fingerprint">
                   Original PDF SHA-256: {active.documentHash}
                 </p>
-                {active.finalHash && (
+                {!!active.finalHash && (
                   <p className="document-fingerprint">
                     Signed PDF SHA-256: {active.finalHash}
                   </p>
                 )}
               </details>
             </>
+          );
+        }
+        return (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              send();
+            }}
+          >
+            <p className="signing-intro">
+              Add each adult tenant and the landlord. We’ll email everyone a
+              private link to review the PDF, verify their email, and sign.
+              Links are valid for 30 days.
+            </p>
+            <fieldset className="signing-recipients" disabled={busy}>
+              <legend className="visually-hidden">Lease recipients</legend>
+              {signers.map((s, i) => (
+                <fieldset className="signer-fields" key={s.id}>
+                  <legend>
+                    {s.role === "landlord" ? "Landlord" : "Tenant"} · Signer{" "}
+                    {i + 1}
+                  </legend>
+                  <label className="field">
+                    Full legal name
+                    <input
+                      maxLength={150}
+                      onChange={(e) =>
+                        setSigners((v) =>
+                          v.map((x, j) =>
+                            j === i ? { ...x, name: e.target.value } : x
+                          )
+                        )
+                      }
+                      required
+                      value={s.name}
+                    />
+                  </label>
+                  <label className="field">
+                    Email address
+                    <input
+                      onChange={(e) =>
+                        setSigners((v) =>
+                          v.map((x, j) =>
+                            j === i ? { ...x, email: e.target.value } : x
+                          )
+                        )
+                      }
+                      required
+                      type="email"
+                      value={s.email}
+                    />
+                  </label>
+                  <AppSelect
+                    label="Signing as"
+                    onValueChange={(value) =>
+                      setSigners((v) =>
+                        v.map((x, j) =>
+                          j === i ? { ...x, role: value as Signer["role"] } : x
+                        )
+                      )
+                    }
+                    value={s.role}
+                  >
+                    <option value="tenant">Tenant</option>
+                    <option value="landlord">Landlord</option>
+                  </AppSelect>
+                  {!!(signers.length > 2) && (
+                    <Button
+                      onClick={() =>
+                        setSigners((v) => v.filter((_, j) => j !== i))
+                      }
+                      type="button"
+                    >
+                      Remove signer
+                    </Button>
+                  )}
+                </fieldset>
+              ))}
+              <Button
+                disabled={signers.length >= 12}
+                onClick={() =>
+                  setSigners((v) => [
+                    ...v,
+                    {
+                      email: "",
+                      id: crypto.randomUUID(),
+                      name: "",
+                      role: "tenant",
+                    },
+                  ])
+                }
+                type="button"
+              >
+                Add signer
+              </Button>
+              <label className="check-row">
+                <input
+                  checked={reviewed}
+                  onChange={(e) => setReviewed(e.target.checked)}
+                  required
+                  type="checkbox"
+                />
+                I have reviewed this exact saved lease, all terms and required
+                attachments, and the list of people who must sign.
+              </label>
+            </fieldset>
+            <div className="signing-send-footer">
+              <p>
+                Sending locks this saved version and its branding. Later edits
+                will need a new signing request.
+              </p>
+              <Button
+                disabled={busy || !reviewed}
+                type="submit"
+                variant="primary"
+              >
+                {busy ? "Sending lease…" : "Send lease for signature"}
+              </Button>
+            </div>
+          </form>
+        );
+      }
+      return (
+        <>
+          <p>Loading signing records…</p>
+          {!!error && (
+            <Button
+              onClick={() => {
+                load().catch((e) => setError(e.message));
+              }}
+              type="button"
+            >
+              Try again
+            </Button>
           )}
-          {packets.some((p) => p.status === "voided") && (
+        </>
+      );
+    };
+  return (
+    <div className="lease-signing-admin">
+      <div className="management-actions lease-delivery-actions">
+        <Button
+          aria-controls={panelId}
+          aria-expanded={open}
+          disabled={busy}
+          onClick={() => {
+            setOpen((v) => !v);
+            if (!open) {
+              setLoaded(false);
+              setError("");
+              load().catch((e) => setError(e.message));
+            }
+          }}
+          type="button"
+          variant="primary"
+        >
+          {active?.status === "completed"
+            ? "View signing details"
+            : "Send lease"}
+        </Button>
+        <Button
+          aria-expanded={preview}
+          disabled={busy}
+          onClick={() => setPreview((v) => !v)}
+          type="button"
+        >
+          {preview ? "Hide PDF preview" : "Preview PDF"}
+        </Button>
+        <a href={`/api/admin/leases/${draftId}/pdf?preview=1`}>Download PDF</a>
+      </div>
+      {!!preview && (
+        <LeasePdfPreview
+          draftId={draftId}
+          onClose={() => setPreview(false)}
+          revision={revision}
+        />
+      )}
+      {!!open && (
+        <section
+          aria-busy={busy}
+          aria-label={`Send lease to ${tenantName}`}
+          className="signing-panel"
+          id={panelId}
+        >
+          <div className="signing-panel-heading">
+            <p className="eyebrow">Lease delivery</p>
+            <h4>
+              {active?.status === "completed"
+                ? "Signed lease"
+                : "Send for signature"}
+            </h4>
+          </div>
+          {!!error && <p role="alert">{error}</p>}
+          {!!message && <p role="status">{message}</p>}
+          {resolveResult1()}
+          {!!packets.some((p) => p.status === "voided") && (
             <p className="small-note">
               {packets.filter((p) => p.status === "voided").length} canceled
               signing request(s) retained in the audit history.

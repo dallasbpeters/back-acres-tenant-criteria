@@ -1,10 +1,13 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { useState, type FormEvent } from "react";
-
-type Receipt = { recordId: string; timestamp: string; version: string };
-
+interface Receipt {
+  recordId: string;
+  timestamp: string;
+  version: string;
+}
 export function AcknowledgmentForm({
   ready,
   requiresCode,
@@ -22,10 +25,11 @@ export function AcknowledgmentForm({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
-
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!ready || sending) return;
+    if (!ready || sending) {
+      return;
+    }
     setSending(true);
     setError("");
     try {
@@ -34,37 +38,36 @@ export function AcknowledgmentForm({
         (form.elements.namedItem("website") as HTMLInputElement | null)
           ?.value || "";
       const response = await fetch("/api/acknowledge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName,
-          applicantEmail: email,
           accessCode,
-          read,
+          applicantEmail: email,
           electronicConsent,
+          fullName,
           policyVersion: version,
+          read,
           website: honeypot,
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
       const data = await response.json();
-      if (!response.ok || !data.ok)
+      if (!(response.ok && data.ok)) {
         throw new Error(
-          data.error ||
-            "We could not send your confirmation. Please try again.",
+          data.error || "We could not send your confirmation. Please try again."
         );
+      }
       setReceipt(data as Receipt);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again.",
+          : "Something went wrong. Please try again."
       );
     } finally {
       setSending(false);
     }
   }
-
-  if (receipt)
+  if (receipt) {
     return (
       <div className="success-panel" role="status">
         <div className="success-mark">✓</div>
@@ -79,9 +82,9 @@ export function AcknowledgmentForm({
           <span>RECEIVED (UTC)</span>
           <strong>
             {new Date(receipt.timestamp).toLocaleString("en-US", {
-              timeZone: "UTC",
               dateStyle: "long",
               timeStyle: "short",
+              timeZone: "UTC",
             })}{" "}
             UTC
           </strong>
@@ -96,7 +99,17 @@ export function AcknowledgmentForm({
         </p>
       </div>
     );
+  }
 
+  const resolveResult1 = () => {
+    if (ready) {
+      if (sending) {
+        return "Sending confirmation…";
+      }
+      return "Confirm I have read the criteria";
+    }
+    return "Not accepting acknowledgments yet";
+  };
   return (
     <form className="ack-form" onSubmit={onSubmit}>
       <div className="fields">
@@ -106,14 +119,14 @@ export function AcknowledgmentForm({
           </span>
           <input
             autoComplete="name"
-            name="fullName"
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            minLength={3}
-            maxLength={120}
-            required
             disabled={!ready || sending}
+            maxLength={120}
+            minLength={3}
+            name="fullName"
+            onChange={(event) => setFullName(event.target.value)}
             placeholder="As shown on your application"
+            required
+            value={fullName}
           />
         </label>
         <label className="field">
@@ -122,47 +135,47 @@ export function AcknowledgmentForm({
           </span>
           <input
             autoComplete="email"
-            name="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            maxLength={254}
-            required
             disabled={!ready || sending}
+            maxLength={254}
+            name="email"
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
+            required
+            type="email"
+            value={email}
           />
         </label>
       </div>
-      {requiresCode && (
+      {!!requiresCode && (
         <label className="field full-field">
           <span>
             Access code <span className="req">*</span>
           </span>
           <input
-            name="accessCode"
-            value={accessCode}
-            onChange={(event) => setAccessCode(event.target.value)}
             autoComplete="off"
-            required
             disabled={!ready || sending}
+            name="accessCode"
+            onChange={(event) => setAccessCode(event.target.value)}
             placeholder="Code provided by the landlord"
+            required
+            value={accessCode}
           />
         </label>
       )}
-      <div className="trap-field" aria-hidden="true">
+      <div aria-hidden="true" className="trap-field">
         <label>
           Website{" "}
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+          <input autoComplete="off" name="website" tabIndex={-1} type="text" />
         </label>
       </div>
       <div className="checkbox-stack">
         <label className="check-row">
           <input
-            type="checkbox"
             checked={read}
+            disabled={!ready || sending}
             onChange={(event) => setRead(event.target.checked)}
             required
-            disabled={!ready || sending}
+            type="checkbox"
           />
           <span>
             <strong>I have read this.</strong> I acknowledge that the tenant
@@ -172,11 +185,11 @@ export function AcknowledgmentForm({
         </label>
         <label className="check-row">
           <input
-            type="checkbox"
             checked={electronicConsent}
+            disabled={!ready || sending}
             onChange={(event) => setElectronicConsent(event.target.checked)}
             required
-            disabled={!ready || sending}
+            type="checkbox"
           />
           <span>
             I agree to sign this acknowledgment electronically and receive a
@@ -189,23 +202,17 @@ export function AcknowledgmentForm({
         limited technical details (such as IP address) are included in the
         confirmation record and emailed to you and the property owners.
       </div>
-      {error && (
+      {!!error && (
         <div className="form-error" role="alert">
           {error}
         </div>
       )}
       <Button
         className="submit-button"
+        disabled={!(ready && read && electronicConsent) || sending}
         type="submit"
-        disabled={!ready || !read || !electronicConsent || sending}
       >
-        <span>
-          {!ready
-            ? "Not accepting acknowledgments yet"
-            : sending
-              ? "Sending confirmation…"
-              : "Confirm I have read the criteria"}
-        </span>
+        <span>{resolveResult1()}</span>
         <span aria-hidden="true">↗</span>
       </Button>
       <p className="button-note">

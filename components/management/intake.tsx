@@ -1,8 +1,8 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
-import { Button } from "@/components/ui/button";
-
-import { AppSelect } from "@/components/ui/select";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { AppSelect } from "@/components/ui/select";
 import type { PropertyInput } from "@/lib/management/model";
 export function IntakeForm({
   kind,
@@ -33,48 +33,50 @@ export function IntakeForm({
     const data =
       kind === "application"
         ? {
-            name: str("name"),
-            email: str("email"),
-            phone: str("phone"),
-            currentAddress: str("currentAddress"),
-            monthlyIncome: Number(str("monthlyIncome")),
-            incomeDetails: str("incomeDetails"),
-            housingHistory: str("housingHistory"),
-            moveDate: str("moveDate"),
-            occupants: Number(str("occupants")),
-            notes: str("notes"),
-            acknowledgment: f.get("acknowledgment") === "on",
             accuracy: f.get("accuracy") === "on",
+            acknowledgment: f.get("acknowledgment") === "on",
+            currentAddress: str("currentAddress"),
+            email: str("email"),
+            housingHistory: str("housingHistory"),
+            incomeDetails: str("incomeDetails"),
+            monthlyIncome: Number(str("monthlyIncome")),
+            moveDate: str("moveDate"),
+            name: str("name"),
+            notes: str("notes"),
+            occupants: Number(str("occupants")),
+            phone: str("phone"),
           }
         : {
-            name: str("name"),
-            email: str("email"),
-            phone: str("phone"),
-            subject: str("subject"),
-            description: str("description"),
-            priority: str("priority"),
             accessNotes: str("accessNotes"),
+            description: str("description"),
+            email: str("email"),
+            name: str("name"),
+            phone: str("phone"),
+            priority: str("priority"),
+            subject: str("subject"),
           };
     try {
       const r = await fetch(
         kind === "application" ? "/api/applications" : "/api/maintenance",
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            criteriaVersion:
+              kind === "application" ? property.criteriaVersion : undefined,
+            data,
             id: requestId,
             propertyId,
             revision,
-            criteriaVersion:
-              kind === "application" ? property.criteriaVersion : undefined,
             token,
             website: str("website"),
-            data,
           }),
-        },
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        }
       );
       const result = await r.json();
-      if (!r.ok) throw new Error(result.error);
+      if (!r.ok) {
+        throw new Error(result.error);
+      }
       setReceipt(result.receipt);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to submit.");
@@ -82,7 +84,7 @@ export function IntakeForm({
       setBusy(false);
     }
   }
-  if (receipt)
+  if (receipt) {
     return (
       <section className="management-section" role="status">
         <h2>
@@ -99,6 +101,16 @@ export function IntakeForm({
         <p>{property.contact}</p>
       </section>
     );
+  }
+  const resolveResult1 = () => {
+    if (busy) {
+      return "Saving…";
+    }
+    if (kind === "application") {
+      return "Submit application";
+    }
+    return "Submit maintenance request";
+  };
   return (
     <form className="management-form" onSubmit={submit}>
       {kind === "application" ? (
@@ -124,28 +136,28 @@ export function IntakeForm({
           {kind === "application" ? "Your application" : "Repair details"}
         </legend>
         <div className="fields">
-          <Field name="name" label="Full name" />
-          <Field name="email" label="Email" type="email" />
-          <Field name="phone" label="Phone" type="tel" />
+          <Field label="Full name" name="name" />
+          <Field label="Email" name="email" type="email" />
+          <Field label="Phone" name="phone" type="tel" />
           {kind === "application" ? (
             <>
-              <Field name="currentAddress" label="Current address" />
+              <Field label="Current address" name="currentAddress" />
               <Field
-                name="monthlyIncome"
                 label="Gross monthly income ($)"
+                name="monthlyIncome"
                 type="number"
               />
-              <Field name="moveDate" label="Desired move-in date" type="date" />
+              <Field label="Desired move-in date" name="moveDate" type="date" />
               <Field
-                name="occupants"
                 label="Number of occupants"
-                type="number"
                 min="1"
+                name="occupants"
+                type="number"
               />
             </>
           ) : (
             <>
-              <Field name="subject" label="What needs repair?" />
+              <Field label="What needs repair?" name="subject" />
               <AppSelect label={<>Priority</>} name="priority">
                 <option value="routine">Routine</option>
                 <option value="urgent">Urgent — also contact the owner</option>
@@ -156,20 +168,20 @@ export function IntakeForm({
         {kind === "application" ? (
           <>
             <TextArea
-              name="incomeDetails"
               label="Income sources and employment details"
+              name="incomeDetails"
             />
             <TextArea
-              name="housingHistory"
               label="Housing history and references"
+              name="housingHistory"
             />
             <TextArea
-              name="notes"
               label="Additional information (optional)"
+              name="notes"
               required={false}
             />
             <label className="check-row">
-              <input name="acknowledgment" type="checkbox" required />I have had
+              <input name="acknowledgment" required type="checkbox" />I have had
               the opportunity to review the selection criteria above. Criteria
               may include criminal history, credit history, current income, and
               rental history. If I do not meet the criteria or provide
@@ -178,7 +190,7 @@ export function IntakeForm({
               subject to applicable law.
             </label>
             <label className="check-row">
-              <input name="accuracy" type="checkbox" required />I am submitting
+              <input name="accuracy" required type="checkbox" />I am submitting
               my own application, the information is accurate to the best of my
               knowledge, and I agree to submit it electronically. I understand
               any credit or background screening authorization will be handled
@@ -188,36 +200,32 @@ export function IntakeForm({
         ) : (
           <>
             <TextArea
-              name="description"
               label="Describe the issue and its location"
+              name="description"
             />
             <TextArea
-              name="accessNotes"
               label="Access instructions or preferred times (optional)"
+              name="accessNotes"
               required={false}
             />
           </>
         )}
-        <label className="trap-field" aria-hidden="true">
+        <label aria-hidden="true" className="trap-field">
           Leave blank
-          <input name="website" tabIndex={-1} autoComplete="off" />
+          <input autoComplete="off" name="website" tabIndex={-1} />
         </label>
         <p className="small-note">
           Do not enter Social Security numbers, bank details, passwords, or
           medical information. See our <a href="/privacy">Privacy Policy</a>.
         </p>
-        {error && <p role="alert">{error}</p>}
+        {!!error && <p role="alert">{error}</p>}
         <Button
-          type="submit"
-          variant="primary"
           className="submit-button"
           disabled={busy}
+          type="submit"
+          variant="primary"
         >
-          {busy
-            ? "Saving…"
-            : kind === "application"
-              ? "Submit application"
-              : "Submit maintenance request"}
+          {resolveResult1()}
         </Button>
       </fieldset>
     </form>
@@ -238,12 +246,12 @@ function Field({
     <label className="field">
       {label}
       <input
-        name={name}
-        type={type}
-        required
         maxLength={500}
         min={min}
+        name={name}
+        required
         step={type === "number" ? "any" : undefined}
+        type={type}
       />
     </label>
   );
@@ -260,7 +268,7 @@ function TextArea({
   return (
     <label className="field">
       {label}
-      <textarea name={name} required={required} rows={4} maxLength={3000} />
+      <textarea maxLength={3000} name={name} required={required} rows={4} />
     </label>
   );
 }

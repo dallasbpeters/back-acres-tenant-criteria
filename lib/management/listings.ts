@@ -2,25 +2,25 @@ import { amenityOptions } from "./amenities";
 import { dollars, type PropertyInput } from "./model";
 export const listingProviders = [
   {
+    coverage: "Zillow, Trulia, and HotPads",
     id: "zillow",
     name: "Zillow Rental Manager",
-    url: "https://www.zillow.com/rental-manager/",
-    coverage: "Zillow, Trulia, and HotPads",
     source: "https://www.zillow.com/rentals-network/",
+    url: "https://www.zillow.com/rental-manager/",
   },
   {
+    coverage: "Realtor.com and the Avail syndication network",
     id: "avail",
     name: "Avail",
-    url: "https://www.avail.com/landlords/rental-listings",
-    coverage: "Realtor.com and the Avail syndication network",
     source: "https://www.realtor.com/landlords/list-rental-property",
+    url: "https://www.avail.com/landlords/rental-listings",
   },
   {
+    coverage: "Apartments.com network, including Homes.com",
     id: "apartments",
     name: "Apartments.com",
-    url: "https://www.apartments.com/rental-manager",
-    coverage: "Apartments.com network, including Homes.com",
     source: "https://www.apartments.com/rental-manager",
+    url: "https://www.apartments.com/rental-manager",
   },
 ] as const;
 export function listingText(data: PropertyInput, slug: string, origin: string) {

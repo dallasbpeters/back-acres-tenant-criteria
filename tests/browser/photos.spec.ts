@@ -1,18 +1,28 @@
-import { test, expect } from "@playwright/test";
-import { loadEnvConfig } from "@next/env";
-import { encode } from "next-auth/jwt";
+// biome-ignore-all lint/performance/noAwaitInLoops: These stateful fixtures and assertions must finish each transition before the next request or cleanup.
+import { requireValue } from "@/lib/required";
+
+const pattern1 = /Zillow Rental Manager publishing status/;
+
 import { neon } from "@neondatabase/serverless";
+import { loadEnvConfig } from "@next/env";
+import { expect, test } from "@playwright/test";
 import { del } from "@vercel/blob";
+import { strFromU8, unzipSync } from "fflate";
+import { encode } from "next-auth/jwt";
 import sharp from "sharp";
-import { unzipSync, strFromU8 } from "fflate";
+
 loadEnvConfig(process.cwd());
 const origin = "http://localhost:3191",
   id = crypto.randomUUID(),
-  sql = neon(process.env.DATABASE_URL!);
+  sql = neon(
+    requireValue(process.env.DATABASE_URL, "Expected process.env.DATABASE_URL")
+  );
 async function cleanup() {
   const photos =
     await sql`SELECT blob_path FROM listing_photos WHERE property_id=${id}`;
-  if (photos.length) await del(photos.map((p) => p.blob_path));
+  if (photos.length) {
+    await del(photos.map((p) => p.blob_path));
+  }
   await sql`DELETE FROM listing_publications WHERE property_id=${id}`;
   await sql`DELETE FROM listing_photos WHERE property_id=${id}`;
   await sql`DELETE FROM management_events WHERE entity_id=${id}`;
@@ -25,64 +35,70 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
 }) => {
   test.skip(
     !process.env.BLOB_READ_WRITE_TOKEN,
-    "Requires the isolated listing-photo Blob store.",
+    "Requires the isolated listing-photo Blob store."
   );
-  test.setTimeout(90000);
+  test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   expect((await request.post("/api/admin/photos", { data: {} })).status()).toBe(
-    401,
+    401
   );
   const token = await encode({
-    secret: process.env.NEXTAUTH_SECRET!,
-    token: {
-      email: process.env.ADMIN_EMAILS!.split(",")[0],
-      sub: "fixture-owner",
-      googleVerified: true,
-    },
     maxAge: 3600,
+    secret: requireValue(
+      process.env.NEXTAUTH_SECRET,
+      "Expected process.env.NEXTAUTH_SECRET"
+    ),
+    token: {
+      email: requireValue(
+        process.env.ADMIN_EMAILS,
+        "Expected process.env.ADMIN_EMAILS"
+      ).split(",")[0],
+      googleVerified: true,
+      sub: "fixture-owner",
+    },
   });
   await page.context().addCookies([
     {
-      name: "next-auth.session-token",
-      value: token,
-      url: origin,
       httpOnly: true,
+      name: "next-auth.session-token",
       sameSite: "Lax",
+      url: origin,
+      value: token,
     },
   ]);
   const data = {
-    name: "Photo workflow verification",
+    acceptingApplications: true,
     address: `1 Test St Unit ${id}`,
+    amenities: ["yard"],
+    availableDate: "",
+    bathrooms: 1,
+    bedrooms: 2,
+    contact: "fixture@example.invalid",
     description:
       "Temporary test fixture — not a rental offer.\n\nFull description ends here; this paragraph must remain visible.",
-    rentCents: 100000,
-    amenities: ["yard"],
-    bedrooms: 2,
-    bathrooms: 1,
-    availableDate: "",
-    contact: "fixture@example.invalid",
+    name: "Photo workflow verification",
     published: false,
-    acceptingApplications: true,
+    rentCents: 100_000,
   };
   const save = (revision: number, published: boolean) =>
     page.request.post("/api/admin/management", {
+      data: { action: "property", data: { ...data, published }, id, revision },
       headers: { origin },
-      data: { action: "property", id, revision, data: { ...data, published } },
     });
   expect((await save(0, false)).ok()).toBe(true);
   await page.goto("/admin#properties");
   await page
-    .getByRole("button", { name: `Edit ${data.name}`, exact: true })
+    .getByRole("button", { exact: true, name: `Edit ${data.name}` })
     .click();
-  const amenities = page.getByRole("group", { name: "Amenities", exact: true });
+  const amenities = page.getByRole("group", { exact: true, name: "Amenities" });
   await expect(
-    amenities.getByRole("checkbox", { name: "Yard", exact: true }),
+    amenities.getByRole("checkbox", { exact: true, name: "Yard" })
   ).toBeChecked();
-  await amenities.getByRole("checkbox", { name: "Patio", exact: true }).check();
+  await amenities.getByRole("checkbox", { exact: true, name: "Patio" }).check();
   await expect(amenities.locator(".amenity-option svg")).toHaveCount(16);
   await page
-    .getByRole("button", { name: "Save property", exact: true })
+    .getByRole("button", { exact: true, name: "Save property" })
     .click();
   await expect
     .poll(async () => {
@@ -98,62 +114,62 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   expect(
     (
       await page.request.post("/api/admin/photos", {
-        headers: { origin: "https://evil.example" },
         data: {},
+        headers: { origin: "https://evil.example" },
       })
-    ).status(),
+    ).status()
   ).toBe(403);
   expect(
     (
       await page.request.post("/api/admin/photos", {
         headers: { origin },
         multipart: {
-          propertyId: id,
           file: {
-            name: "bad.svg",
-            mimeType: "image/svg+xml",
             buffer: Buffer.from("<svg/>"),
+            mimeType: "image/svg+xml",
+            name: "bad.svg",
           },
+          propertyId: id,
         },
       })
-    ).status(),
+    ).status()
   ).toBe(400);
   expect(
     (
       await page.request.post("/api/admin/photos", {
         headers: { origin },
         multipart: {
-          propertyId: id,
           file: {
-            name: "disguised.jpg",
-            mimeType: "image/jpeg",
             buffer: Buffer.from("<svg/>"),
+            mimeType: "image/jpeg",
+            name: "disguised.jpg",
           },
+          propertyId: id,
         },
       })
-    ).status(),
+    ).status()
   ).toBe(400);
   const image = await sharp({
-    create: { width: 3000, height: 1800, channels: 3, background: "#7a9c93" },
+    create: { background: "#7a9c93", channels: 3, height: 1800, width: 3000 },
   })
     .withMetadata()
     .jpeg()
     .toBuffer();
   await page.goto(`/admin?property=${id}#publishing`);
   await expect(
-    page.getByRole("heading", { name: "Photos & publishing", exact: true }),
+    page.getByRole("heading", { exact: true, name: "Photos & publishing" })
   ).toBeVisible();
   await page.getByLabel("Upload listing photos").setInputFiles([
-    { name: "one.jpg", mimeType: "image/jpeg", buffer: image },
-    { name: "two.jpg", mimeType: "image/jpeg", buffer: image },
+    { buffer: image, mimeType: "image/jpeg", name: "one.jpg" },
+    { buffer: image, mimeType: "image/jpeg", name: "two.jpg" },
   ]);
   await expect(page.getByText("Photos uploaded.", { exact: true })).toBeVisible(
-    { timeout: 45000 },
+    { timeout: 45_000 }
   );
   const records = async () =>
     (await page.request.get("/api/admin/management")).json();
-  let photos = (await records()).photos.filter(
-    (p: { propertyId: string }) => p.propertyId === id,
+  const photos: { id: string; url: string }[] = (await records()).photos.filter(
+    (p: { propertyId: string }) => p.propertyId === id
   );
   expect(photos).toHaveLength(2);
   expect((await request.get(photos[0].url)).status()).toBe(404);
@@ -168,33 +184,39 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
     .poll(
       async () =>
         (await records()).photos.find(
-          (p: { id: string }) => p.id === photos[0].id,
-        ).caption,
+          (p: { id: string }) => p.id === photos[0].id
+        ).caption
     )
     .toBe("Fixture exterior");
   const gallery = page.getByRole("region", {
-    name: "Listing photos",
     exact: true,
+    name: "Listing photos",
   });
   const first = gallery.getByRole("button", {
-    name: "Reorder photo 1",
     exact: true,
+    name: "Reorder photo 1",
   });
   const second = gallery.getByRole("button", {
-    name: "Reorder photo 2",
     exact: true,
+    name: "Reorder photo 2",
   });
   await page.mouse.move(0, 0);
   await expect(
-    gallery.getByRole("button", { name: "Remove photo 1", exact: true }),
+    gallery.getByRole("button", { exact: true, name: "Remove photo 1" })
   ).toHaveCSS("opacity", "0");
   await expect(first).toBeEnabled();
   await first.hover();
   await expect(
-    gallery.getByRole("button", { name: "Remove photo 1", exact: true }),
+    gallery.getByRole("button", { exact: true, name: "Remove photo 1" })
   ).toHaveCSS("opacity", "1");
-  const from = (await first.boundingBox())!,
-    to = (await second.boundingBox())!;
+  const from = requireValue(
+      await first.boundingBox(),
+      "Expected (await first.boundingBox())"
+    ),
+    to = requireValue(
+      await second.boundingBox(),
+      "Expected (await second.boundingBox())"
+    );
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
@@ -204,29 +226,27 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await expect
     .poll(
       async () =>
-        (await records()).photos.filter(
+        (await records()).photos.find(
           (p: { propertyId: string; archived: boolean }) =>
-            p.propertyId === id && !p.archived,
-        )[0].id,
+            p.propertyId === id && !p.archived
+        )?.id
     )
     .toBe(photos[1].id);
+  await page.getByRole("button", { name: pattern1 }).click();
   await page
-    .getByRole("button", { name: /Zillow Rental Manager publishing status/ })
-    .click();
-  await page
-    .getByRole("option", { name: "Live — confirmed by me", exact: true })
+    .getByRole("option", { exact: true, name: "Live — confirmed by me" })
     .click();
   await expect(
-    page.getByText("Publishing status saved.", { exact: true }),
+    page.getByText("Publishing status saved.", { exact: true })
   ).toBeVisible();
   await page.reload();
   await expect(gallery.locator(".photo-edit-item").first()).toHaveAttribute(
     "data-photo-id",
-    photos[1].id,
+    photos[1].id
   );
   await page.screenshot({
-    path: "test-results/photo-before-keyboard.png",
     fullPage: true,
+    path: "test-results/photo-before-keyboard.png",
   });
   // Keyboard users can reorder and cancel without a pointer.
   await first.focus();
@@ -236,25 +256,25 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      )
   );
   await page.keyboard.press("ArrowRight");
   await expect
     .poll(() =>
       gallery
         .locator(".photo-dragging")
-        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41),
+        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41)
     )
     .toBeGreaterThan(1);
   await page.keyboard.press("Space");
   await expect
     .poll(
       async () =>
-        (await records()).photos.filter(
+        (await records()).photos.find(
           (p: { propertyId: string; archived: boolean }) =>
-            p.propertyId === id && !p.archived,
-        )[0].id,
+            p.propertyId === id && !p.archived
+        )?.id
     )
     .toBe(photos[0].id);
   await expect(second).toBeEnabled();
@@ -265,25 +285,25 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      )
   );
   await page.keyboard.press("ArrowLeft");
   await expect
     .poll(() =>
       gallery
         .locator(".photo-dragging")
-        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41),
+        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41)
     )
     .toBeLessThan(-1);
   await page.keyboard.press("Space");
   await expect
     .poll(
       async () =>
-        (await records()).photos.filter(
+        (await records()).photos.find(
           (p: { propertyId: string; archived: boolean }) =>
-            p.propertyId === id && !p.archived,
-        )[0].id,
+            p.propertyId === id && !p.archived
+        )?.id
     )
     .toBe(photos[1].id);
   await first.focus();
@@ -293,111 +313,111 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      )
   );
   await page.keyboard.press("ArrowRight");
   await expect
     .poll(() =>
       gallery
         .locator(".photo-dragging")
-        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41),
+        .evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41)
     )
     .toBeGreaterThan(1);
   await page.keyboard.press("Escape");
   await expect(gallery.locator(".photo-edit-item").first()).toHaveAttribute(
     "data-photo-id",
-    photos[1].id,
+    photos[1].id
   );
   await first.hover();
   await page.screenshot({
-    path: "test-results/photo-gallery-drag-and-drop.png",
     fullPage: true,
+    path: "test-results/photo-gallery-drag-and-drop.png",
   });
   await page.getByLabel("Caption for photo 1").fill("Updated cover caption");
   await page.getByLabel("Caption for photo 1").blur();
   await expect(
     page.getByText(
-      "Listing details or photos changed. Update this site, then confirm its status again.",
-    ),
+      "Listing details or photos changed. Update this site, then confirm its status again."
+    )
   ).toBeVisible();
   expect((await request.get(`/api/admin/listings/${id}/export`)).status()).toBe(
-    401,
+    401
   );
   const exported = await page.request.get(`/api/admin/listings/${id}/export`);
   expect(exported.ok()).toBe(true);
   const files = unzipSync(await exported.body());
   expect(
-    Object.keys(files).filter((p) => p.startsWith("photos/")),
+    Object.keys(files).filter((p) => p.startsWith("photos/"))
   ).toHaveLength(2);
   expect(strFromU8(files["listing.txt"])).toContain(data.address);
   expect(strFromU8(files["listing.txt"])).toContain("Amenities: Yard, Patio");
   expect(strFromU8(files["READ-ME.txt"])).toContain(
-    "Nothing has been submitted",
+    "Nothing has been submitted"
   );
   await gallery
-    .getByRole("button", { name: "Remove photo 2", exact: true })
+    .getByRole("button", { exact: true, name: "Remove photo 2" })
     .focus();
   await expect(
-    gallery.getByRole("button", { name: "Remove photo 2", exact: true }),
+    gallery.getByRole("button", { exact: true, name: "Remove photo 2" })
   ).toHaveCSS("opacity", "1");
   await gallery
-    .getByRole("button", { name: "Remove photo 2", exact: true })
+    .getByRole("button", { exact: true, name: "Remove photo 2" })
     .click();
   await expect
     .poll(
       async () =>
         (await records()).photos.find(
-          (p: { id: string }) => p.id === photos[0].id,
-        ).archived,
+          (p: { id: string }) => p.id === photos[0].id
+        ).archived
     )
     .toBe(true);
   await page.getByText("Removed photos (1)", { exact: true }).click();
   await page
-    .getByRole("button", { name: "Restore photo", exact: true })
+    .getByRole("button", { exact: true, name: "Restore photo" })
     .click();
   await expect
     .poll(
       async () =>
         (await records()).photos.find(
-          (p: { id: string }) => p.id === photos[0].id,
-        ).archived,
+          (p: { id: string }) => p.id === photos[0].id
+        ).archived
     )
     .toBe(false);
   await page.emulateMedia({ media: "screen" });
-  const mobile = await page
-    .context()
-    .browser()!
-    .newContext({
-      viewport: { width: 390, height: 844 },
-      hasTouch: true,
-      isMobile: true,
-    });
+  const mobile = await requireValue(
+    page.context().browser(),
+    "Expected page     .context()     .browser()"
+  ).newContext({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { height: 844, width: 390 },
+  });
   await mobile.addCookies(await page.context().cookies());
   const mobilePage = await mobile.newPage();
   await mobilePage.goto(`/admin?property=${id}#publishing`);
   await expect(
-    mobilePage.getByRole("button", { name: "Remove photo 1", exact: true }),
+    mobilePage.getByRole("button", { exact: true, name: "Remove photo 1" })
   ).toHaveCSS("opacity", "1");
   expect(
     await mobilePage.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
   ).toBe(true);
   await mobile.close();
   expect((await save(2, true)).ok()).toBe(true);
   expect((await request.get(photos[0].url)).ok()).toBe(true);
   const property = (await records()).properties.find(
-    (p: { id: string }) => p.id === id,
+    (p: { id: string }) => p.id === id
   );
   await page.goto(`/properties/${property.slug}`);
   await expect(page.locator("#property-overview")).toHaveCSS(
     "border-bottom-width",
-    "0px",
+    "0px"
   );
   await expect(page.locator("#property-about")).toHaveCSS(
     "border-top-width",
-    "0px",
+    "0px"
   );
   await expect(page.locator("#property-amenities li")).toHaveCount(2);
   await expect(page.locator("#property-amenities li svg")).toHaveCount(2);
@@ -405,19 +425,19 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await expect(page.locator("#property-amenities")).toContainText("Patio");
 
   await expect(
-    page.getByRole("region", { name: "Property photos" }),
+    page.getByRole("region", { name: "Property photos" })
   ).toBeVisible();
   await page
     .getByRole("button", { name: "View photo 2: Fixture exterior" })
     .click();
   await expect(
-    page.getByRole("img", { name: "Fixture exterior", exact: true }),
+    page.getByRole("img", { exact: true, name: "Fixture exterior" })
   ).toBeVisible();
   const viewer = page.getByRole("dialog", { name: `${data.name} · Photos` });
   await expect(viewer).toBeVisible();
   const closePhotos = viewer.getByRole("button", {
-    name: "Close photos",
     exact: true,
+    name: "Close photos",
   });
   await expect(closePhotos.locator("svg")).toHaveCount(1);
   await expect(closePhotos).toHaveText("");
@@ -427,31 +447,31 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await page.keyboard.press("ArrowRight");
   await expect(viewer.getByText("Photo 1 of 2", { exact: true })).toBeVisible();
   await viewer
-    .getByRole("button", { name: "Previous photo", exact: true })
+    .getByRole("button", { exact: true, name: "Previous photo" })
     .click();
   await expect(viewer.getByText("Photo 2 of 2", { exact: true })).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
+      () => document.documentElement.scrollWidth <= innerWidth
+    )
   ).toBe(true);
   await page.keyboard.press("Escape");
   await expect(viewer).not.toBeVisible();
   await expect(
-    page.getByRole("button", { name: "View photo 2: Fixture exterior" }),
+    page.getByRole("button", { name: "View photo 2: Fixture exterior" })
   ).toBeFocused();
   await expect(
     page.getByText(
       "Full description ends here; this paragraph must remain visible.",
-      { exact: true },
-    ),
+      { exact: true }
+    )
   ).toBeVisible();
   for (const mode of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: mode });
     const apply = page.getByRole("link", {
-      name: "Apply for this property",
       exact: true,
+      name: "Apply for this property",
     });
     const ink = await apply.evaluate((e) => getComputedStyle(e).color);
     await apply.hover();
@@ -462,11 +482,11 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   await expect(
     page.getByText(
       "Full description ends here; this paragraph must remain visible.",
-      { exact: true },
-    ),
+      { exact: true }
+    )
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Owner workspace", exact: true }),
+    page.getByRole("link", { exact: true, name: "Owner workspace" })
   ).toBeVisible();
   const visitor = await request.get("/properties");
   expect(await visitor.text()).not.toContain('href="/admin"');
@@ -475,19 +495,19 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   expect(
     (
       await page.request.patch("/api/admin/photos", {
+        data: { action: "archive", archived: true, id: photos[0].id },
         headers: { origin },
-        data: { action: "archive", id: photos[0].id, archived: true },
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   expect((await request.get(photos[0].url)).status()).toBe(404);
   expect(
     (
       await page.request.patch("/api/admin/photos", {
+        data: { action: "archive", archived: false, id: photos[0].id },
         headers: { origin },
-        data: { action: "archive", id: photos[0].id, archived: false },
       })
-    ).ok(),
+    ).ok()
   ).toBe(true);
   expect((await save(3, false)).ok()).toBe(true);
   expect((await request.get(photos[0].url)).status()).toBe(404);
@@ -499,43 +519,43 @@ test("photo upload, draft privacy, cover order, export, publication tracking and
   page.once("dialog", (dialog) => dialog.dismiss());
   await page
     .getByRole("navigation", { name: "Account navigation" })
-    .getByRole("button", { name: "Sign out", exact: true })
+    .getByRole("button", { exact: true, name: "Sign out" })
     .click();
   await expect(
-    page.getByLabel("Applicant full name", { exact: true }),
+    page.getByLabel("Applicant full name", { exact: true })
   ).toHaveValue("Unsaved fixture");
   expect((await page.request.get("/api/admin/management")).ok()).toBe(true);
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "New notice", exact: true }).click();
+  await page.getByRole("button", { exact: true, name: "New notice" }).click();
   await expect(
-    page.getByLabel("Applicant full name", { exact: true }),
+    page.getByLabel("Applicant full name", { exact: true })
   ).toHaveValue("");
   await expect(
     page
       .getByRole("navigation", { name: "Account navigation" })
-      .getByRole("button", { name: "Sign out", exact: true }),
+      .getByRole("button", { exact: true, name: "Sign out" })
   ).toHaveCount(1);
   await expect(
     page
       .getByRole("navigation", { name: "Account navigation" })
-      .getByRole("link", { name: "Workspace", exact: true }),
+      .getByRole("link", { exact: true, name: "Workspace" })
   ).toHaveAttribute("href", "/admin");
   await page
     .getByRole("navigation", { name: "Workspace sections" })
-    .getByRole("link", { name: "Properties", exact: true })
+    .getByRole("link", { exact: true, name: "Properties" })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Properties", exact: true }),
+    page.getByRole("heading", { exact: true, name: "Properties" })
   ).toBeVisible();
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
   ).toBe(true);
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ height: 1000, width: 1440 });
   await page.screenshot({
-    path: "test-results/owner-workspace-updated.png",
     fullPage: true,
+    path: "test-results/owner-workspace-updated.png",
   });
   expect(errors).toEqual([]);
 });

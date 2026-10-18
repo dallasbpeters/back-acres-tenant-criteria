@@ -26,6 +26,7 @@ Run `npm run fix -- <files>` to format and safely fix the files you changed,
 then `npm run check -- <files>` to verify them. Husky runs lint-staged followed
 by the full TypeScript check before committing. Do not bypass the hook.
 
-The existing app has a documented strict-lint baseline in `docs/code-checks.md`;
-a whole-project `npm run check` is not currently clean. Keep new or edited files
-passing the configured rules, and do not disable rules globally to hide old debt.
+The full-project `npm run check` must pass before completion. Keep new or edited
+files passing the configured rules. Do not disable rules globally to hide debt;
+necessary source-scoped exceptions must explain the behavior or safety invariant.
+See `docs/code-checks.md` for the lint policy and intentional exceptions.

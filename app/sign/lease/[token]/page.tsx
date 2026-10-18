@@ -1,10 +1,10 @@
-import { ManagementShell } from "@/components/management/shell";
 import { LeaseSigner } from "@/components/management/lease-signer";
+import { ManagementShell } from "@/components/management/shell";
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Review and sign your lease | Back Acres",
-  robots: { index: false, follow: false },
   referrer: "no-referrer" as const,
+  robots: { follow: false, index: false },
+  title: "Review and sign your lease | Back Acres",
 };
 export default async function Page({
   params,
