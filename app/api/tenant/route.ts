@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
     }
     if (!(await allowIntake(request, `tenant-maintenance:${access.id}`))) {
       return reply(
-        { error: "Too many requests. Please contact the owner directly." },
+        {
+          error:
+            "Too many requests. Please contact Back Acres Rentals directly.",
+        },
         429
       );
     }
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest) {
     return reply({ receipt: id }, 201);
   } catch {
     return reply(
-      { error: "Could not save. Please retry or contact the owner." },
+      { error: "Could not save. Please retry or contact Back Acres Rentals." },
       503
     );
   }

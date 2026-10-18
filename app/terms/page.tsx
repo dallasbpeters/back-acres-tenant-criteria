@@ -112,10 +112,10 @@ export default function TermsPage() {
           amount, first debit date, monthly frequency, and payment count before
           authorizing. Bank debits may take several business days to settle. An
           initiated payment is not confirmed payment. Use the private enrollment
-          page to stop future debits, or contact the owner. Stopping payments
-          does not reverse debits already submitted or alter rent due under your
-          lease. Changes to bank details or payment terms require a new
-          enrollment. The enrollment page provides a downloadable copy of
+          page to stop future debits, or contact Back Acres Rentals. Stopping
+          payments does not reverse debits already submitted or alter rent due
+          under your lease. Changes to bank details or payment terms require a
+          new enrollment. The enrollment page provides a downloadable copy of
           accepted payment terms; a copy is also queued for email. Keep it and
           the separate Stripe mandate.
         </p>
@@ -141,7 +141,7 @@ export default function TermsPage() {
         <h2>07 · Availability, changes, and contact</h2>
         <p>
           The website may be unavailable during maintenance or service
-          interruptions. Contact the owner if you cannot submit an
+          interruptions. Contact Back Acres Rentals if you cannot submit an
           acknowledgment, need a copy of a record, or have a time-sensitive
           issue. Updated website terms will show a new effective date here;
           changing this page does not change a prior acknowledgment, saved

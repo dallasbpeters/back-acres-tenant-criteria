@@ -35,13 +35,16 @@ export async function POST(request: NextRequest) {
       .where(and(eq(residentLinks.id, id), notRemoved(residentLinks.id)));
     if (!link || link.revoked || link.expiresAt.getTime() < Date.now()) {
       return reply(
-        { error: "This link has expired. Contact the property owner." },
+        { error: "This link has expired. Contact Back Acres Rentals." },
         404
       );
     }
     if (!(await allowIntake(request, `maintenance:${id}`))) {
       return reply(
-        { error: "Too many requests. Please contact the owner directly." },
+        {
+          error:
+            "Too many requests. Please contact Back Acres Rentals directly.",
+        },
         429
       );
     }
@@ -58,7 +61,8 @@ export async function POST(request: NextRequest) {
   } catch {
     return reply(
       {
-        error: "Could not save the request. Please retry or contact the owner.",
+        error:
+          "Could not save the request. Please retry or contact Back Acres Rentals.",
       },
       503
     );

@@ -14,7 +14,10 @@ export async function POST(request: NextRequest) {
   }
   if (!paymentReady()) {
     return reply(
-      { error: "Online payments are not available yet. Contact the owner." },
+      {
+        error:
+          "Online payments are not available yet. Contact Back Acres Rentals.",
+      },
       503
     );
   }
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest) {
       return reply(
         {
           error:
-            "This request belongs to a different payment environment. Ask the owner for a new payment link.",
+            "This request belongs to a different payment environment. Ask Back Acres Rentals for a new payment link.",
         },
         409
       );
@@ -130,7 +133,7 @@ export async function POST(request: NextRequest) {
       return reply(
         {
           error:
-            "This checkout is processing, completed, or expired. Contact the owner before making another payment.",
+            "This checkout is processing, completed, or expired. Contact Back Acres Rentals before making another payment.",
         },
         409
       );
@@ -140,7 +143,7 @@ export async function POST(request: NextRequest) {
     return reply(
       {
         error:
-          "Could not open secure checkout. Please try again or contact the owner.",
+          "Could not open secure checkout. Please try again or contact Back Acres Rentals.",
       },
       503
     );

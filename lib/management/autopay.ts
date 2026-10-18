@@ -10,7 +10,7 @@ import { collectStripePages, paymentMode, stripe } from "./stripe";
 
 type Schedule = typeof rentSchedules.$inferSelect;
 export function authorizationText(r: Schedule) {
-  return `I authorize Back Acres Rental to debit my US bank account ${dollars(r.monthlyCents)} monthly for ${r.installments} payments, beginning ${r.firstDate}, on the same calendar day each month. Total scheduled: ${dollars(r.monthlyCents * r.installments)}. Debits are initiated at 12:00 UTC; bank posting may occur later, including after weekends or holidays. This authorization covers rent only, with no automatic renewal or variable charges. I can stop future debits using this private link or by contacting the owner. Canceling does not cancel my lease or reverse payments already submitted. I will keep a copy of these terms and the Stripe mandate.`;
+  return `I authorize Back Acres Rental to debit my US bank account ${dollars(r.monthlyCents)} monthly for ${r.installments} payments, beginning ${r.firstDate}, on the same calendar day each month. Total scheduled: ${dollars(r.monthlyCents * r.installments)}. Debits are initiated at 12:00 UTC; bank posting may occur later, including after weekends or holidays. This authorization covers rent only, with no automatic renewal or variable charges. I can stop future debits using this private link or by contacting Back Acres Rentals. Canceling does not cancel my lease or reverse payments already submitted. I will keep a copy of these terms and the Stripe mandate.`;
 }
 export async function stopAutopay(id: string) {
   const d = db();

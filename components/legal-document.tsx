@@ -47,7 +47,7 @@ export function LegalDocument({
 export function LegalContact() {
   return (
     <p>
-      Contact the Back Acres property owner at{" "}
+      Contact Back Acres Rentals at{" "}
       <a href="mailto:dallaspeters@gmail.com">dallaspeters@gmail.com</a>. For
       privacy requests, identify the record or account involved. Please do not
       email Social Security numbers, full financial account numbers, passwords,

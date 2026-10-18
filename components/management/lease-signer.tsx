@@ -15,6 +15,7 @@ interface Record {
   brandName: string;
   consent?: string;
   consentVersion?: string;
+  contact?: string;
   declinedAt?: string;
   documentHash?: string;
   email: string;
@@ -37,6 +38,7 @@ export function LeaseSigner({ token }: { token: string }) {
     [message, setMessage] = useState(""),
     [withdrawn, setWithdrawn] = useState(false);
   const endpoint = `/api/lease-signing/${token}`;
+  const contact = record?.contact || record?.brandName || "Back Acres Rentals";
   const load = useCallback(
     async (session = key) => {
       const r = await fetch(endpoint, {
@@ -154,8 +156,7 @@ export function LeaseSigner({ token }: { token: string }) {
       if (record.declinedAt) {
         return (
           <p>
-            Electronic signing was declined. Contact your landlord for a paper
-            copy.
+            Electronic signing was declined. Contact {contact} for a paper copy.
           </p>
         );
       }
@@ -230,7 +231,7 @@ export function LeaseSigner({ token }: { token: string }) {
               onClick={() => {
                 if (
                   /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
-                    "Decline electronic signing and ask the landlord for a paper alternative?"
+                    `Decline electronic signing and ask ${contact} for a paper alternative?`
                   )
                 ) {
                   act({ action: "withdraw" });
@@ -247,7 +248,7 @@ export function LeaseSigner({ token }: { token: string }) {
     if (withdrawn) {
       return (
         <p role="status">
-          Electronic signing declined. Contact your landlord for a paper copy or
+          Electronic signing declined. Contact {contact} for a paper copy or
           another way to sign. No signature was added.
         </p>
       );
@@ -279,6 +280,7 @@ export function LeaseSigner({ token }: { token: string }) {
                 Signed PDF SHA-256: {record.finalHash}
               </p>
             )}
+            <p className="small-note">Lease contact: {contact}</p>
             {resolveResult2()}
           </>
         );
@@ -323,8 +325,8 @@ export function LeaseSigner({ token }: { token: string }) {
             </Button>
           </form>
           <p className="small-note">
-            Need paper instead? Contact your landlord. This link is private;
-            don’t forward it.
+            Need paper instead? Contact {contact}. This link is private; don’t
+            forward it.
           </p>
         </>
       );
@@ -332,7 +334,7 @@ export function LeaseSigner({ token }: { token: string }) {
     return (
       <p>
         {error
-          ? "Contact your landlord if this problem continues."
+          ? `Contact ${contact} if this problem continues.`
           : "Loading signing request…"}
       </p>
     );

@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       return reply(
         {
           error:
-            "The enrollment deadline passed. Ask the owner for a new schedule.",
+            "The enrollment deadline passed. Ask Back Acres Rentals for a new schedule.",
         },
         409
       );
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       return reply(
         {
           error:
-            "Bank setup is submitted or expired. Refresh for verification instructions, or ask the owner for a new enrollment.",
+            "Bank setup is submitted or expired. Refresh for verification instructions, or ask Back Acres Rentals for a new enrollment.",
         },
         409
       );
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     return reply(
       {
         error:
-          "Could not complete this request. Refresh for status or contact the owner before retrying.",
+          "Could not complete this request. Refresh for status or contact Back Acres Rentals before retrying.",
       },
       503
     );

@@ -120,6 +120,7 @@ export default async function TenantPortal() {
                   id={index === 0 ? "payments" : undefined}
                 >
                   <PaymentHistory
+                    contact={property?.data.contact}
                     history={history}
                     payments={payments}
                     schedules={schedules}
@@ -154,6 +155,7 @@ export default async function TenantPortal() {
                   <details>
                     <summary>New maintenance request</summary>
                     <TenantRequestForm
+                      contact={property?.data.contact}
                       email={email}
                       id={access.id}
                       name={access.name}
@@ -173,9 +175,9 @@ export default async function TenantPortal() {
       <section className="tenant-empty">
         <h2>Your account is ready</h2>
         <p>
-          Your property owner needs to connect your tenancy before you can view
-          payments or submit maintenance requests. Give the owner your verified
-          account email.
+          Back Acres Rentals needs to connect your tenancy before you can view
+          payments or submit maintenance requests. Send Back Acres Rentals your
+          verified account email.
         </p>
         <a href="/tenant/settings">Manage account settings</a>
       </section>
@@ -183,8 +185,8 @@ export default async function TenantPortal() {
   } catch {
     content = (
       <p role="alert">
-        We couldn’t load your tenancy. Please refresh or contact the property
-        owner. Your account settings are still available.
+        We couldn’t load your tenancy. Please refresh or contact Back Acres
+        Rentals. Your account settings are still available.
       </p>
     );
   }

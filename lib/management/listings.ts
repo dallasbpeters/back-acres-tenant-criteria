@@ -27,7 +27,7 @@ export function listingText(data: PropertyInput, slug: string, origin: string) {
   return [
     `${data.name}\n${data.address}`,
     `${dollars(data.rentCents)} / month · ${data.bedrooms} bedrooms · ${data.bathrooms} bathrooms`,
-    `Available: ${data.availableDate || "Contact owner"}`,
+    `Available: ${data.availableDate || "Contact Back Acres Rentals"}`,
     data.description,
     ...(data.amenities?.length
       ? [

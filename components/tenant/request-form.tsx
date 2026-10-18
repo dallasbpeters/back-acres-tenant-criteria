@@ -8,7 +8,9 @@ export function TenantRequestForm({
   name,
   email,
   phone,
+  contact = "Back Acres Rentals",
 }: {
+  contact?: string;
   id: string;
   name: string;
   email: string;
@@ -84,7 +86,7 @@ export function TenantRequestForm({
       </label>
       <p className="small-note">
         This portal is not monitored continuously. For immediate danger, call
-        911. For urgent property damage, contact the owner directly as well.
+        911. For urgent property damage, contact {contact} directly as well.
       </p>
       <Button disabled={pending} type="submit" variant="primary">
         {pending ? "Submitting…" : "Submit maintenance request"}

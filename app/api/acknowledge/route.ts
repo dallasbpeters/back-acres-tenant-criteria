@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       return respond(
         {
           error:
-            "Your confirmation could not be sent. Please try again or contact the landlord.",
+            "Your confirmation could not be sent. Please try again or contact Back Acres Rentals.",
         },
         502
       );

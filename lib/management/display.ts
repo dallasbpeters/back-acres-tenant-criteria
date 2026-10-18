@@ -1,6 +1,6 @@
 export function availabilityDate(value: string) {
   if (!value) {
-    return "Contact owner";
+    return "Contact Back Acres Rentals";
   }
   const date = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) {

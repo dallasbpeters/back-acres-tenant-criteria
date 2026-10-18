@@ -5,7 +5,9 @@ export function PaymentHistory({
   payments,
   schedules,
   history,
+  contact = "Back Acres Rentals",
 }: {
+  contact?: string;
   payments: (typeof invoices.$inferSelect)[];
   schedules: (typeof rentSchedules.$inferSelect)[];
   history: (typeof paymentHistory.$inferSelect)[];
@@ -16,7 +18,7 @@ export function PaymentHistory({
       <p className="small-note">
         {paymentMode() === "test"
           ? "Test payments only. No real payments are collected."
-          : "Payments shared by your property owner. Bank payments may take several business days to settle."}
+          : "Payments shared by Back Acres Rentals. Bank payments may take several business days to settle."}
       </p>
       {payments.length ? (
         <div className="tenant-table-wrap">
@@ -54,8 +56,8 @@ export function PaymentHistory({
           <summary>Payment activity and refunds</summary>
           <p className="small-note">
             Recorded invoice changes. Older invoices begin with a baseline;
-            earlier activity is available from the owner’s Stripe records. These
-            entries are not a bank statement.
+            earlier activity is available from Back Acres Rentals’ Stripe
+            records. These entries are not a bank statement.
           </p>
           <ul className="tenant-request-list">
             {history.map((entry) => (
@@ -102,7 +104,7 @@ export function PaymentHistory({
       )}
       <p>
         Use your private enrollment link to authorize or stop automatic
-        payments. Contact the owner to change the payment amount or bank
+        payments. Contact {contact} to change the payment amount or bank
         account.
       </p>
     </>

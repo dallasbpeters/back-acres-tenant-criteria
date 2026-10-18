@@ -92,11 +92,11 @@ export function IntakeForm({
         </h2>
         <p>Reference: {receipt}</p>
         <p>
-          Save this reference for your records. The owner will review your
-          submission.{" "}
+          Save this reference for your records. Back Acres Rentals will review
+          your submission.{" "}
           {kind === "application"
             ? "This is not an approval or a lease. Your email address has not been verified."
-            : "For urgent needs, contact the owner directly."}
+            : `For urgent needs, contact ${property.contact} directly.`}
         </p>
         <p>{property.contact}</p>
       </section>
@@ -160,7 +160,10 @@ export function IntakeForm({
               <Field label="What needs repair?" name="subject" />
               <AppSelect label={<>Priority</>} name="priority">
                 <option value="routine">Routine</option>
-                <option value="urgent">Urgent — also contact the owner</option>
+                <option value="urgent">
+                  Urgent — also contact{" "}
+                  {property.emergencyContact || property.contact}
+                </option>
               </AppSelect>
             </>
           )}

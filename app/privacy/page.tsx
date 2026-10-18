@@ -213,7 +213,7 @@ export default function PrivacyPage() {
           does not erase earlier versions.
         </p>
         <p>
-          You may contact the property owner to request access to, correction
+          You may contact Back Acres Rentals to request access to, correction
           of, or deletion of information associated with you. The owner may need
           to verify your identity and retain information needed for applicable
           legal obligations, disputes, or rental recordkeeping. Deleting a
@@ -226,8 +226,8 @@ export default function PrivacyPage() {
             Google Account connections
           </a>
           . Removing the Google connection does not delete applicant notices.
-          Contact the owner to remove an approved account or address records
-          separately.
+          Contact Back Acres Rentals to remove an approved account or address
+          records separately.
         </p>
       </section>
       <section>

@@ -46,7 +46,8 @@ export default async function PaymentPage({
     if (invoice.status === "void") {
       return (
         <p>
-          This payment request was canceled. Contact the owner with questions.
+          This payment request was canceled. Contact{" "}
+          {p?.data.contact || "Back Acres Rentals"} with questions.
         </p>
       );
     }
@@ -68,7 +69,8 @@ export default async function PaymentPage({
     }
     return (
       <p>
-        Online payment setup is pending. Contact the owner: {p?.data.contact}
+        Online payment setup is pending. Contact{" "}
+        {p?.data.contact || "Back Acres Rentals"}.
       </p>
     );
   };

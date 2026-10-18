@@ -134,8 +134,9 @@ export default async function AutopayPage({
       )}
       {!!(r.status === "needs_review") && (
         <p role="status">
-          This enrollment needs owner review. No new enrollment can start here.
-          Contact the owner before paying another way.
+          This enrollment needs review by Back Acres Rentals. No new enrollment
+          can start here. Contact {p?.data.contact || "Back Acres Rentals"}{" "}
+          before paying another way.
         </p>
       )}
       {!!closed && (
@@ -158,8 +159,9 @@ export default async function AutopayPage({
       )}
       <p className="small-note">
         Questions or changes to your bank account: contact {p?.data.contact}. To
-        change banks, stop this authorization and ask the owner for a new
-        enrollment. Do not pay the same rent obligation twice.
+        change banks, stop this authorization and ask{" "}
+        {p?.data.contact || "Back Acres Rentals"} for a new enrollment. Do not
+        pay the same rent obligation twice.
       </p>
     </ManagementShell>
   );

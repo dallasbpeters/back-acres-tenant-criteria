@@ -12,6 +12,7 @@ import {
   leasePackets,
   leaseSigners,
 } from "@/lib/db/schema";
+import { leaseContact } from "@/lib/leases/contact";
 import {
   documentText,
   type LeaseNode,
@@ -239,9 +240,10 @@ export async function POST(request: NextRequest) {
     if (!updated.length) {
       return reply({ error: "This signer has already signed." }, 409);
     }
+    const contact = await leaseContact(packet.id, packet.brandName);
     const response = await sendLeaseMail({
       subject: `${packet.brandName}: review and sign your lease`,
-      text: `Hello ${signer.name},\n\nReview the complete lease, download a copy, and sign securely here:\n${url}\n\nThe request expires ${packet.expiresAt.toISOString()}. A separate verification code will be sent to this email address before signing. Do not forward this private link.\n\nYou may request a paper copy or signing alternative by contacting your landlord.`,
+      text: `Hello ${signer.name},\n\nReview the complete lease, download a copy, and sign securely here:\n${url}\n\nThe request expires ${packet.expiresAt.toISOString()}. A separate verification code will be sent to this email address before signing. Do not forward this private link.\n\nYou may request a paper copy or signing alternative by contacting ${contact}.`,
       to: signer.email,
     });
     if (!response.ok) {

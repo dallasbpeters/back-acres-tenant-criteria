@@ -12,6 +12,6 @@ export function authorizationReceiptText(receipt: {
     "",
     "This records acceptance of the displayed payment terms. It does not confirm bank verification, scheduling, or payment settlement.",
     "Stripe separately supplies the bank mandate. Retain both documents.",
-    "Contact the property owner to stop future payments or use your private enrollment page. Stopping payments does not change your lease obligations.",
+    "Contact Back Acres Rentals to stop future payments or use your private enrollment page. Stopping payments does not change your lease obligations.",
   ].join("\n");
 }

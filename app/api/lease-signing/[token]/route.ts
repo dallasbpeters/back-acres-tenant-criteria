@@ -13,6 +13,7 @@ import { readBody, reply, sameOrigin } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import { leaseSigners } from "@/lib/db/schema";
 import { signaturePng } from "@/lib/leases/branding";
+import { leaseContact } from "@/lib/leases/contact";
 import { sendLeaseMail } from "@/lib/leases/mail";
 import {
   codeDigest,
@@ -46,12 +47,13 @@ export async function GET(
       return reply(
         {
           error:
-            "This signing link is unavailable or expired. Please contact your landlord.",
+            "This signing link is unavailable or expired. Please contact Back Acres Rentals.",
         },
         404
       );
     }
     const { signer, packet } = ctx;
+    const contact = await leaseContact(packet.id, packet.brandName);
     if (!verified(request, signer)) {
       if (request.nextUrl.searchParams.get("format") === "pdf") {
         return reply(
@@ -61,6 +63,7 @@ export async function GET(
       }
       return reply({
         brandName: packet.brandName,
+        contact,
         email: signer.email.replace(pattern3, "$1•••$2"),
         name: signer.name,
         verified: false,
@@ -88,8 +91,9 @@ export async function GET(
     return reply({
       body: packet.body,
       brandName: packet.brandName,
-      consent: SIGNING_CONSENT,
-      consentVersion: SIGNING_CONSENT_VERSION,
+      consent: signer.consent || SIGNING_CONSENT,
+      consentVersion: signer.consentVersion || SIGNING_CONSENT_VERSION,
+      contact,
       declinedAt: signer.declinedAt,
       documentHash: packet.documentHash,
       email: signer.email,
@@ -143,6 +147,7 @@ export async function POST(
     const { signer, packet } = ctx,
       c = parsed.data,
       d = db();
+    const contact = await leaseContact(packet.id, packet.brandName);
     if (
       !(await allowIntake(request, `lease-signing:${signer.id}:${c.action}`))
     ) {
@@ -155,8 +160,7 @@ export async function POST(
       if (!(process.env.RESEND_API_KEY && process.env.FROM_EMAIL)) {
         return reply(
           {
-            error:
-              "Email verification is unavailable. Please contact your landlord.",
+            error: `Email verification is unavailable. Please contact ${contact}.`,
           },
           503
         );
@@ -184,7 +188,7 @@ export async function POST(
       }
       const response = await sendLeaseMail({
         subject: `${packet.brandName}: your lease verification code`,
-        text: `Your lease signing verification code is ${code}. It expires in 10 minutes. Do not share this code. If you did not request it, ignore this message and contact your landlord.`,
+        text: `Your lease signing verification code is ${code}. It expires in 10 minutes. Do not share this code. If you did not request it, ignore this message and contact ${contact}.`,
         to: signer.email,
       });
       if (!response.ok) {
@@ -241,8 +245,7 @@ export async function POST(
         ? reply({ ok: true })
         : reply(
             {
-              error:
-                "A recorded signature cannot be withdrawn here. Contact your landlord.",
+              error: `A recorded signature cannot be withdrawn here. Contact ${contact}.`,
             },
             409
           );

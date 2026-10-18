@@ -1,8 +1,8 @@
 import { createHash, createHmac } from "node:crypto";
 import { z } from "zod";
 export const SIGNING_CONSENT =
-  "I have reviewed this lease and can open and retain its PDF. I agree to use electronic records and signatures for this lease. I intend my signature to sign this exact lease and agree to its terms. I may choose paper before signing, request paper copies, update my email, or withdraw consent for future electronic records by contacting the landlord. Withdrawal does not undo a signature already made. This website charges no fee for these requests. I have access to this email address, a web browser and a PDF reader, and can save or print the document.";
-export const SIGNING_CONSENT_VERSION = "lease-esign-v1";
+  "I have reviewed this lease and can open and retain its PDF. I agree to use electronic records and signatures for this lease. I intend my signature to sign this exact lease and agree to its terms. I may choose paper before signing, request paper copies, update my email, or withdraw consent for future electronic records by contacting Back Acres Rentals. Withdrawal does not undo a signature already made. This website charges no fee for these requests. I have access to this email address, a web browser and a PDF reader, and can save or print the document.";
+export const SIGNING_CONSENT_VERSION = "lease-esign-v2";
 export const signerInput = z.object({
   email: z.email().transform((v) => v.toLowerCase()),
   name: z.string().trim().min(2).max(150),
