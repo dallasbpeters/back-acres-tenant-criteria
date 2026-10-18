@@ -86,6 +86,9 @@ importers:
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
+      pdfjs-dist:
+        specifier: 6.3.289
+        version: 6.3.289
       posthog-js:
         specifier: ^1.438.12
         version: 1.438.12(@types/react@19.3.0)(preact-render-to-string@5.2.6(preact@10.29.8))(react@19.3.1)

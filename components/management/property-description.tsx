@@ -3,11 +3,12 @@ export function PropertyDescription({
   text,
   grid = false,
 }: {
-  text: string;
+  /** Older or partial listings can lack a description; render nothing. */
+  text?: string;
   grid?: boolean;
 }) {
   const occurrences = new Map<string, number>();
-  const paragraphs = text
+  const paragraphs = (text ?? "")
     .split(pattern1)
     .filter((paragraph) => paragraph.trim())
     .map((paragraph) => {

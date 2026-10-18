@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "browser-tests",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "STRIPE_SECRET_KEY=\"$(cat .env.stripe-key)\" exec npx next dev --port 3191"
+      ],
+      "port": 3191,
+      "env": {
+        "ADMIN_EMAILS": "admin-test@example.invalid",
+        "RESEND_API_KEY": "test-no-email-delivery",
+        "FROM_EMAIL": "test@example.com",
+        "STRIPE_WEBHOOK_SECRET": "whsec_test_only",
+        "PAYMENTS_LIVE_ENABLED": "false"
+      }
+    }
+  ]
+}

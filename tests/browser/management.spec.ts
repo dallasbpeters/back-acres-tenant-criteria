@@ -1,5 +1,7 @@
 // biome-ignore-all lint/performance/noAwaitInLoops: These stateful fixtures and assertions must finish each transition before the next request or cleanup.
+
 import { requireValue } from "@/lib/required";
+import { retireTestProperty } from "./retire-property";
 
 const pattern1 = /property/i;
 const pattern2 = /Lease document/;
@@ -29,12 +31,12 @@ test.afterAll(async () => {
   await sql`DELETE FROM maintenance_requests WHERE property_id=${propertyId}`;
   await sql`DELETE FROM resident_links WHERE property_id=${propertyId}`;
   await sql`DELETE FROM rental_applications WHERE property_id=${propertyId}`;
-  await sql`DELETE FROM rental_invoices WHERE property_id=${propertyId}`;
   await sql`DELETE FROM lease_drafts WHERE property_id=${propertyId}`;
   await sql`DELETE FROM lease_templates WHERE id=${templateId}`;
   await sql`DELETE FROM management_events WHERE entity_id IN (${propertyId},${applicationId},${invoiceId},${canceledInvoiceId},${linkId || propertyId},${draftId || propertyId})`;
   await sql`DELETE FROM management_events WHERE entity_id=${duplicatePropertyId}`;
-  await sql`DELETE FROM properties WHERE id IN (${propertyId},${duplicatePropertyId})`;
+  await retireTestProperty(sql, propertyId, "MANAGEMENT TEST");
+  await retireTestProperty(sql, duplicatePropertyId, "MANAGEMENT TEST");
 });
 test("property lifecycle, private records, public applications, resident links, drafts and signed payments", async ({
   page,
@@ -356,14 +358,15 @@ test("property lifecycle, private records, public applications, resident links, 
           amount_total: 250_000,
           client_reference_id: invoiceId,
           currency: "usd",
-          id: "cs_test_fixture",
+          // Real Checkout sessions and events have unique IDs; test invoices persist.
+          id: `cs_test_${invoiceId}`,
           livemode: false,
           metadata: { invoiceId },
           object: "checkout.session",
           payment_status: "paid",
         },
       },
-      id: "evt_fixture",
+      id: `evt_${invoiceId}`,
       object: "event",
       type: "checkout.session.completed",
     };

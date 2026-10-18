@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import { encode } from "next-auth/jwt";
 import { requireValue } from "@/lib/required";
 import { blankNotice } from "../../lib/adverse/notice";
+import { retireTestProperty } from "./retire-property";
 
 loadEnvConfig(process.cwd());
 const origin = "http://localhost:3191",
@@ -34,12 +35,10 @@ test.afterAll(async () => {
   await sql`DELETE FROM maintenance_requests WHERE property_id=${ids.property}`;
   await sql`DELETE FROM resident_links WHERE property_id=${ids.property}`;
   await sql`DELETE FROM rental_applications WHERE property_id=${ids.property}`;
-  await sql`DELETE FROM rental_invoices WHERE property_id=${ids.property}`;
-  await sql`DELETE FROM rent_schedules WHERE property_id=${ids.property}`;
   await sql`DELETE FROM lease_drafts WHERE property_id=${ids.property}`;
   await sql`DELETE FROM lease_templates WHERE id=${ids.leaseTemplate}`;
   await sql`DELETE FROM adverse_notice_versions WHERE document_id=${ids.notice}`;
-  await sql`DELETE FROM properties WHERE id=${ids.property}`;
+  await retireTestProperty(sql, ids.property, name);
 });
 test("remove and restore every workspace record; close listings and links, preserve versions and stop payment schedules", async ({
   page,
@@ -271,7 +270,11 @@ test("remove and restore every workspace record; close listings and links, prese
     .getByRole("link", { exact: true, name: "Removed items" })
     .click();
   await page.reload(); // API-only fixture changes should be reflected in the workspace.
-  const trash = page.getByRole("region", { name: "Removed items" });
+  // Scope to this test's row: a shared database can hold other removed items.
+  const trash = page
+    .getByRole("region", { name: "Removed items" })
+    .getByRole("article")
+    .filter({ has: page.getByRole("heading", { exact: true, name }) });
   await expect(
     trash.getByRole("button", { exact: true, name: "Restore property" })
   ).toBeVisible();

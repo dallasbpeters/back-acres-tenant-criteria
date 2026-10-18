@@ -196,7 +196,12 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
     fullPage: false,
     path: "test-results/lease-guided-review.png",
   });
-  await workspace.getByText("Earlier versions (1)", { exact: true }).click();
+  // Scope to this test's lease: a shared database can hold other drafts.
+  await workspace
+    .getByRole("article")
+    .filter({ hasText: "LEASE UX TEST tenant" })
+    .getByText("Earlier versions (1)", { exact: true })
+    .click();
   await workspace
     .getByRole("button", { exact: true, name: "Open earlier version" })
     .click();
