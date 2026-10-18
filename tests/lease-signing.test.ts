@@ -38,7 +38,7 @@ test("signing requires distinct named tenants and landlord with explicit owner r
     false
   );
 });
-test("logo PNG and SVG rasterize safely; unsupported, oversized, and external-only SVG fail or lose external content", async () => {
+test("logo PNG and SVG rasterize safely; unsupported, oversized, and invalid images fail and unsafe SVG content is removed", async () => {
   const png = await sharp({
     create: { background: "#215132", channels: 4, height: 40, width: 80 },
   })
@@ -198,4 +198,24 @@ test("lease email sends only to the individual signer with bounded delivery and 
       process.env.FROM_EMAIL = previousFrom;
     }
   }
+});
+
+test("SVG uploads remove exported DTDs and external dependencies while retaining local artwork", async () => {
+  const artwork =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="20"><rect width="30" height="20" fill="#215132"/></svg>';
+  const expected = await logoPng(Buffer.from(artwork), "image/svg+xml");
+  const declarations = [
+    '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "https://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">',
+    '<!DOCTYPE svg [<!ENTITY remote SYSTEM "https://example.invalid/secret"><!ENTITY local SYSTEM "file:///etc/passwd"><!ENTITY parameter "nested [ > ]">]>',
+    '<!DOCTYPE svg [<!-- unmatched ] [ > in a comment --><!ENTITY remote SYSTEM "https://example.invalid/secret">]>',
+  ];
+  await Promise.all(
+    declarations.map(async (declaration) => {
+      const input = `${declaration}<?xml-stylesheet href="https://example.invalid/style.css"?>${artwork.replace("</svg>", '<title>&remote;</title><style>@import url(https://example.invalid/style.css);</style><image href="https://example.invalid/image.png"/><use href="https://example.invalid/symbols.svg#logo"/><path d="M0 0h1v1z" fill="url(https://example.invalid/paint.svg#paint)" opacity="0"/></svg>')}`;
+      assert.deepEqual(
+        await logoPng(Buffer.from(input), "image/svg+xml"),
+        expected
+      );
+    })
+  );
 });

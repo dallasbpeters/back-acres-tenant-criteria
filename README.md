@@ -264,7 +264,7 @@ PDF export is independent of the screen theme.
 
 ### Lease signatures and branding
 
-In **Branding**, save the business name and a PNG or SVG logo (maximum 2 MB). SVG artwork is restricted to safe vector elements and rasterized to PNG; export text as paths for consistent rendering. Removing a logo preserves previous branding versions, which can be restored. Draft PDFs use current branding. Signing packets freeze their original branding and PDF bytes.
+In **Branding**, save the business name and a PNG or SVG logo (maximum 2 MB). SVG upload removes exported DTDs and external dependencies, restricts artwork to safe vector elements, and rasterizes it to PNG; export text as paths for consistent rendering. Removing a logo preserves previous branding versions, which can be restored. Draft PDFs use current branding. Signing packets freeze their original branding and PDF bytes.
 
 Under **Leases → Saved leases → Send lease**, list every adult tenant and the landlord, review the saved lease and attachments, then choose **Send lease for signature**. The app freezes the saved version and emails each person their own private signing link. Existing application and lease email details prefill where available. Per-recipient email acceptance is stored; **Send unsent emails** retries recipients without a recorded acceptance, and **Resend signing email** deliberately replaces a previous link. Provider acceptance is not a delivery receipt. Links expire in 30 days while awaiting signatures; a replacement lease version cannot have a second pending packet in the same lease history. Cancel the previous pending request first.
 

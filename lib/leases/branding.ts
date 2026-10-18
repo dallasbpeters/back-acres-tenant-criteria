@@ -7,15 +7,16 @@ const pattern6 = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
 
 import sanitize from "sanitize-html";
 import sharp from "sharp";
+import { stripSvgDeclarations } from "./svg-declarations";
 export async function logoPng(input: Buffer, type: string) {
   if (input.length > 2_000_000 || !input.length) {
     throw new Error("Choose a PNG or SVG under 2 MB.");
   }
   let source = input;
   if (type === "image/svg+xml") {
-    const raw = input.toString("utf8");
-    if (!pattern1.test(raw) || pattern2.test(raw)) {
-      throw new Error("Choose an SVG without external resources.");
+    const raw = stripSvgDeclarations(input.toString("utf8"));
+    if (!pattern1.test(raw)) {
+      throw new Error("Choose a valid SVG logo.");
     }
     const clean = sanitize(raw, {
       allowedAttributes: {
@@ -141,6 +142,10 @@ export async function logoPng(input: Buffer, type: string) {
         },
       },
     });
+    // Only the allowlisted SVG reaches the XML renderer: never pass through a DTD.
+    if (!pattern1.test(clean) || pattern2.test(clean)) {
+      throw new Error("Choose a valid SVG logo.");
+    }
     source = Buffer.from(clean);
   } else if (
     type !== "image/png" ||

@@ -106,8 +106,9 @@ export function BrandingWorkspace() {
         </label>
         <p className="small-note">
           PNG or SVG, up to 2 MB. Transparent backgrounds work well. SVG artwork
-          is converted safely for display and PDF export; export text as paths
-          for best results.
+          is cleaned and converted for display and PDF export. External images,
+          fonts, stylesheets, and scripts are removed; use self-contained
+          artwork and export text as paths for best results.
         </p>
         <div className="management-actions">
           <Button disabled={busy} type="submit" variant="primary">
