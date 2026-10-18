@@ -31,7 +31,7 @@ export function LegalDocument({
       <article className="layout-width legal-body">
         <div className="document-heading">
           <p className="eyebrow">
-            Website information · Effective October 17, 2026
+            Website information · Effective October 18, 2026
           </p>
           <h1>{title}</h1>
           <p className="hero-lede">{introduction}</p>

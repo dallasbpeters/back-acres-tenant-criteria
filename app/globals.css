@@ -3789,3 +3789,108 @@ button,
     gap: 1rem;
   }
 }
+
+/* Tenant account views share the application's theme, controls, and document typography. */
+.tenant-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding-block: 1rem;
+  margin-block-end: 1.5rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-auth {
+  display: grid;
+  justify-items: center;
+  padding-block: 2rem;
+}
+.tenant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+}
+.tenant-grid > *,
+.tenant-table-wrap {
+  min-inline-size: 0;
+}
+.tenant-table-wrap {
+  overflow-x: auto;
+}
+.tenant-table-wrap table {
+  inline-size: 100%;
+  font-family: var(--font-interface);
+  font-size: 0.9rem;
+  border-collapse: collapse;
+}
+.tenant-table-wrap th,
+.tenant-table-wrap td {
+  padding: 0.75rem;
+  text-align: start;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-table-wrap th {
+  font-weight: 650;
+}
+.tenant-form {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 56rem;
+  padding-block: 1rem;
+}
+.tenant-form label:not(.check-label) {
+  display: grid;
+  gap: 0.5rem;
+}
+.tenant-form fieldset {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+}
+.tenant-form .ui-button {
+  justify-self: start;
+}
+.tenant-tenancy {
+  padding-block: 1.5rem;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-access-list,
+.tenant-request-list {
+  padding: 0;
+  list-style: none;
+}
+.tenant-access-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-request-list > li {
+  padding-block: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-request-list span {
+  display: block;
+  font-size: 0.85rem;
+}
+.tenant-grid details {
+  padding-block: 1rem;
+}
+@media (max-width: 800px) {
+  .tenant-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* Keep app-wide hover/pressed rules consistent with Clerk's primary action color. */
+.cl-formButtonPrimary {
+  --button-ink: var(--on-action);
+  --button-hover-ink: var(--on-action);
+  --button-hover: var(--actions);
+  --button-active: var(--actions);
+}

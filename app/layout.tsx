@@ -32,6 +32,7 @@ export default async function RootLayout({
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
             <a href="/properties">Properties</a>
+            <a href="/tenant">Tenant portal</a>
             {!!signedIn && <a href="/admin">Owner workspace</a>}
           </nav>
         </ThemeProvider>

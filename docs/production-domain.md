@@ -1,27 +1,32 @@
 # Production domain
 
-The production origin is **https://back-acres.vercel.app**. The retired
-`back-acres-tenant-criteria.vercel.app` address is no longer configured.
+The canonical production origin is **https://backacresrentals.com**.
+`https://www.backacresrentals.com` redirects to it with HTTP 308.
+`https://back-acres.vercel.app` continues to serve the same Vercel project for
+existing links. The retired `back-acres-tenant-criteria.vercel.app` is not served.
 
-Production `NEXTAUTH_URL` in Vercel must equal the new origin. It is the canonical
-origin for Google authentication, generated lease invitations, maintenance links,
-and Stripe Checkout/ACH return URLs. Environment changes require a new deployment.
+Production `NEXTAUTH_URL` equals the canonical origin. It controls owner Google
+authentication, generated lease invitations, maintenance links, and Stripe
+Checkout/ACH return URLs. Environment changes require a new deployment.
 
-The existing Google OAuth client in the `back-acres` Cloud project uses:
+The existing Google OAuth client in the `back-acres` Cloud project includes:
 
-- Authorized JavaScript origin: `https://back-acres.vercel.app`
-- Authorized redirect URI: `https://back-acres.vercel.app/api/auth/callback/google`
+- Authorized JavaScript origin: `https://backacresrentals.com`
+- Owner redirect: `https://backacresrentals.com/api/auth/callback/google`
+- Clerk redirect: `https://clerk.backacresrentals.com/v1/oauth_callback`
 
-The retired origin and callback were removed on October 18, 2026. OAuth client
-credentials, owner allowlists, PKCE/state checks, and mailbox-verification rules
-are unchanged. Users must sign in on the new domain; cookies from the retired
-host do not transfer.
+Google consent homepage, privacy policy and terms links use the canonical origin.
+The existing callbacks are retained. Client credentials, owner allowlists,
+PKCE/state checks and mailbox-verification rules are unchanged. Cookies from an
+old hostname do not transfer; users sign in again on the new domain.
 
-The existing Stripe **test-mode** webhook was moved to:
-`https://back-acres.vercel.app/api/payments/webhook`. Its ID, enabled state, 25 event
-subscriptions, API version, and signing secret are retained. This does not enable
-live payments or create transactions.
+Clerk uses the same production instance and app-scoped Vercel Connect credential.
+The public key points to `clerk.backacresrentals.com`. All four Clerk DNS CNAMEs
+are verified and its certificate is issued. No credentials are stored here.
 
-Older emails, printed links, or bookmarks containing the retired hostname must
-be replaced or reissued from the new domain. Do not restore the retired OAuth
-redirect when troubleshooting the new deployment.
+The existing Stripe **test-mode** webhook remains at
+`https://back-acres.vercel.app/api/payments/webhook`, which still serves this
+project. Its ID, enabled state, 25 event subscriptions, API version and signing
+secret are retained. Adding the domain does not enable live payments or create
+transactions. Do not redirect or remove the old host without migrating this
+webhook and checking independently issued links first.

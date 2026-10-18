@@ -77,6 +77,19 @@ export default function TermsPage() {
         </p>
       </section>
       <section>
+        <h2>Tenant accounts and property access</h2>
+        <p>
+          Create and use your own tenant account. Verify your email and keep
+          your sign-in credentials private. The property owner must approve
+          access and choose which payment records are shared. Account
+          registration does not approve an application, establish a tenancy,
+          change a lease, or authorize a payment. Payment status remains subject
+          to confirmation by Stripe. Removing portal access does not cancel an
+          existing payment authorization; use the enrollment controls or contact
+          the owner to stop future debits.
+        </p>
+      </section>
+      <section>
         <h2>05 · Appropriate use</h2>
         <p>
           Use the website only for legitimate rental-related communications and

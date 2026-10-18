@@ -25,6 +25,7 @@ export function ManagementShell({
           </a>
           <nav aria-label="Main navigation" className="management-nav">
             <a href="/properties">Properties</a>
+            <a href="/tenant">Tenant portal</a>
             <ThemeControl />
             {!!owner && (
               <>

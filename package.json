@@ -12,11 +12,12 @@
     "postinstall": "node scripts/copy-pdf-assets.cjs",
     "prepare": "husky",
     "start": "next start",
-    "test": "npm run test:unit && npm run test:stripe",
+    "test": "npm run test:unit && npm run test:stripe && npm run test:tenant",
     "test:e2e": "playwright test",
     "test:signing": "node tests/support/run-lease-signing.cjs",
     "test:stripe": "vitest run --config vitest.stripe.config.mts",
     "test:stripe:coverage": "npm run test:stripe -- --coverage",
+    "test:tenant": "vitest run --config vitest.tenant.config.mts",
     "test:unit": "tsx --tsconfig tests/tsconfig.json --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -27,6 +28,7 @@
     "postcss": "8.5.29"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.17",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -42,6 +44,7 @@
     "@tiptap/react": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
     "@vercel/blob": "^2.8.2",
+    "@vercel/connect": "^2.5.2",
     "drizzle-orm": "^0.45.4",
     "fflate": "^0.8.3",
     "next": "^15.5.0",

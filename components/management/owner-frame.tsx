@@ -94,6 +94,14 @@ export function OwnerFrame({
                   {s.label}
                 </a>
               ))}
+              <a
+                aria-current={
+                  pathname === "/admin/tenants" ? "page" : undefined
+                }
+                href="/admin/tenants"
+              >
+                Tenant access
+              </a>
               <div className="nav-divider" />
               <a
                 aria-current={

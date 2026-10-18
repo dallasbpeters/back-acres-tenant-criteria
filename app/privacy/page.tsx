@@ -7,7 +7,7 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <LegalDocument
-      introduction="This policy explains how the Back Acres Rental website handles information when you review criteria, submit an acknowledgment, or use the private owner workspace."
+      introduction="This policy explains how the Back Acres Rental website handles information when you review criteria, submit an acknowledgment, use the private owner workspace, or access a tenant account."
       title="Privacy Policy"
     >
       <section>
@@ -79,6 +79,24 @@ export default function PrivacyPage() {
         </p>
       </section>
       <section>
+        <h2>Tenant accounts</h2>
+        <p>
+          Clerk manages tenant sign-in, verified email addresses, account
+          security, and session cookies. The property database stores your Clerk
+          account identifier, owner-approved property access, contact phone,
+          selected payment-record permissions, and maintenance requests.
+          Changing your account email does not automatically change which
+          property records you can access. Creating an account does not grant
+          access to the owner workspace or another tenant’s records.
+        </p>
+        <p>
+          You can manage account information and security in tenant account
+          settings. Removing an account or portal access does not automatically
+          erase payment, maintenance, lease, or audit records. Contact the
+          property owner for record corrections or deletion requests.
+        </p>
+      </section>
+      <section>
         <h2>02 · How information is used</h2>
         <p>
           Information is used to record acknowledgments, provide receipts,
@@ -98,6 +116,13 @@ export default function PrivacyPage() {
       <section>
         <h2>03 · Storage and service providers</h2>
         <ul>
+          <li>
+            <strong>Clerk</strong> processes tenant account and authentication
+            information and provides the tenant sign-in and account-management
+            components. See{" "}
+            <a href="https://clerk.com/legal/privacy">Clerk’s Privacy Policy</a>
+            .
+          </li>
           <li>
             <strong>Vercel</strong> hosts the website, processes server
             requests, and stores normalized listing photos in private Blob
@@ -161,10 +186,10 @@ export default function PrivacyPage() {
       <section>
         <h2>04 · Cookies and security</h2>
         <p>
-          Owner sign-in uses cookies for session management and protection
-          against forged sign-in requests. The website does not include
-          advertising or analytics trackers. Service providers may maintain
-          their own operational logs.
+          Owner and tenant sign-in use cookies for session management and
+          protection against forged sign-in requests. The website does not
+          include advertising or analytics trackers. Service providers may
+          maintain their own operational logs.
         </p>
         <p>
           Private workspace access is restricted to approved Google accounts.
