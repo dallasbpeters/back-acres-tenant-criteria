@@ -2,7 +2,13 @@
 // Keep PDF rendering local: no lease content or fonts go to a third-party viewer.
 const fs = require("node:fs"),
   path = require("node:path");
-const root = path.dirname(require.resolve("pdfjs-dist/package.json"));
+// pdfjs-dist is react-pdf's dependency. Resolve it through react-pdf so the
+// copied fonts and wasm always match the viewer version it loads.
+const root = path.dirname(
+  require.resolve("pdfjs-dist/package.json", {
+    paths: [path.dirname(require.resolve("react-pdf/package.json"))],
+  })
+);
 for (const directory of ["standard_fonts", "wasm"]) {
   const target = path.join("public", "pdf-assets", directory);
   fs.mkdirSync(target, { recursive: true });

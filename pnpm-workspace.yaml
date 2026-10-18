@@ -1,3 +1,5 @@
 allowBuilds:
-  core-js: set this to true or false
-  esbuild: set this to true or false
+  # core-js only prints a donation message after install.
+  core-js: false
+  # esbuild verifies its platform binary after install.
+  esbuild: true
