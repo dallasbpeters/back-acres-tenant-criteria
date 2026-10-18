@@ -237,3 +237,18 @@ separately. Active rent schedules block property removal; schedule removal first
 stops future payments, and open payment requests are canceled before removal.
 Pending payments must reconcile before removal. Restoring payment records never
 restarts collection or refunds a payment.
+
+### Disclosure defaults and lease editing
+
+Migration `0009` adds private property disclosure defaults and rich lease draft
+content. Back Acres disclosures are prefilled from the supplied Avail PDF;
+those property facts are not copied to unrelated addresses. Owners can choose
+statements, edit exceptions, and save or clear reusable property defaults.
+Each new lease requires review of disclosures and attachments. The source PDF’s
+attachment list is prefilled, but attachment files are not bundled automatically.
+Lead receipt wording is prospective and does not claim delivery or signature.
+
+Tiptap is visible at the Review step. Paragraphs, headings, bold/italic,
+and numbered/bulleted lists persist with each draft version and render in the
+PDF. Existing plain-text drafts remain supported. Disclosure detail editors
+use Tiptap with text and list controls; their wording is stored as plain text.

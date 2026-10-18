@@ -508,3 +508,25 @@ button.remove-record-button,
     display: none;
   }
 }
+
+/* Lease disclosures are reusable statements; only exceptions need typing. */
+.lease-disclosures { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem 1.5rem; }
+.lease-disclosures > p, .lease-disclosures > .check-row, .lease-disclosures > .management-actions, .lease-disclosure-wide { grid-column: 1 / -1; }
+@media (max-width: 800px) { .lease-disclosures { grid-template-columns: minmax(0,1fr); } }
+.lease-disclosure-card { padding: 1.25rem 0; border-block-start: 1px solid var(--line); }
+.lease-disclosure-card h4 { font-size: 1rem; }
+.lease-disclosure-card .section-heading-row { margin-bottom: .8rem; }
+.disclosure-wording { margin-top: .75rem; color: var(--ink); white-space: pre-wrap; line-height: 1.7; }
+.lease-attachment-options { display: grid; gap: .65rem; margin-block: 1rem; }
+.lease-rich-editor { border: 1px solid var(--line); background: var(--paper); }
+.lease-rich-editor .editor-tools { position: sticky; top: 0; z-index: 1; background: var(--paper); }
+.lease-rich-editor .editor-tools button { min-block-size: 2.5rem; background: transparent; color: var(--ink); }
+.lease-rich-editor .editor-tools [aria-pressed="true"] { background: var(--tint); color: var(--accent); }
+.lease-rich-content { padding: clamp(1rem,3vw,2rem); min-height: 28rem; max-height: 65vh; overflow: auto; font-family: var(--font-document); font-size: 1.05rem; line-height: 1.7; outline-offset: 2px; }
+.lease-rich-compact { min-height: 7rem; max-height: 18rem; padding: 1rem; }
+.lease-rich-content p { margin-block: .4rem; }
+.lease-rich-content ul, .lease-rich-content ol, .lease-document ul, .lease-document ol { padding-inline-start: 1.5rem; }
+.lease-rich-content h2, .lease-rich-content h3 { margin-block: 1rem .5rem; }
+.lease-disclosure-card button { border: 1px solid var(--line); background: var(--paper); }
+@media print { .lease-rich-editor .editor-tools { display: none; } .lease-rich-content { overflow: visible; max-height: none; } }
+.lease-disclosure-card .section-heading-row button { flex-shrink: 0; white-space: nowrap; }

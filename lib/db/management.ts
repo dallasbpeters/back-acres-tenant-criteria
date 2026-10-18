@@ -16,6 +16,7 @@ const createdAt = () =>
 export const properties = pgTable("properties", {
   id: uuid("id").primaryKey(),
   slug: text("slug").unique().notNull(),
+  leaseDefaults: jsonb("lease_defaults").$type<LeaseValues>(),
   data: jsonb("data").$type<PropertyInput>().notNull(),
   revision: integer("revision").notNull().default(1),
   createdAt: createdAt(),
@@ -148,6 +149,7 @@ export const leaseDrafts = pgTable("lease_drafts", {
   parentId: uuid("parent_id"),
   tenantName: text("tenant_name").notNull(),
   values: jsonb("values").$type<LeaseValues>(),
+  document: jsonb("document").$type<import("../leases/document").LeaseNode>(),
   body: text("body").notNull(),
   createdAt: createdAt(),
 });

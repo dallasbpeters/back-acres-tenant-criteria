@@ -1,4 +1,7 @@
 "use client";
+import { LeaseDisclosures, disclosureDefaults } from "./lease-disclosures";
+import { sourceDisclosures } from "@/lib/leases/disclosures";
+import { textDocument, type LeaseNode } from "@/lib/leases/document";
 import { RemoveButton } from "./remove-button";
 import { useEffect, useRef, useState } from "react";
 import { AppSelect } from "@/components/ui/select";
@@ -20,6 +23,14 @@ import {
 } from "@/lib/management/lease-workflow";
 import { dollars } from "@/lib/management/model";
 import dynamic from "next/dynamic";
+const LeaseDocumentPreview = dynamic(
+  () => import("./lease-text-editor").then((m) => m.LeaseDocumentPreview),
+  { ssr: false },
+);
+const LeaseTextEditor = dynamic(
+  () => import("./lease-text-editor").then((m) => m.LeaseTextEditor),
+  { ssr: false, loading: () => <p>Loading editor…</p> },
+);
 const LeaseWordingEditor = dynamic(
   () => import("./lease-wording-editor").then((m) => m.LeaseWordingEditor),
   { ssr: false, loading: () => <p role="status">Loading document editor…</p> },
@@ -69,14 +80,22 @@ export function LeaseWorkspace({
       properties.length === 1 ? properties[0].id : "",
     ),
     [templateId, setTemplateId] = useState(preferred?.id ?? ""),
-    [values, setValues] = useState<LeaseValues>(() =>
-      initialLeaseValues(
+    [values, setValues] = useState<LeaseValues>(() => ({
+      ...initialLeaseValues(
         properties.length === 1 ? properties[0].data : undefined,
       ),
-    ),
+      ...(properties.length === 1
+        ? sourceDisclosures(properties[0].data.address)
+        : {}),
+      ...(properties.length === 1 ? properties[0].leaseDefaults : {}),
+    })),
     [step, setStep] = useState(0),
     [furthest, setFurthest] = useState(0),
     [body, setBody] = useState(""),
+    [leaseDocument, setDocument] = useState<LeaseNode | null>(null),
+    [documentEditorKey, setDocumentEditorKey] = useState(0),
+    [disclosuresReviewed, setDisclosuresReviewed] = useState(false),
+    [disclosureMessage, setDisclosureMessage] = useState(""),
     [bodyEdited, setBodyEdited] = useState(false),
     [parentId, setParentId] = useState<string | null>(null),
     [draftId, setDraftId] = useState(() => crypto.randomUUID()),
@@ -162,7 +181,14 @@ export function LeaseWorkspace({
       return;
     setWordingOpen(false);
     setWordingDirty(false);
-    setValues(initialLeaseValues(property?.data));
+    setValues({
+      ...initialLeaseValues(property?.data),
+      ...sourceDisclosures(property?.data.address ?? ""),
+      ...property?.leaseDefaults,
+    });
+    setDisclosuresReviewed(false);
+    setDisclosureMessage("");
+    setDocument(null);
     setBody("");
     setBodyEdited(false);
     setParentId(null);
@@ -195,6 +221,8 @@ export function LeaseWorkspace({
       return;
     }
     try {
+      if (questionsFor(template.body, 2).length && !disclosuresReviewed)
+        throw Error("Review the prefilled disclosures before continuing.");
       const normalized = normalizedLeaseValues({
         ...values,
         property_name: property.data.name,
@@ -215,12 +243,14 @@ export function LeaseWorkspace({
         throw Error(
           "This lease is too long to save. Shorten the added details and try again.",
         );
+      setDocumentEditorKey((n) => n + 1);
       setBody(generated);
+      setDocument(textDocument(generated));
       setBodyEdited(false);
       setTenantName(normalized.tenant_names?.trim() ?? "");
       setDirty(true);
       setSavedId("");
-      setEditingDocument(false);
+      setEditingDocument(true);
       setFurthest(3);
       go(3);
     } catch (e) {
@@ -247,6 +277,7 @@ export function LeaseWorkspace({
       parentId,
       tenantName,
       body,
+      document: leaseDocument ?? textDocument(body),
       values: normalizedLeaseValues(values),
     });
     if (ok) {
@@ -281,7 +312,10 @@ export function LeaseWorkspace({
     setTemplateId(d.templateId);
     setTenantName(d.tenantName);
     setParentId(d.id);
+    setDocumentEditorKey((n) => n + 1);
     setBody(d.body);
+    setDocument(d.document ?? textDocument(d.body));
+    setDisclosuresReviewed(false);
     setValues(leaseFormValues(d.values ?? {}));
     let manuallyEdited = true;
     try {
@@ -296,7 +330,7 @@ export function LeaseWorkspace({
     setDraftId(crypto.randomUUID());
     setDirty(false);
     setFurthest(3);
-    setEditingDocument(false);
+    setEditingDocument(true);
     go(3);
   }
   function openWording() {
@@ -497,11 +531,15 @@ export function LeaseWorkspace({
                             setPropertyId(id);
                             setParentId(null);
                             setDraftId(crypto.randomUUID());
-                            setValues((v) => ({
-                              ...v,
+                            setValues({
                               ...initialLeaseValues(p.data),
+                              ...sourceDisclosures(p.data.address),
+                              ...p.leaseDefaults,
                               tenant_names: "",
-                            }));
+                            });
+                            setDisclosuresReviewed(false);
+                            setDisclosureMessage("");
+                            setDocument(null);
                             setApplicantId("");
                             setDirty(true);
                             setSavedId("");
@@ -580,15 +618,63 @@ export function LeaseWorkspace({
                         amount; enter 0 where no fee applies.
                       </p>
                     )}
-                    {step === 2 && (
-                      <p className="small-note">
-                        Describe the facts for this property and the documents
-                        actually provided. Tenant receipt acknowledgments must
-                        match what the tenant receives.
-                      </p>
-                    )}
+                    {step === 2 &&
+                      questionsFor(template?.body ?? "", 2).length > 0 && (
+                        <>
+                          <LeaseDisclosures
+                            fields={questionsFor(template?.body ?? "", 2)}
+                            values={values}
+                            onChange={(key, value) => {
+                              change(key, value);
+                              setDisclosuresReviewed(false);
+                              setDisclosureMessage("");
+                            }}
+                            reviewed={disclosuresReviewed}
+                            onReviewed={setDisclosuresReviewed}
+                            busy={busy}
+                            fromSource={
+                              !!sourceDisclosures(property?.data.address ?? "")
+                                .habitability_disclosure
+                            }
+                            hasDefaults={
+                              !!property?.leaseDefaults &&
+                              Object.keys(property.leaseDefaults).length > 0
+                            }
+                            onSaveDefaults={async () => {
+                              if (
+                                await save({
+                                  action: "leaseDefaults",
+                                  propertyId,
+                                  values: disclosureDefaults(values),
+                                })
+                              )
+                                setDisclosureMessage(
+                                  "Saved. New leases for this property will use these disclosures.",
+                                );
+                            }}
+                            onClearDefaults={async () => {
+                              if (
+                                await save({
+                                  action: "leaseDefaults",
+                                  propertyId,
+                                  values: {},
+                                })
+                              )
+                                setDisclosureMessage(
+                                  "Saved defaults cleared. This lease’s wording is unchanged.",
+                                );
+                            }}
+                          />
+                          {disclosureMessage && (
+                            <p role="status">{disclosureMessage}</p>
+                          )}
+                        </>
+                      )}
                     <div className="fields lease-fields">
-                      {questionsFor(template?.body ?? "", step).map((key) => (
+                      {(step === 2
+                        ? []
+                        : questionsFor(template?.body ?? "", step)
+                      ).map((key) => (
                         <label
                           className={`field${longAnswers.includes(key) ? " lease-wide" : ""}`}
                           key={key}
@@ -731,41 +817,23 @@ export function LeaseWorkspace({
                     )}
                   </div>
                   {editingDocument ? (
-                    <label className="field">
-                      Lease document text
-                      <textarea
-                        aria-label="Lease document text"
-                        rows={24}
-                        maxLength={45000}
-                        value={body}
-                        onChange={(e) => {
-                          setBody(e.target.value);
-                          setBodyEdited(true);
-                          setDirty(true);
-                          setSavedId("");
-                        }}
-                      />
-                    </label>
+                    <LeaseTextEditor
+                      key={documentEditorKey}
+                      label="Lease document text"
+                      body={body}
+                      document={leaseDocument}
+                      disabled={busy}
+                      onChange={(text, content) => {
+                        setBody(text);
+                        setDocument(content);
+                        setBodyEdited(true);
+                        setDirty(true);
+                      }}
+                    />
                   ) : (
-                    <article
-                      className="lease-document"
-                      aria-label="Lease draft preview"
-                    >
-                      {body.split(/\n\n/).map((paragraph, i) => (
-                        <p
-                          key={i}
-                          className={
-                            /^(?:§|TERMS$|TENANTS$|LANDLORD$|TEXAS RESIDENTIAL|\d+\.\s[^\n]{1,80}$)/.test(
-                              paragraph,
-                            )
-                              ? "lease-document-heading"
-                              : undefined
-                          }
-                        >
-                          {paragraph}
-                        </p>
-                      ))}
-                    </article>
+                    <LeaseDocumentPreview
+                      document={leaseDocument ?? textDocument(body)}
+                    />
                   )}
                 </>
               )}
@@ -869,7 +937,16 @@ export function LeaseWorkspace({
                             setSavedId("");
                             setBody("");
                             setBodyEdited(false);
-                            setValues(initialLeaseValues(property?.data));
+                            setValues({
+                              ...initialLeaseValues(property?.data),
+                              ...sourceDisclosures(
+                                property?.data.address ?? "",
+                              ),
+                              ...property?.leaseDefaults,
+                            });
+                            setDisclosuresReviewed(false);
+                            setDisclosureMessage("");
+                            setDocument(null);
                             setTenantName("");
                             setDirty(false);
                             setStep(0);

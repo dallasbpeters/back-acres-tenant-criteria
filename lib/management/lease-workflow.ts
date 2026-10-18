@@ -1,3 +1,4 @@
+import { suppliedDisclosures } from "../leases/disclosures";
 import { dollars } from "./model";
 import {
   leaseFields,
@@ -91,6 +92,8 @@ export function initialLeaseValues(property?: {
   emergencyContact?: string;
 }): LeaseValues {
   return {
+    lead_records_receipt: suppliedDisclosures.lead_records_receipt,
+    lead_pamphlet_receipt: suppliedDisclosures.lead_pamphlet_receipt,
     property_name: property?.name ?? "",
     property_address: property?.address ?? "",
     monthly_rent: property ? String(property.rentCents / 100) : "",

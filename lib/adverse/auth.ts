@@ -29,10 +29,11 @@ export async function guard(request: NextRequest) {
     return reply({ error: "Invalid origin." }, 403);
   return null;
 }
-export async function readBody(request: NextRequest) {
+export async function readBody(request: NextRequest, maxBytes = 64000) {
   if (!request.headers.get("content-type")?.includes("application/json"))
     throw new Error("Use JSON.");
   const raw = await request.text();
-  if (Buffer.byteLength(raw) > 64000) throw new Error("Notice is too large.");
+  if (Buffer.byteLength(raw) > maxBytes)
+    throw new Error("Notice is too large.");
   return JSON.parse(raw);
 }

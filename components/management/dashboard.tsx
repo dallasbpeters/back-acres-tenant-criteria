@@ -20,6 +20,7 @@ import { POLICY, policyRecordText } from "@/lib/policy";
 import { LeaseWorkspace } from "./leases";
 import { BillingWorkspace, type RentScheduleRecord } from "./billing";
 export type PropertyRecord = {
+  leaseDefaults?: import("@/lib/management/leases").LeaseValues | null;
   id: string;
   slug: string;
   revision: number;
@@ -77,6 +78,7 @@ export type TemplateRecord = {
   createdAt: string;
 };
 export type DraftRecord = {
+  document?: import("@/lib/leases/document").LeaseNode | null;
   values: import("@/lib/management/leases").LeaseValues | null;
   id: string;
   propertyId: string;

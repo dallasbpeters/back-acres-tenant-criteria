@@ -19,7 +19,7 @@ export async function GET(
       .from(leaseDrafts)
       .where(and(eq(leaseDrafts.id, id), notRemoved(leaseDrafts.id)));
     if (!draft) return reply({ error: "Not found." }, 404);
-    const bytes = await leasePdf(draft.body, id);
+    const bytes = await leasePdf(draft.body, id, draft.document);
     return new NextResponse(Buffer.from(bytes), {
       headers: {
         "Content-Type": "application/pdf",

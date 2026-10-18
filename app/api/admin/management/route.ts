@@ -1,3 +1,5 @@
+import { leaseDocumentSchema, documentText } from "@/lib/leases/document";
+import { disclosureFields } from "@/lib/leases/disclosures";
 import { notRemoved } from "@/lib/management/not-removed";
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
@@ -34,6 +36,17 @@ import { leaseFields } from "@/lib/management/leases";
 const uuid = z.string().uuid();
 const command = z.discriminatedUnion("action", [
   z.object({
+    action: z.literal("leaseDefaults"),
+    propertyId: uuid,
+    values: z
+      .record(z.string(), z.string().max(3000))
+      .refine((v) =>
+        Object.keys(v).every((k) =>
+          disclosureFields.includes(k as (typeof disclosureFields)[number]),
+        ),
+      ),
+  }),
+  z.object({
     action: z.literal("leaseTemplate"),
     id: uuid,
     name: z.string().trim().min(1).max(300),
@@ -41,6 +54,7 @@ const command = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("leaseDraft"),
+    document: leaseDocumentSchema.optional(),
     id: uuid,
     propertyId: uuid,
     templateId: uuid,
@@ -210,7 +224,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const denied = await guard(request);
   if (denied) return denied;
-  const parsed = command.safeParse(await readBody(request).catch(() => null));
+  const parsed = command.safeParse(
+    await readBody(request, 256000).catch(() => null),
+  );
   if (!parsed.success)
     return reply({ error: "Check the required fields and amounts." }, 400);
   const c = parsed.data;
@@ -255,7 +271,23 @@ export async function POST(request: NextRequest) {
         .insert(leaseTemplates)
         .values({ id: c.id, name: c.name, body: c.body })
         .onConflictDoNothing();
+    } else if (c.action === "leaseDefaults") {
+      const [updated] = await d
+        .update(properties)
+        .set({ leaseDefaults: c.values })
+        .where(and(eq(properties.id, c.propertyId), notRemoved(properties.id)))
+        .returning({ id: properties.id });
+      if (!updated) return reply({ error: "Property not found." }, 404);
+      await event(c.propertyId, { fields: Object.keys(c.values) });
     } else if (c.action === "leaseDraft") {
+      if (c.document && documentText(c.document).trim() !== c.body.trim())
+        return reply(
+          {
+            error:
+              "The editor text and saved document do not match. Reload the draft and try again.",
+          },
+          400,
+        );
       if (c.parentId) {
         const [parent] = await d
           .select()
@@ -277,6 +309,7 @@ export async function POST(request: NextRequest) {
           parentId: c.parentId,
           tenantName: c.tenantName,
           values: c.values ?? null,
+          document: c.document ?? null,
           body: c.body,
         })
         .onConflictDoNothing();

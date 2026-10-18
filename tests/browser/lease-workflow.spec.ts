@@ -109,16 +109,28 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
   await workspace
     .getByRole("button", { name: "Continue", exact: true })
     .click();
+  for (const [label, text] of [
+    ["Habitability disclosure", "TEST property condition details."],
+    [
+      "Utility responsibilities and disclosure details",
+      "TEST utility allocation.",
+    ],
+  ]) {
+    await page
+      .locator(".lease-disclosure-card")
+      .filter({ has: page.getByRole("heading", { name: label, exact: true }) })
+      .getByRole("button", { name: "Edit wording", exact: true })
+      .click();
+    await page.getByRole("textbox", { name: label, exact: true }).fill(text);
+  }
   await page
-    .getByLabel("Habitability disclosure", { exact: true })
-    .fill("TEST property condition details.");
-  await page
-    .getByLabel("Utility responsibilities and disclosure details", {
-      exact: true,
-    })
-    .fill("TEST utility allocation.");
+    .getByRole("checkbox", { name: /I reviewed these property statements/ })
+    .check();
   await workspace
     .getByRole("button", { name: "Review lease", exact: true })
+    .click();
+  await workspace
+    .getByRole("button", { name: "Read document", exact: true })
     .click();
   const preview = page.getByRole("article", { name: "Lease draft preview" });
   await expect(preview).toContainText("Rent: $2,500.00");
@@ -171,6 +183,9 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
   await workspace.getByText("Earlier versions (1)", { exact: true }).click();
   await workspace
     .getByRole("button", { name: "Open earlier version", exact: true })
+    .click();
+  await workspace
+    .getByRole("button", { name: "Read document", exact: true })
     .click();
   await expect(preview).not.toContainText("TEST owner revision.");
   await workspace

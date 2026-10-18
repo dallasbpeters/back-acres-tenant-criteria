@@ -261,6 +261,9 @@ test("property lifecycle, private records, public applications, resident links, 
   await page.getByLabel("Security deposit ($)", { exact: true }).fill("2500");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Review lease", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Read document", exact: true })
+    .click();
   await expect(
     page.getByRole("article", { name: "Lease draft preview" }),
   ).toContainText(`Lease for Fixture tenant at ${property.address}.`);
