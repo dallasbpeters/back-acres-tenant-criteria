@@ -1,0 +1,3 @@
+{
+  "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,css}": "ultracite fix"
+}

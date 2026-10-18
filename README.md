@@ -292,3 +292,9 @@ Applying a template preserves applicant/property/contact details, existing agenc
 `npm run test:stripe:coverage` for the coverage report and enforced thresholds.
 See [Stripe failure coverage and external-testing limits](docs/stripe-testing.md).
 No real provider calls, charges, emails, or Neon writes are made by this suite.
+
+### Formatting and pre-commit checks
+
+Ultracite + Biome check source files; Husky runs staged-file fixes/lint and
+TypeScript before each commit. Use `npm run fix -- <files>` and
+`npm run check -- <files>`. See [setup and existing lint baseline](docs/code-checks.md).

@@ -18,3 +18,14 @@ A carefully typeset property notice: light paper, dark ink, restrained green acc
 
 ### Typography decision
 Voice: formal, precise, composed. Reflex candidates rejected: Newsreader, IBM Plex Serif, and Inter. Physical reference: a carefully typeset property notice, not a sales brochure. Catalog-reviewed selection: Source Serif 4 for the document and Public Sans for metadata and controls. Serve fonts locally through bundled Fontsource assets.
+
+## Code checks
+
+Use Ultracite's Biome presets for core JavaScript/TypeScript, React, and Next.js.
+Run `npm run fix -- <files>` to format and safely fix the files you changed,
+then `npm run check -- <files>` to verify them. Husky runs lint-staged followed
+by the full TypeScript check before committing. Do not bypass the hook.
+
+The existing app has a documented strict-lint baseline in `docs/code-checks.md`;
+a whole-project `npm run check` is not currently clean. Keep new or edited files
+passing the configured rules, and do not disable rules globally to hide old debt.

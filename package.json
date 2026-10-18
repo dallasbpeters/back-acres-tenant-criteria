@@ -3,19 +3,28 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit",
+    "check": "ultracite check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "dev": "next dev",
+    "fix": "ultracite fix",
+    "postinstall": "node scripts/copy-pdf-assets.cjs",
+    "prepare": "husky",
+    "start": "next start",
     "test": "npm run test:unit && npm run test:stripe",
     "test:e2e": "playwright test",
     "test:signing": "node tests/support/run-lease-signing.cjs",
-    "postinstall": "node scripts/copy-pdf-assets.cjs",
     "test:stripe": "vitest run --config vitest.stripe.config.mts",
+    "test:stripe:coverage": "npm run test:stripe -- --coverage",
     "test:unit": "tsx --test tests/*.test.ts",
-    "test:stripe:coverage": "npm run test:stripe -- --coverage"
+    "typecheck": "tsc --noEmit"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.0"
+    },
+    "postcss": "8.5.29"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -50,6 +59,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@electric-sql/pglite": "^0.5.10",
     "@playwright/test": "^1.64.1",
     "@types/node": "^22.0.0",
@@ -59,15 +69,12 @@
     "@types/sanitize-html": "^2.16.2",
     "@vitest/coverage-v8": "^5.0.5",
     "drizzle-kit": "^0.31.11",
+    "husky": "latest",
+    "lint-staged": "latest",
     "tsx": "^4.23.15",
     "typescript": "^5.9.0",
+    "ultracite": "7.10.2",
     "vitest": "^5.0.5"
-  },
-  "overrides": {
-    "postcss": "8.5.29",
-    "@esbuild-kit/core-utils": {
-      "esbuild": "^0.25.0"
-    }
   },
   "engines": {
     "node": "22.x"
