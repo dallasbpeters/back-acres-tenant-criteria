@@ -176,7 +176,9 @@ export default function PrivacyPage() {
         <p>
           For automatic rent payments, we retain the agreed amount, dates,
           installment count, acceptance time, authorization text, and Stripe
-          references for the bank setup and recurring schedule. Stripe collects
+          references for the bank setup and recurring schedule. We retain
+          invoice activity and cumulative refund history, and queue copies of
+          accepted payment terms to the payer through Resend. Stripe collects
           and verifies bank details and provides the bank mandate. We do not
           store bank account or routing numbers. Private enrollment links permit
           bank setup and stopping future payments; share them only with the

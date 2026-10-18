@@ -210,6 +210,7 @@ async function reconcileInvoice(invoice: Stripe.Invoice) {
     payerEmail: schedule.payerEmail,
     payerName: schedule.payerName,
     propertyId: schedule.propertyId,
+    refundedCents: charge?.amount_refunded ?? 0,
     status: state,
     stripeInvoiceId: invoice.id,
   };
@@ -220,6 +221,7 @@ async function reconcileInvoice(invoice: Stripe.Invoice) {
       set: {
         hostedInvoiceUrl: values.hostedInvoiceUrl,
         paidAt: sql`coalesce(${invoices.paidAt},${values.paidAt})`,
+        refundedCents: sql`greatest(${invoices.refundedCents},${values.refundedCents})`,
         // Preserve settled/returned states if an older reconciliation finishes last.
         status: sql`case
           when ${invoices.status} in ('disputed','refunded') then ${invoices.status}
@@ -309,6 +311,7 @@ async function reconcileCheckoutPayment(intentId: string) {
     await d
       .update(invoices)
       .set({
+        refundedCents: sql`greatest(${invoices.refundedCents},${charge?.amount_refunded ?? 0})`,
         status: sql`case
         when ${invoices.status} in ('disputed','refunded') then ${invoices.status}
         when ${status} in ('disputed','refunded','partially_refunded','failed') then ${status}

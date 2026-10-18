@@ -21,3 +21,6 @@ skills-lock.json
 public/pdf-assets/
 
 coverage/
+
+# Local configuration handoff; never commit credentials
+/env.txt

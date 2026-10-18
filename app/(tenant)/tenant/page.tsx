@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import {
   invoices,
   maintenanceRequests,
+  paymentHistory,
   properties,
   rentSchedules,
 } from "@/lib/db/schema";
@@ -96,6 +97,19 @@ export default async function TenantPortal() {
                 .limit(100),
             ]);
           const [property] = propertyRows;
+          // The history query uses the already-authorized invoice rows, never URL IDs.
+          const history = payments.length
+            ? await d
+                .select()
+                .from(paymentHistory)
+                .where(
+                  inArray(
+                    paymentHistory.invoiceId,
+                    payments.map((payment) => payment.id)
+                  )
+                )
+                .orderBy(desc(paymentHistory.observedAt))
+            : [];
           return (
             <section className="tenant-tenancy" key={access.id}>
               <h2>{property?.data.name}</h2>
@@ -105,7 +119,11 @@ export default async function TenantPortal() {
                   aria-label={`${property?.data.name} payments`}
                   id={index === 0 ? "payments" : undefined}
                 >
-                  <PaymentHistory payments={payments} schedules={schedules} />
+                  <PaymentHistory
+                    history={history}
+                    payments={payments}
+                    schedules={schedules}
+                  />
                 </section>
                 <section
                   aria-label={`${property?.data.name} maintenance`}

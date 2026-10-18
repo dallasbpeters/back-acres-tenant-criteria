@@ -115,8 +115,9 @@ export default function TermsPage() {
           page to stop future debits, or contact the owner. Stopping payments
           does not reverse debits already submitted or alter rent due under your
           lease. Changes to bank details or payment terms require a new
-          enrollment. Keep a copy of the displayed authorization and Stripe
-          mandate.
+          enrollment. The enrollment page provides a downloadable copy of
+          accepted payment terms; a copy is also queued for email. Keep it and
+          the separate Stripe mandate.
         </p>
       </section>
       <section>

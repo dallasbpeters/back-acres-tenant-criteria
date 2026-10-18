@@ -37,5 +37,6 @@ export const noticeDeliveries = pgTable("adverse_notice_deliveries", {
 });
 // biome-ignore lint/performance/noBarrelFile: This server-only schema assembly is the canonical Drizzle migration and relationship boundary.
 export * from "./management";
+export * from "./payments";
 export * from "./signing";
 export * from "./tenants";

@@ -1,12 +1,14 @@
-import type { invoices, rentSchedules } from "@/lib/db/schema";
+import type { invoices, paymentHistory, rentSchedules } from "@/lib/db/schema";
 import { dollars } from "@/lib/management/model";
 import { paymentMode } from "@/lib/management/stripe";
 export function PaymentHistory({
   payments,
   schedules,
+  history,
 }: {
   payments: (typeof invoices.$inferSelect)[];
   schedules: (typeof rentSchedules.$inferSelect)[];
+  history: (typeof paymentHistory.$inferSelect)[];
 }) {
   return (
     <>
@@ -46,6 +48,43 @@ export function PaymentHistory({
         </div>
       ) : (
         <p>No payment records have been shared yet.</p>
+      )}
+      {!!history.length && (
+        <details>
+          <summary>Payment activity and refunds</summary>
+          <p className="small-note">
+            Recorded invoice changes. Older invoices begin with a baseline;
+            earlier activity is available from the owner’s Stripe records. These
+            entries are not a bank statement.
+          </p>
+          <ul className="tenant-request-list">
+            {history.map((entry) => (
+              <li key={entry.id}>
+                <strong>
+                  {
+                    payments.find((payment) => payment.id === entry.invoiceId)
+                      ?.description
+                  }
+                </strong>
+                <span>
+                  {entry.status.replaceAll("_", " ")} ·{" "}
+                  {entry.observedAt.toLocaleString("en-US", {
+                    timeZone: "America/Chicago",
+                  })}
+                </span>
+                <span>
+                  {dollars(entry.amountCents)}
+                  {entry.refundedCents
+                    ? ` · Refunded to date: ${dollars(entry.refundedCents)}`
+                    : ""}
+                </span>
+                {entry.source === "migration_baseline" && (
+                  <span>Migration baseline</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       <h3>Automatic payments</h3>
       {schedules.length ? (

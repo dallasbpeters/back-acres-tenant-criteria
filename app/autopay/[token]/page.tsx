@@ -1,9 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { AuthorizationDownload } from "@/components/management/authorization-download";
 import { AutopayControls } from "@/components/management/autopay";
 import { ManagementShell } from "@/components/management/shell";
 import { db } from "@/lib/db";
 import { properties, rentSchedules } from "@/lib/db/schema";
+import { authorizationReceiptText } from "@/lib/management/authorization-receipt";
 import { authorizationText } from "@/lib/management/autopay";
 import { dollars } from "@/lib/management/model";
 import { notRemoved } from "@/lib/management/not-removed";
@@ -89,6 +91,21 @@ export default async function AutopayPage({
       </dl>
       <h2>Payment authorization</h2>
       <p>{r.authorizationText || authorizationText(r)}</p>
+      {!!(r.consentedAt && r.authorizationText) && (
+        <section aria-label="Accepted payment authorization">
+          <p>
+            Accepted {r.consentedAt?.toISOString()}. This is your copy of the
+            accepted payment terms; Stripe supplies the separate bank mandate.
+          </p>
+          <AuthorizationDownload
+            text={authorizationReceiptText({
+              authorizationText: r.authorizationText,
+              consentedAt: r.consentedAt,
+              payerName: r.payerName,
+            })}
+          />
+        </section>
+      )}
       <p>
         Keep this link private. Save or print this page for your records. Bank
         details are entered directly with Stripe and are not stored by Back

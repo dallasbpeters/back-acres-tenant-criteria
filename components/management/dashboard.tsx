@@ -311,6 +311,11 @@ export function Dashboard() {
             <section>
               <h2>Payment requests</h2>
               <p>
+                <a href="/admin/payment-history">
+                  Payment activity, authorization receipts, and recovery status
+                </a>
+              </p>
+              <p>
                 {records.paymentsReady
                   ? `Stripe ${records.paymentMode} mode is configured.`
                   : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
@@ -345,6 +350,11 @@ export function Dashboard() {
                   <a href={i.url} rel="noreferrer" target="_blank">
                     Open payment request
                   </a>
+                  <p>
+                    <a href={`/admin/payment-history?invoice=${i.id}`}>
+                      View payment activity
+                    </a>
+                  </p>
                   <CopyLink url={i.url} />
                   <RemoveButton
                     cancelFirst={i.status === "open"}

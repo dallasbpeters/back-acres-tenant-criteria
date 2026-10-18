@@ -116,6 +116,7 @@ export const invoices = pgTable("rental_invoices", {
   propertyId: uuid("property_id")
     .notNull()
     .references(() => properties.id),
+  refundedCents: integer("refunded_cents").notNull().default(0),
   status: text("status").notNull().default("open"),
   stripeInvoiceId: text("stripe_invoice_id").unique(),
   stripeSessionId: text("stripe_session_id").unique(),

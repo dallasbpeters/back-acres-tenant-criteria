@@ -86,3 +86,12 @@ it before creating another request. Retrying the UI is not a safe substitute.
 
 Stripe references: [webhook signatures, retries, duplicate delivery and event
 ordering](https://docs.stripe.com/webhooks), [ACH Direct Debit lifecycle](https://docs.stripe.com/payments/ach-direct-debit).
+
+## Invoice history and scheduled recovery
+
+The suite also covers database-triggered append-only history, baseline migration,
+rollback on history failure, cumulative refund amounts, immutable authorization
+snapshots, receipt outbox delivery/retry failures, worker authentication, bounded
+Stripe pagination, mode separation, and independent email/Stripe recovery.
+The coverage gate includes the new worker, receipt formatter, and recovery module.
+See `payment-security.md` for operating limits and unresolved launch requirements.

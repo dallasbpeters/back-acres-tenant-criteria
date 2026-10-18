@@ -28,6 +28,7 @@ const client = vi.hoisted(() => ({
     },
   },
   customers: { create: vi.fn() },
+  events: { list: vi.fn() },
   invoicePayments: { list: vi.fn() },
   invoices: { retrieve: vi.fn(), voidInvoice: vi.fn() },
   mandates: { retrieve: vi.fn() },
