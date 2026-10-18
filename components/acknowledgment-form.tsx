@@ -74,7 +74,7 @@ export function AcknowledgmentForm({
         <h3>Confirmation sent.</h3>
         <p>
           Thank you, {fullName}. An acknowledgment receipt has been emailed to{" "}
-          <strong>{email}</strong> and copied to the property owners. Check your
+          <strong>{email}</strong> and copied to Back Acres Rentals. Check your
           inbox and spam folder.
         </p>
         <div className="receipt-divider" />
@@ -156,7 +156,7 @@ export function AcknowledgmentForm({
             disabled={!ready || sending}
             name="accessCode"
             onChange={(event) => setAccessCode(event.target.value)}
-            placeholder="Code provided by the landlord"
+            placeholder="Code from Back Acres Rentals"
             required
             value={accessCode}
           />
@@ -200,7 +200,7 @@ export function AcknowledgmentForm({
       <div className="data-notice">
         Your typed name, email, time of acknowledgment, criteria version, and
         limited technical details (such as IP address) are included in the
-        confirmation record and emailed to you and the property owners.
+        confirmation record and emailed to you and Back Acres Rentals.
       </div>
       {!!error && (
         <div className="form-error" role="alert">

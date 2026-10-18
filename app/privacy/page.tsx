@@ -92,8 +92,8 @@ export default function PrivacyPage() {
         <p>
           You can manage account information and security in tenant account
           settings. Removing an account or portal access does not automatically
-          erase payment, maintenance, lease, or audit records. Contact the
-          property owner for record corrections or deletion requests.
+          erase payment, maintenance, lease, or audit records. Contact Back
+          Acres Rentals for record corrections or deletion requests.
         </p>
       </section>
       <section>
@@ -137,7 +137,7 @@ export default function PrivacyPage() {
           <li>
             <strong>Resend</strong> processes email recipients, message content,
             and email delivery information. Acknowledgment receipts are sent to
-            the applicant and privately copied to the property owners.
+            the applicant and privately copied to Back Acres Rentals.
             Adverse-action notices are sent to the recipient confirmed by the
             administrator.
           </li>
@@ -214,10 +214,10 @@ export default function PrivacyPage() {
         </p>
         <p>
           You may contact Back Acres Rentals to request access to, correction
-          of, or deletion of information associated with you. The owner may need
-          to verify your identity and retain information needed for applicable
-          legal obligations, disputes, or rental recordkeeping. Deleting a
-          website record does not recall emails already sent.
+          of, or deletion of information associated with you. Back Acres Rentals
+          may need to verify your identity and retain information needed for
+          applicable legal obligations, disputes, or rental recordkeeping.
+          Deleting a website record does not recall emails already sent.
         </p>
         <p>
           Administrators may sign out to clear the active session and may manage

@@ -75,8 +75,8 @@ export default function Page() {
           <div className="draft-banner" role="status">
             <strong>Acknowledgments temporarily unavailable</strong>
             <p>
-              You can review the final criteria below. Please contact the
-              property owner if you need to submit an acknowledgment.
+              You can review the final criteria below. Please contact Back Acres
+              Rentals if you need to submit an acknowledgment.
             </p>
           </div>
         )}

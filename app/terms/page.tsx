@@ -13,7 +13,7 @@ export default function TermsPage() {
       <section>
         <h2>01 · Purpose and scope</h2>
         <p>
-          The property owner provides this website for the rental at 7800 Back
+          Back Acres Rentals provides this website for the rental at 7800 Back
           Acres Rd, Amarillo, Texas. It publishes selection criteria, records
           applicants’ acknowledgments, and allows authorized administrators to
           prepare, save, and send applicant notices.
@@ -37,8 +37,8 @@ export default function TermsPage() {
           An acknowledgment records the submission at the time it is made and
           identifies the criteria version presented. It does not establish that
           criteria were provided on an earlier date. Keep the confirmation for
-          your records. If you cannot use the electronic form, contact the
-          property owner to arrange another way to receive and acknowledge the
+          your records. If you cannot use the electronic form, contact Back
+          Acres Rentals to arrange another way to receive and acknowledge the
           criteria.
         </p>
       </section>
@@ -48,7 +48,7 @@ export default function TermsPage() {
           The owner workspace is limited to approved Google accounts. Protect
           your account and do not share your session or attempt to access
           another person’s account or records. Google sign-in confirms an
-          identity; it does not grant access unless the property owner has
+          identity; it does not grant access unless Back Acres Rentals has
           approved the account.
         </p>
         <p>
@@ -80,13 +80,13 @@ export default function TermsPage() {
         <h2>Tenant accounts and property access</h2>
         <p>
           Create and use your own tenant account. Verify your email and keep
-          your sign-in credentials private. The property owner must approve
+          your sign-in credentials private. Back Acres Rentals must approve
           access and choose which payment records are shared. Account
           registration does not approve an application, establish a tenancy,
           change a lease, or authorize a payment. Payment status remains subject
           to confirmation by Stripe. Removing portal access does not cancel an
           existing payment authorization; use the enrollment controls or contact
-          the owner to stop future debits.
+          Back Acres Rentals to stop future debits.
         </p>
       </section>
       <section>
@@ -154,23 +154,24 @@ export default function TermsPage() {
         <p>
           An application is a request for consideration, not acceptance or a
           lease. Screening authorization and any screening charge are handled
-          separately. Maintenance forms are not emergency services; contact the
-          owner directly for urgent repairs and call 911 for immediate danger.
-          Lease documents are drafts until reviewed and signed. Electronic
-          signing is a separate flow tied to a frozen PDF version, individual
-          email verification, explicit consent, and an audit record. Each signer
-          must act for themselves; administrators must not sign for a tenant. A
-          server timestamp records when this website accepted the signature; it
-          is not notarization, an independent trusted timestamp, or a guarantee
-          that a lease or its terms are enforceable. Signers may request paper
-          or decline electronic signing before signing by contacting the
-          landlord. Signed records and audit evidence are retained; a later edit
-          creates a separate lease version and does not change what was signed.
-          Paying a request does not by itself approve an application or execute
-          a lease. Payment amounts are disclosed before checkout; contact the
-          owner about errors or refunds. Bank payments may remain pending until
-          the provider confirms success. These website terms do not alter lease
-          obligations or waive rights under applicable law.
+          separately. Maintenance forms are not emergency services; contact Back
+          Acres Rentals directly for urgent repairs and call 911 for immediate
+          danger. Lease documents are drafts until reviewed and signed.
+          Electronic signing is a separate flow tied to a frozen PDF version,
+          individual email verification, explicit consent, and an audit record.
+          Each signer must act for themselves; administrators must not sign for
+          a tenant. A server timestamp records when this website accepted the
+          signature; it is not notarization, an independent trusted timestamp,
+          or a guarantee that a lease or its terms are enforceable. Signers may
+          request paper or decline electronic signing before signing by
+          contacting Back Acres Rentals. Signed records and audit evidence are
+          retained; a later edit creates a separate lease version and does not
+          change what was signed. Paying a request does not by itself approve an
+          application or execute a lease. Payment amounts are disclosed before
+          checkout; contact Back Acres Rentals about errors or refunds. Bank
+          payments may remain pending until the provider confirms success. These
+          website terms do not alter lease obligations or waive rights under
+          applicable law.
         </p>
       </section>
     </LegalDocument>
