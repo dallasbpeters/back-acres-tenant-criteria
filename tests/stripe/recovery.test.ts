@@ -12,11 +12,13 @@ import {
   describe,
   expect,
   it,
+  onTestFinished,
   vi,
 } from "vitest";
 import { GET as recover } from "@/app/api/internal/payment-recovery/route";
 import {
   authorizationReceipts,
+  brandVersions,
   invoices,
   paymentHistory,
   rentSchedules,
@@ -218,6 +220,27 @@ describe("authorization copies and outbox", () => {
     expect(receipt.resendId).toBe("email_fixture");
     expect(receipt.acceptedAt).toBeInstanceOf(Date);
     expect(await deliverAuthorizationReceipts(transport)).toBe(0);
+  });
+  it("brands the authorization email with the saved name and PNG logo", async () => {
+    const brandId = "33333333-3333-4333-8333-333333333333";
+    await state.database.insert(brandVersions).values({
+      id: brandId,
+      logoPng: Buffer.from("fixture-png").toString("base64"),
+      name: "Saved <Brand>",
+    });
+    // brand_versions is not part of the shared reset; remove the row afterwards.
+    onTestFinished(() => state.database.delete(brandVersions));
+    await consent();
+    const transport = emailTransport();
+    expect(await deliverAuthorizationReceipts(transport)).toBe(1);
+    const call = transport.mock.calls[0] as unknown as [string, RequestInit];
+    const [message] = JSON.parse(call[1].body as string);
+    expect(message.html).toContain("Saved &lt;Brand&gt;");
+    expect(message.html).toContain(
+      `src="https://rental.example.invalid/api/branding/logo?v=${brandId}"`
+    );
+    expect(message.html).not.toContain("<svg");
+    expect(message.html).toContain("I authorize $1,250");
   });
   it.each(["rejected", "malformed", "partial", "timeout"])(
     "leaves a receipt pending after %s transport results",

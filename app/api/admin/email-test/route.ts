@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { guard, reply } from "@/lib/adverse/auth";
 import { authOptions } from "@/lib/adverse/google-auth";
+import { currentEmailBrand } from "@/lib/email-brand";
 import { sendLeaseMail } from "@/lib/leases/mail";
 import { allowIntake } from "@/lib/management/security";
 
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
     const reference = randomUUID();
     // The recipient, subject and body are server-controlled. Never send arbitrary owner input.
     const response = await sendLeaseMail({
+      brand: await currentEmailBrand(),
       subject: "Back Acres Rentals — email delivery test",
       text: `This is a test email from Back Acres Rentals.\n\nYou requested this delivery check from the owner workspace. It does not create a lease, payment obligation, application decision or tenant record.\n\nSender: ${process.env.FROM_EMAIL}\nTest reference: ${reference}\nSent at: ${new Date().toISOString()}\n\nhttps://backacresrentals.com`,
       to: recipient,

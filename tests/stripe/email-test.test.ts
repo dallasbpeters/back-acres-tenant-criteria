@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   allow: vi.fn(),
+  brand: vi.fn(),
   guard: vi.fn(),
   mail: vi.fn(),
   session: vi.fn(),
@@ -14,9 +15,14 @@ vi.mock("@/lib/adverse/auth", async (importOriginal) => ({
 }));
 vi.mock("@/lib/management/security", () => ({ allowIntake: state.allow }));
 vi.mock("@/lib/leases/mail", () => ({ sendLeaseMail: state.mail }));
+vi.mock("@/lib/email-brand", () => ({ currentEmailBrand: state.brand }));
 
 import { POST } from "../../app/api/admin/email-test/route";
 
+const brand = {
+  logoUrl: "https://rental.example.invalid/api/branding/logo?v=fixture",
+  name: "Saved Brand",
+};
 const request = () =>
   new NextRequest("https://rental.example.invalid/api/admin/email-test", {
     body: JSON.stringify({
@@ -30,6 +36,7 @@ beforeEach(() => {
   state.guard.mockResolvedValue(null);
   state.session.mockResolvedValue({ user: { email: "owner@example.invalid" } });
   state.allow.mockResolvedValue(true);
+  state.brand.mockResolvedValue(brand);
   state.mail.mockResolvedValue(
     new Response(JSON.stringify({ id: "test-delivery-id" }), { status: 200 })
   );
@@ -68,6 +75,7 @@ describe("owner-only email delivery test", () => {
     });
     expect(JSON.stringify(result)).not.toContain("test-private-key");
     expect(state.mail).toHaveBeenCalledWith({
+      brand,
       subject: "Back Acres Rentals — email delivery test",
       text: expect.stringContaining("It does not create a lease"),
       to: "owner@example.invalid",

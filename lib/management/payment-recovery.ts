@@ -5,6 +5,8 @@ import type Stripe from "stripe";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { authorizationReceipts, invoices } from "@/lib/db/schema";
+import { currentEmailBrand } from "@/lib/email-brand";
+import { brandedEmailHtml, textEmailHtml } from "@/lib/email-layout";
 import { requireValue } from "@/lib/required";
 import { authorizationReceiptText } from "./authorization-receipt";
 import { billingEvents, handleBillingEvent } from "./billing-events";
@@ -31,6 +33,7 @@ export async function deliverAuthorizationReceipts(
   if (!(process.env.RESEND_API_KEY && process.env.FROM_EMAIL)) {
     throw new Error("Authorization email is not configured.");
   }
+  const brand = await currentEmailBrand();
   // All-or-nothing provider validation and one transaction keep a retried batch stable.
   const key = createHash("sha256")
     .update(rows.map((row) => row.id).join(":"))
@@ -39,6 +42,10 @@ export async function deliverAuthorizationReceipts(
     body: JSON.stringify(
       rows.map((row) => ({
         from: process.env.FROM_EMAIL,
+        html: brandedEmailHtml(
+          brand,
+          textEmailHtml(authorizationReceiptText(row))
+        ),
         subject: "Your Back Acres ACH authorization copy",
         text: authorizationReceiptText(row),
         to: [row.recipient],

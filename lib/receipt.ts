@@ -50,11 +50,11 @@ export function escapeHtml(value: string): string {
   });
 }
 
-export function receiptHtml(receipt: Receipt) {
+export function receiptHtml(receipt: Receipt, brandName = "Back Acres Rental") {
   const labeled = (key: string, value: string) =>
     `<tr><td style="padding:6px 14px 6px 0;color:#64748b;vertical-align:top">${escapeHtml(key)}</td><td style="padding:6px 0;word-break:break-word">${escapeHtml(value)}</td></tr>`;
   return `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.55;color:#1c2931;max-width:660px;margin:auto">
-  <p style="text-transform:uppercase;font-size:11px;letter-spacing:2px;color:#64748b">Back Acres Rental · Confirmation</p>
+  <p style="text-transform:uppercase;font-size:11px;letter-spacing:2px;color:#64748b">${escapeHtml(brandName)} · Confirmation</p>
   <h1 style="font-size:26px;line-height:1.2">Acknowledgment received</h1>
   <p>We received an electronic acknowledgment that the applicant was given the opportunity to review the tenant selection criteria. This does not approve or deny the rental application.</p>
   <table style="border-collapse:collapse;width:100%;border-top:1px solid #d4dadd;border-bottom:1px solid #d4dadd;margin:24px 0">${[

@@ -6,6 +6,8 @@ import { deliverVersion } from "@/lib/adverse/delivery";
 import { sendErrors } from "@/lib/adverse/notice";
 import { db } from "@/lib/db";
 import { noticeDeliveries, noticeVersions } from "@/lib/db/schema";
+import { currentEmailBrand } from "@/lib/email-brand";
+import { brandedEmailHtml } from "@/lib/email-layout";
 import { notRemoved } from "@/lib/management/not-removed";
 export async function POST(request: NextRequest) {
   const denied = await guard(request);
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
         const response = await fetch("https://api.resend.com/emails", {
           body: JSON.stringify({
             from: process.env.FROM_EMAIL,
-            html: version.html,
+            html: brandedEmailHtml(await currentEmailBrand(), version.html),
             subject: version.subject,
             text: version.plainText,
             to: [version.notice.applicantEmail],
