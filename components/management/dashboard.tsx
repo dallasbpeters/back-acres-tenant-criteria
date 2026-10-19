@@ -15,11 +15,8 @@ import { BillingWorkspace, type RentScheduleRecord } from "./billing";
 import { BrandingWorkspace } from "./branding";
 import { LeaseWorkspace } from "./leases";
 import { ownerSections } from "./navigation";
-import {
-  PaymentRentersProvider,
-  RenterSharing,
-  RentersOverview,
-} from "./payment-renters";
+import { PaymentRentersProvider, RentersOverview } from "./payment-renters";
+import { PaymentRequests } from "./payment-requests";
 import type { PhotoRecord } from "./photos";
 import { type PublicationRecord, PublishingWorkspace } from "./publishing";
 import {
@@ -67,8 +64,9 @@ interface LinkRecord {
   revoked: boolean;
   url: string;
 }
-interface InvoiceRecord {
+export interface InvoiceRecord {
   amountCents: number;
+  category?: string;
   description: string;
   dueDate: string;
   id: string;
@@ -315,23 +313,28 @@ export function Dashboard() {
           </div>
           {!!(tab === "Payments") && (
             <PaymentRentersProvider>
-              <section>
-                <h2>Payment requests</h2>
-                <p>
-                  <a href="/admin/payment-history">
-                    Payment activity, authorization receipts, and recovery
-                    status
-                  </a>
-                </p>
-                <p>
-                  {records.paymentsReady
-                    ? `Stripe ${records.paymentMode} mode is configured (the secret key starts with ${records.paymentKeyKind}).`
-                    : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
-                  Use a rent schedule for monthly invoices, or a separate
-                  request for a deposit, fee, or one-time rent charge. Avoid
-                  requesting the same obligation twice. Automatic ACH requires
-                  the tenant’s bank authorization.
-                </p>
+              <section className="payments-tab">
+                <header className="payments-head">
+                  <div>
+                    <h2>Payments</h2>
+                    <p className="small-note">
+                      Rent schedules collect monthly rent. Payment requests are
+                      one-time charges, such as a deposit or a fee. Don’t
+                      request the same charge twice.
+                    </p>
+                  </div>
+                  <div className="payments-head-meta">
+                    <span
+                      className="payment-mode"
+                      data-mode={
+                        records.paymentsReady ? records.paymentMode : "off"
+                      }
+                    >
+                      {paymentModeLabel(records)}
+                    </span>
+                    <a href="/admin/payment-history">Payment activity</a>
+                  </div>
+                </header>
                 <RentersOverview propertyName={propertyName} />
                 <BillingWorkspace
                   onSaved={load}
@@ -339,60 +342,14 @@ export function Dashboard() {
                   ready={records.paymentsReady}
                   schedules={records.rentSchedules}
                 />
-                <InvoiceForm
+                <PaymentRequests
                   busy={busy}
+                  invoices={records.invoices}
+                  onSaved={load}
                   properties={records.properties}
+                  propertyName={propertyName}
                   save={save}
                 />
-                {records.invoices.map((i) => (
-                  <article className="record" key={i.id}>
-                    <h3>
-                      {i.description} · {dollars(i.amountCents)}
-                    </h3>
-                    <p>
-                      {i.payerName} · {i.payerEmail} ·{" "}
-                      {propertyName(i.propertyId)}
-                    </p>
-                    <p>
-                      Due {i.dueDate} · {i.status} · {i.mode} mode
-                    </p>
-                    <RenterSharing
-                      kind="invoice"
-                      propertyId={i.propertyId}
-                      recordId={i.id}
-                    />
-                    <a href={i.url} rel="noreferrer" target="_blank">
-                      Open payment request
-                    </a>
-                    <p>
-                      <a href={`/admin/payment-history?invoice=${i.id}`}>
-                        View payment activity
-                      </a>
-                    </p>
-                    <CopyLink url={i.url} />
-                    <RemoveButton
-                      cancelFirst={i.status === "open"}
-                      disabled={busy}
-                      id={i.id}
-                      kind="invoice"
-                      name={i.description}
-                      onRemoved={load}
-                    />
-                    {!!(i.status === "open") && (
-                      <div className="management-actions">
-                        <Button
-                          disabled={busy}
-                          onClick={() =>
-                            save({ action: "voidInvoice", id: i.id })
-                          }
-                          type="submit"
-                        >
-                          Cancel payment request
-                        </Button>
-                      </div>
-                    )}
-                  </article>
-                ))}
               </section>
             </PaymentRentersProvider>
           )}
@@ -507,6 +464,14 @@ export function Dashboard() {
   );
 }
 export type Save = (body: unknown) => Promise<boolean>;
+function paymentModeLabel(records: Records) {
+  if (!records.paymentsReady) {
+    return "Stripe not set up";
+  }
+  return records.paymentMode === "live"
+    ? "Live · real money"
+    : `Test mode · key ${records.paymentKeyKind ?? ""}`.trim();
+}
 export function Field({
   name,
   label,
@@ -807,73 +772,5 @@ function PropertyWorkspace({
         </p>
       )}
     </section>
-  );
-}
-function InvoiceForm({
-  properties,
-  save,
-  busy,
-}: {
-  properties: PropertyRecord[];
-  save: Save;
-  busy: boolean;
-}) {
-  const [id, setId] = useState(() => crypto.randomUUID());
-
-  return (
-    <form
-      className="management-form"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const form = e.currentTarget,
-          f = new FormData(form);
-        const ok = await save({
-          action: "invoice",
-          data: {
-            amountCents: Math.round(Number(f.get("amount")) * 100),
-            category: f.get("category"),
-            description: f.get("description"),
-            dueDate: f.get("dueDate"),
-            payerEmail: f.get("payerEmail"),
-            payerName: f.get("payerName"),
-            propertyId: f.get("propertyId"),
-          },
-          id,
-        });
-        if (ok) {
-          setId(crypto.randomUUID());
-          form.reset();
-        }
-      }}
-    >
-      <fieldset disabled={busy}>
-        <div className="fields">
-          <PropertySelect properties={properties} />
-          <Field label="Payer name" name="payerName" />
-          <Field label="Payer email" name="payerEmail" type="email" />
-          <AppSelect label={<>Payment type</>} name="category">
-            <option value="rent">Rent</option>
-            <option value="deposit">Deposit</option>
-            <option value="application_fee">Application fee</option>
-            <option value="other">Other</option>
-          </AppSelect>
-          <Field label="Description / rent period" name="description" />
-          <Field label="Amount ($)" name="amount" type="number" />
-          <Field label="Due date" name="dueDate" type="date" />
-        </div>
-        <p>
-          Confirm the amount and recipient. Requests are immutable once created.
-          No email is sent; copy and share the private link.
-        </p>
-        <Button
-          className="submit-button"
-          disabled={!properties.length}
-          type="submit"
-          variant="primary"
-        >
-          Create payment request
-        </Button>
-      </fieldset>
-    </form>
   );
 }
