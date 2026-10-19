@@ -101,12 +101,10 @@ export function LeaseSigning({
     setRevision((v) => v + 1);
     return data.packets as Packet[];
   }
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Load once per lease when the panel is embedded; later refreshes are explicit.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load once per lease so the row can show its signing status; later refreshes are explicit.
   useEffect(() => {
-    if (embedded) {
-      load().catch((e) => setError(e.message));
-    }
-  }, [embedded, draftId]);
+    load().catch((e) => setError(e.message));
+  }, [draftId]);
   // Renters connected to this lease's property, for choosing signers.
   useEffect(() => {
     if (!open) {
@@ -239,6 +237,58 @@ export function LeaseSigning({
       setBusy(false);
     }
   }
+  /** Cancels the open request and reopens the form with its signers to edit. */
+  async function changeSigners(packet: Packet) {
+    if (
+      !(
+        /* biome-ignore lint/suspicious/noAlert: Keep the explicit native confirmation before discarding edits, canceling collection, or withdrawing a signature. */ window.confirm(
+          "Change signers? This cancels the current signing request. You then fix the signers and send the lease again; everyone signs the new request."
+        )
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await post({ action: "void", packetId: packet.id });
+      setSigners(
+        packet.signers.map((signer) => ({
+          email: signer.email,
+          id: crypto.randomUUID(),
+          name: signer.name,
+          role: signer.role,
+        }))
+      );
+      setReviewed(false);
+      await load();
+      setOpen(true);
+      setMessage(
+        "Signing request canceled. Edit the signers below and send the lease again."
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const rowPacket = packets.find((p) => p.status !== "voided");
+  const rowStatus = (() => {
+    if (!rowPacket) {
+      return { label: "Not sent", tone: "draft" };
+    }
+    if (rowPacket.status === "completed") {
+      return { label: "Signed", tone: "done" };
+    }
+    const done = rowPacket.signers.filter((x) => x.signedAt).length;
+    const late = new Date(rowPacket.expiresAt).getTime() < Date.now();
+    return {
+      label: late
+        ? "Signing request expired"
+        : `Out for signature · ${done} of ${rowPacket.signers.length} signed`,
+      tone: late ? "late" : "out",
+    };
+  })();
   const active = packets.find((p) => p.status !== "voided"),
     expired = !!active && new Date(active.expiresAt).getTime() < Date.now(),
     unsent =
@@ -254,6 +304,25 @@ export function LeaseSigning({
         if (active) {
           return (
             <>
+              {active.status === "awaiting" && (
+                <div className="management-actions signing-request-actions">
+                  <Button
+                    disabled={busy}
+                    onClick={() => changeSigners(active)}
+                    type="button"
+                  >
+                    Change signers
+                  </Button>
+                  <Button
+                    disabled={busy}
+                    onClick={() => cancel(active.id)}
+                    type="button"
+                    variant="danger"
+                  >
+                    Cancel signing request
+                  </Button>
+                </div>
+              )}
               <p className="signing-summary">
                 {active.status === "completed"
                   ? "All required signatures recorded."
@@ -329,19 +398,6 @@ export function LeaseSigning({
                 >
                   Refresh signature status
                 </Button>
-                {!!(active.status === "awaiting") && (
-                  <Button
-                    disabled={busy}
-                    onClick={() => {
-                      if (active) {
-                        cancel(active.id);
-                      }
-                    }}
-                    type="button"
-                  >
-                    Cancel signing request
-                  </Button>
-                )}
               </div>
               <details className="signing-audit-details">
                 <summary>Document audit details</summary>
@@ -589,6 +645,11 @@ export function LeaseSigning({
       <div className="lease-row">
         {heading}
         <div className="lease-row-actions">
+          {!!loaded && (
+            <span className={`lease-status lease-status--${rowStatus.tone}`}>
+              {rowStatus.label}
+            </span>
+          )}
           {leading}
           <Button
             aria-expanded={preview}
@@ -614,9 +675,12 @@ export function LeaseSigning({
             type="button"
             variant="primary"
           >
-            {active?.status === "completed"
-              ? "View signing details"
-              : "Send lease"}
+            {(() => {
+              if (active?.status === "completed") {
+                return "View signing details";
+              }
+              return active ? "Signing status" : "Send lease";
+            })()}
           </Button>
           <OverflowMenu
             actions={[

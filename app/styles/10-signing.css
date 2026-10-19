@@ -258,3 +258,34 @@
   grid-column: 1 / -1;
   margin: 0;
 }
+/* Signing status on each lease row. */
+.lease-status {
+  padding: 0.2rem 0.55rem;
+  font-family: var(--font-interface);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid var(--border-dark);
+}
+.lease-status--out {
+  --bg-current: color-mix(in oklch, var(--actions) 10%, var(--paper));
+  background: color-mix(in oklch, var(--actions) 10%, var(--paper));
+  border-color: color-mix(in oklch, var(--actions) 45%, var(--paper));
+}
+.lease-status--done {
+  --bg-current: color-mix(in oklch, var(--accent) 14%, var(--paper));
+  background: color-mix(in oklch, var(--accent) 14%, var(--paper));
+  border-color: color-mix(in oklch, var(--accent) 50%, var(--paper));
+}
+.lease-status--late {
+  --bg-current: color-mix(in oklch, var(--warning) 14%, var(--paper));
+  background: color-mix(in oklch, var(--warning) 14%, var(--paper));
+  border-color: var(--warning);
+}
+.lease-status--draft {
+  color: var(--muted);
+}
+.signing-request-actions {
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid var(--border);
+}
