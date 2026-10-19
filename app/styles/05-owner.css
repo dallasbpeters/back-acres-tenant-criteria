@@ -523,6 +523,12 @@ button.remove-record-button,
 .remove-modal button {
   min-block-size: 2.75rem;
 }
+.remove-confirm-name {
+  margin-block-start: 1rem;
+}
+.remove-confirm-name strong {
+  overflow-wrap: anywhere;
+}
 .remove-modal .management-actions {
   margin-top: 1.5rem;
 }

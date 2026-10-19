@@ -128,6 +128,7 @@ test("remove and restore every workspace record; close listings and links, prese
   await page
     .getByRole("button", { exact: true, name: `Remove property: ${name}` })
     .click();
+  await dialog.getByRole("textbox", { name: "to confirm" }).fill(name);
   await dialog
     .getByRole("button", { exact: true, name: "Remove property" })
     .click();
@@ -245,6 +246,10 @@ test("remove and restore every workspace record; close listings and links, prese
   await page
     .getByRole("button", { exact: true, name: `Remove property: ${name}` })
     .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("textbox", { name: "to confirm" })
+    .fill(name);
   await page
     .getByRole("dialog")
     .getByRole("button", { exact: true, name: "Remove property" })

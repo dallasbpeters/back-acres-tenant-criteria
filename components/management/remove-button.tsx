@@ -37,12 +37,18 @@ export function RemoveButton({
 }) {
   const [localOpen, setLocalOpen] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [typed, setTyped] = useState("");
+  // Removing a property unpublishes it and hides its leases and invitations,
+  // so the owner must type its name before the remove button works.
+  const requiresName = kind === "property";
+  const nameMatches = typed.trim() === name.trim();
   const controlled = controlledOpen !== undefined;
   const open = controlled ? controlledOpen : localOpen;
   const setOpen = (value: boolean) => {
     if (value) {
       setError("");
+      setTyped("");
     }
     if (controlled) {
       onOpenChange?.(value);
@@ -100,13 +106,22 @@ export function RemoveButton({
                 Removed items; its history is retained.
               </p>
               {!!(kind === "property") && (
-                <p>
-                  The listing will be unpublished, applications closed, and
-                  resident links revoked. Related records stay in their own
-                  sections. Remove external listings in Zillow, Avail, and
-                  Apartments.com separately. Stop active rent schedules before
-                  removing this property.
-                </p>
+                <>
+                  <p>
+                    The listing will be unpublished, applications closed, and
+                    resident links revoked. Related records stay in their own
+                    sections. Remove external listings in Zillow, Avail, and
+                    Apartments.com separately. Stop active rent schedules before
+                    removing this property.
+                  </p>
+                  <p>
+                    <strong>
+                      Its leases cannot be sent for signature and tenant
+                      invitations stop working
+                    </strong>{" "}
+                    until you restore it from Removed items.
+                  </p>
+                </>
               )}
               {!!(kind === "residentLink") && (
                 <p>
@@ -154,13 +169,31 @@ export function RemoveButton({
                 {error}
               </p>
             )}
+            {requiresName ? (
+              <label className="field remove-confirm-name">
+                <span>
+                  Type <strong>{name}</strong> to confirm
+                </span>
+                <input
+                  autoComplete="off"
+                  disabled={busy}
+                  onChange={(event) => setTyped(event.target.value)}
+                  spellCheck={false}
+                  value={typed}
+                />
+              </label>
+            ) : null}
             <div className="management-actions">
-              <Button isDisabled={busy} onPress={() => setOpen(false)}>
+              <Button
+                autoFocus
+                isDisabled={busy}
+                onPress={() => setOpen(false)}
+              >
                 Keep {label}
               </Button>
               <Button
                 className="remove-confirm-button"
-                isDisabled={busy}
+                isDisabled={busy || (requiresName && !nameMatches)}
                 onPress={async () => {
                   setBusy(true);
                   setError("");

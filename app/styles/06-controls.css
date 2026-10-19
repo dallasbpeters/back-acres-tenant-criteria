@@ -17,12 +17,20 @@
   --button-active: color-mix(in oklch, var(--actions) 78%, #ffffff);
   --border-color: var(--border);
 }
+/* Destructive actions: a clear red in both themes, text by contrast-color(). */
 .ui-button--danger,
 .remove-confirm-button {
-  --button-bg: #853b32;
-  --button-ink: #fff;
-  --button-hover: #6f2f28;
-  --button-active: #59251f;
+  --button-bg: oklch(52% 0.2 27);
+  --button-ink: contrast-color(var(--button-bg));
+  --button-hover: oklch(46% 0.19 27);
+  --button-active: oklch(40% 0.17 27);
+  --border-color: transparent;
+}
+.ui-button--danger:disabled,
+.remove-confirm-button:disabled,
+.remove-confirm-button[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 .ui-button--quiet {
   --button-bg: transparent;
