@@ -99,6 +99,15 @@ describe("tenant invitations", () => {
     });
     expect(await db().select().from(tenantAccess)).toEqual([]);
   });
+  it("explains when the Clerk instance does not accept email addresses", async () => {
+    clerk.invite.mockRejectedValueOnce({
+      errors: [{ code: "invitations_not_supported", message: "Not supported" }],
+    });
+    const response = await invite();
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toContain("turn on Email address");
+    expect(await pending()).toEqual([]);
+  });
   it("updates one pending invitation when the owner invites again", async () => {
     await invite();
     await invite({ invoiceIds: [], name: "Renamed Tenant" });

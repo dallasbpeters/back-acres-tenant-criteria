@@ -245,7 +245,28 @@ export async function POST(request: NextRequest) {
       return await assignAccess(d, command, actor);
     }
     return await updateInvitation(d, command);
-  } catch {
+  } catch (error) {
+    // Log the provider or database reason (never request data) so failures
+    // in production can be diagnosed; the owner still sees a generic message.
+    const clerkError = (
+      error as { errors?: { code?: string; message?: string }[] } | null
+    )?.errors?.[0];
+    console.error(
+      "Tenant access update failed",
+      command.action,
+      clerkError?.code ?? "",
+      clerkError?.message ??
+        (error instanceof Error ? error.message : String(error))
+    );
+    if (clerkError?.code === "invitations_not_supported") {
+      return reply(
+        {
+          error:
+            "Clerk can't send invitations yet. In the Clerk dashboard (Production), turn on Email address under User & authentication, then try again.",
+        },
+        409
+      );
+    }
     return reply(
       { error: "Could not update access. Reload and try again." },
       503
