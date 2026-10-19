@@ -238,10 +238,12 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+
 .owner-sidebar nav {
   display: grid;
   gap: 0.3rem;
 }
+
 .owner-sidebar a {
   display: block;
   min-block-size: 2.75rem;
@@ -253,12 +255,18 @@
 .owner-sidebar a:hover {
   background: var(--tint);
 }
+
 .owner-sidebar a[aria-current="page"] {
   font-weight: 650;
   color: contrast-color(var(--tint));
   background: var(--tint);
-  border-inline-start-color: var(--border);
+  border-inline-start-color: var(--accent);
 }
+
+.owner-sidebar a[aria-current="page"]:hover {
+  color: contrast-color(var(--tint));
+}
+
 .owner-main.management-main {
   gap: 1.5rem;
   align-content: start;
