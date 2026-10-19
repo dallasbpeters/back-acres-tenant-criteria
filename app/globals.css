@@ -16,7 +16,7 @@
   /* One neutral color for every visible border and keyboard outline. */
   --border: #e6e5df;
   --border-dark: #646e51;
-  --tint: color-mix(in oklch, var(--accent) 12%, var(--paper));
+  --tint: color-mix(in oklch, var(--accent) 82%, var(--paper));
   --danger: #ff7141;
   --warning: #f0b03e;
   --font-document: "Source Serif 4 Variable", Georgia, serif;
@@ -4183,7 +4183,7 @@ button,
 .lease-side-tabs .ui-button[aria-pressed="true"],
 .lease-document-modes .ui-button[aria-pressed="true"] {
   font-weight: 700;
-  color: var(--ink);
+  color: contrast-color(var(--tint));
   border-block-end-color: var(--primary);
 }
 .lease-saved .lease-record {
