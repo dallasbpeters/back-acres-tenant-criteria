@@ -380,7 +380,7 @@ textarea::placeholder {
 }
 :is(button, .ui-button, .submit-button)[aria-pressed="true"] {
   --bg-current: var(--tint);
-  color: var(--accent);
+  color: contrast-color(var(--accent));
   background: var(--tint);
   border-color: var(--border);
 }
