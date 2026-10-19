@@ -1206,7 +1206,7 @@ footer {
 }
 .owner-sidebar a[aria-current="page"] {
   font-weight: 650;
-  color: var(--accent);
+  color: contrast-color(var(--tint));
   background: var(--tint);
   border-inline-start-color: var(--border);
 }
