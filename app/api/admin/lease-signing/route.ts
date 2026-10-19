@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
       timeZone: "America/Chicago",
     });
     const intro = `Hello ${signer.name},\n\nYour lease is ready. Review the complete lease, download a copy, and sign securely.`;
-    const details = `The request expires ${expires}. A separate verification code will be sent to this email address before signing. Do not forward this private link.\n\nYou may request a paper copy or signing alternative by contacting ${contact}.`;
+    const details = `The request expires ${expires}. This private link opens your lease for signing. Do not forward it. You can also sign from your tenant portal.\n\nYou may request a paper copy or signing alternative by contacting ${contact}.`;
     const portalLead =
       "After signing, create your tenant portal account with this email address to keep a copy of your lease and see payments and maintenance requests.";
     const response = await sendLeaseMail({

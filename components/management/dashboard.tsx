@@ -15,6 +15,11 @@ import { BillingWorkspace, type RentScheduleRecord } from "./billing";
 import { BrandingWorkspace } from "./branding";
 import { LeaseWorkspace } from "./leases";
 import { ownerSections } from "./navigation";
+import {
+  PaymentRentersProvider,
+  RenterSharing,
+  RentersOverview,
+} from "./payment-renters";
 import type { PhotoRecord } from "./photos";
 import { type PublicationRecord, PublishingWorkspace } from "./publishing";
 import {
@@ -308,78 +313,87 @@ export function Dashboard() {
             />
           </div>
           {!!(tab === "Payments") && (
-            <section>
-              <h2>Payment requests</h2>
-              <p>
-                <a href="/admin/payment-history">
-                  Payment activity, authorization receipts, and recovery status
-                </a>
-              </p>
-              <p>
-                {records.paymentsReady
-                  ? `Stripe ${records.paymentMode} mode is configured.`
-                  : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
-                Use a rent schedule for monthly invoices, or a separate request
-                for a deposit, fee, or one-time rent charge. Avoid requesting
-                the same obligation twice. Automatic ACH requires the tenant’s
-                bank authorization.
-              </p>
-              <BillingWorkspace
-                onSaved={load}
-                properties={records.properties}
-                ready={records.paymentsReady}
-                schedules={records.rentSchedules}
-              />
-              <InvoiceForm
-                busy={busy}
-                properties={records.properties}
-                save={save}
-              />
-              {records.invoices.map((i) => (
-                <article className="record" key={i.id}>
-                  <h3>
-                    {i.description} · {dollars(i.amountCents)}
-                  </h3>
-                  <p>
-                    {i.payerName} · {i.payerEmail} ·{" "}
-                    {propertyName(i.propertyId)}
-                  </p>
-                  <p>
-                    Due {i.dueDate} · {i.status} · {i.mode} mode
-                  </p>
-                  <a href={i.url} rel="noreferrer" target="_blank">
-                    Open payment request
+            <PaymentRentersProvider>
+              <section>
+                <h2>Payment requests</h2>
+                <p>
+                  <a href="/admin/payment-history">
+                    Payment activity, authorization receipts, and recovery
+                    status
                   </a>
-                  <p>
-                    <a href={`/admin/payment-history?invoice=${i.id}`}>
-                      View payment activity
+                </p>
+                <p>
+                  {records.paymentsReady
+                    ? `Stripe ${records.paymentMode} mode is configured.`
+                    : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
+                  Use a rent schedule for monthly invoices, or a separate
+                  request for a deposit, fee, or one-time rent charge. Avoid
+                  requesting the same obligation twice. Automatic ACH requires
+                  the tenant’s bank authorization.
+                </p>
+                <RentersOverview propertyName={propertyName} />
+                <BillingWorkspace
+                  onSaved={load}
+                  properties={records.properties}
+                  ready={records.paymentsReady}
+                  schedules={records.rentSchedules}
+                />
+                <InvoiceForm
+                  busy={busy}
+                  properties={records.properties}
+                  save={save}
+                />
+                {records.invoices.map((i) => (
+                  <article className="record" key={i.id}>
+                    <h3>
+                      {i.description} · {dollars(i.amountCents)}
+                    </h3>
+                    <p>
+                      {i.payerName} · {i.payerEmail} ·{" "}
+                      {propertyName(i.propertyId)}
+                    </p>
+                    <p>
+                      Due {i.dueDate} · {i.status} · {i.mode} mode
+                    </p>
+                    <RenterSharing
+                      kind="invoice"
+                      propertyId={i.propertyId}
+                      recordId={i.id}
+                    />
+                    <a href={i.url} rel="noreferrer" target="_blank">
+                      Open payment request
                     </a>
-                  </p>
-                  <CopyLink url={i.url} />
-                  <RemoveButton
-                    cancelFirst={i.status === "open"}
-                    disabled={busy}
-                    id={i.id}
-                    kind="invoice"
-                    name={i.description}
-                    onRemoved={load}
-                  />
-                  {!!(i.status === "open") && (
-                    <div className="management-actions">
-                      <Button
-                        disabled={busy}
-                        onClick={() =>
-                          save({ action: "voidInvoice", id: i.id })
-                        }
-                        type="submit"
-                      >
-                        Cancel payment request
-                      </Button>
-                    </div>
-                  )}
-                </article>
-              ))}
-            </section>
+                    <p>
+                      <a href={`/admin/payment-history?invoice=${i.id}`}>
+                        View payment activity
+                      </a>
+                    </p>
+                    <CopyLink url={i.url} />
+                    <RemoveButton
+                      cancelFirst={i.status === "open"}
+                      disabled={busy}
+                      id={i.id}
+                      kind="invoice"
+                      name={i.description}
+                      onRemoved={load}
+                    />
+                    {!!(i.status === "open") && (
+                      <div className="management-actions">
+                        <Button
+                          disabled={busy}
+                          onClick={() =>
+                            save({ action: "voidInvoice", id: i.id })
+                          }
+                          type="submit"
+                        >
+                          Cancel payment request
+                        </Button>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </section>
+            </PaymentRentersProvider>
           )}
           {!!(tab === "Maintenance") && (
             <section>

@@ -8,6 +8,7 @@ import { dollars } from "@/lib/management/model";
 import { terminalSchedules } from "@/lib/management/removal";
 import { requireValue } from "@/lib/required";
 import { Field, type PropertyRecord, PropertySelect } from "./dashboard";
+import { RenterSharing } from "./payment-renters";
 import { RemoveButton } from "./remove-button";
 export interface RentScheduleRecord {
   collection: string;
@@ -189,6 +190,11 @@ export function BillingWorkspace({
             {s.collection === "ach" ? "Automatic ACH" : "Manual invoices"} ·{" "}
             {s.status.replaceAll("_", " ")} · {s.mode} mode
           </p>
+          <RenterSharing
+            kind="schedule"
+            propertyId={s.propertyId}
+            recordId={s.id}
+          />
           <RemoveButton
             cancelFirst={!terminalSchedules.includes(s.status)}
             disabled={busy}

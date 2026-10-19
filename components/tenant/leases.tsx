@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type { TenantLease } from "@/lib/tenant/leases";
 
 const date = (value: Date) =>
@@ -31,21 +32,27 @@ export function TenantLeaseList({
               <p className="small-note">
                 Sent {date(lease.createdAt)} · {status(lease)}
               </p>
-              {lease.status === "awaiting" && !lease.mySignedAt && (
-                <p className="small-note">
-                  To sign, open the private signing link emailed to you. If you
-                  cannot find it, ask {contact} to resend it.
-                </p>
-              )}
-              <a
-                className="property-details-link"
-                download
-                href={`/api/tenant/leases/${lease.id}`}
-              >
-                {lease.status === "completed"
-                  ? "Download signed lease (PDF)"
-                  : "Download lease for review (PDF)"}
-              </a>
+              <div className="tenant-lease-actions">
+                {lease.status === "awaiting" && !lease.mySignedAt && (
+                  <form
+                    action={`/api/tenant/leases/${lease.id}/sign`}
+                    method="post"
+                  >
+                    <Button type="submit" variant="primary">
+                      Review and sign lease
+                    </Button>
+                  </form>
+                )}
+                <a
+                  className="property-details-link"
+                  download
+                  href={`/api/tenant/leases/${lease.id}`}
+                >
+                  {lease.status === "completed"
+                    ? "Download signed lease (PDF)"
+                    : "Download a copy (PDF)"}
+                </a>
+              </div>
             </li>
           ))}
         </ul>

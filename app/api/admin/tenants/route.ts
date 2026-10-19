@@ -24,12 +24,14 @@ import {
   sendClerkInvitation,
 } from "@/lib/tenant/invitations";
 import { tenantAssignmentSchema, verifiedAccountId } from "@/lib/tenant/model";
+import { shareCommand, sharePayment } from "@/lib/tenant/sharing";
 
 const input = z.discriminatedUnion("action", [
   z.object({ action: z.literal("assign"), data: tenantAssignmentSchema }),
   z.object({ action: z.literal("revoke"), id: z.string().uuid() }),
   z.object({ action: z.literal("resendInvite"), id: z.string().uuid() }),
   z.object({ action: z.literal("cancelInvite"), id: z.string().uuid() }),
+  shareCommand,
 ]);
 export async function GET(request: NextRequest) {
   const denied = await guard(request);
@@ -261,6 +263,13 @@ export async function POST(request: NextRequest) {
     const actor = (await getServerSession(authOptions))?.user?.email ?? "owner";
     if (command.action === "revoke") {
       return await revokeAccess(d, command, actor);
+    }
+    if (command.action === "share") {
+      // Sharing only changes app records, so it works without Clerk.
+      const result = await sharePayment(command, actor);
+      return "error" in result
+        ? reply({ error: result.error }, result.status)
+        : reply({ ok: true });
     }
     if (!tenantAuthReady()) {
       return reply(

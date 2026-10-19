@@ -5,19 +5,16 @@ const pattern2 = /^[a-f0-9]{64}$/;
 const pattern3 = /^(.).*(@.*)$/;
 const pattern4 = /signature|Draw|draw/;
 
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { readBody, reply, sameOrigin } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import { leaseSigners } from "@/lib/db/schema";
-import { currentEmailBrand } from "@/lib/email-brand";
 import { signaturePng } from "@/lib/leases/branding";
 import { leaseContact } from "@/lib/leases/contact";
-import { sendLeaseMail } from "@/lib/leases/mail";
 import {
-  codeDigest,
   digest,
   SIGNING_CONSENT,
   SIGNING_CONSENT_VERSION,
@@ -48,7 +45,7 @@ export async function GET(
       return reply(
         {
           error:
-            "This signing link is unavailable or expired. Please contact Back Acres Rentals.",
+            "This signing link was replaced or has expired. Sign in to your tenant portal to open the lease, or contact Back Acres Rentals.",
         },
         404
       );
@@ -58,7 +55,9 @@ export async function GET(
     if (!verified(request, signer)) {
       if (request.nextUrl.searchParams.get("format") === "pdf") {
         return reply(
-          { error: "Verify your email again before downloading this lease." },
+          {
+            error: "Your signing session ended. Reload this page to continue.",
+          },
           401
         );
       }
@@ -110,8 +109,7 @@ export async function GET(
   }
 }
 const input = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("code") }),
-  z.object({ action: z.literal("verify"), code: z.string().regex(/^\d{6}$/) }),
+  z.object({ action: z.literal("open") }),
   z.object({
     action: z.literal("sign"),
     consent: z.literal(true),
@@ -157,81 +155,23 @@ export async function POST(
         429
       );
     }
-    if (c.action === "code") {
-      if (!(process.env.RESEND_API_KEY && process.env.FROM_EMAIL)) {
-        return reply(
-          {
-            error: `Email verification is unavailable. Please contact ${contact}.`,
-          },
-          503
-        );
-      }
-      const code = String(randomInt(100_000, 1_000_000));
-      const rows = await d
+    if (c.action === "open") {
+      // The private link went only to this signer's email, so opening it is
+      // the email check. No second code is needed.
+      const key = randomBytes(32).toString("hex");
+      await d
         .update(leaseSigners)
         .set({
-          codeAttempts: 0,
-          codeExpiresAt: new Date(Date.now() + 10 * 60_000),
-          codeHash: codeDigest(token, code),
+          sessionExpiresAt: sql`now()+interval '30 minutes'`,
+          sessionHash: digest(key),
+          verifiedAt: sql`case when ${leaseSigners.signedAt} is null then coalesce(${leaseSigners.verifiedAt},now()) else ${leaseSigners.verifiedAt} end`,
         })
-        .where(
-          and(
-            eq(leaseSigners.id, signer.id),
-            sql`(${leaseSigners.codeExpiresAt} is null or ${leaseSigners.codeExpiresAt}<now()+interval '9 minutes')`
-          )
-        )
-        .returning({ id: leaseSigners.id });
-      if (!rows.length) {
-        return reply(
-          { error: "Please wait a minute before requesting another code." },
-          429
-        );
-      }
-      const response = await sendLeaseMail({
-        brand: await currentEmailBrand(packet.brandName),
-        subject: `${packet.brandName}: your lease verification code`,
-        text: `Your lease signing verification code is ${code}. It expires in 10 minutes. Do not share this code. If you did not request it, ignore this message and contact ${contact}.`,
-        to: signer.email,
-      });
-      if (!response.ok) {
-        return reply(
-          { error: "Code delivery failed. Please try again in a minute." },
-          502
-        );
-      }
-      return reply({ ok: true });
-    }
-    if (c.action === "verify") {
-      const key = randomBytes(32).toString("hex"),
-        rows = await d
-          .update(leaseSigners)
-          .set({
-            codeAttempts: sql`${leaseSigners.codeAttempts}+1`,
-            codeHash: sql`case when ${leaseSigners.codeHash}=${codeDigest(token, c.code)} then null else ${leaseSigners.codeHash} end`,
-            sessionExpiresAt: sql`case when ${leaseSigners.codeHash}=${codeDigest(token, c.code)} then now()+interval '30 minutes' else ${leaseSigners.sessionExpiresAt} end`,
-            sessionHash: sql`case when ${leaseSigners.codeHash}=${codeDigest(token, c.code)} then ${digest(key)} else ${leaseSigners.sessionHash} end`,
-            verifiedAt: sql`case when ${leaseSigners.codeHash}=${codeDigest(token, c.code)} and ${leaseSigners.signedAt} is null then now() else ${leaseSigners.verifiedAt} end`,
-          })
-          .where(
-            and(
-              eq(leaseSigners.id, signer.id),
-              sql`${leaseSigners.codeAttempts}<5 and ${leaseSigners.codeExpiresAt}>now() and ${leaseSigners.codeHash} is not null`
-            )
-          )
-          .returning({ sessionHash: leaseSigners.sessionHash });
-      return rows[0]?.sessionHash === digest(key)
-        ? reply({ session: key })
-        : reply(
-            {
-              error:
-                "The code is incorrect or expired. Request a new code if needed.",
-            },
-            400
-          );
+        .where(eq(leaseSigners.id, signer.id));
+      return reply({ session: key });
     }
     if (!verified(request, signer)) {
       return reply(
-        { error: "Verify your email again before continuing." },
+        { error: "Your signing session ended. Reload this page to continue." },
         401
       );
     }

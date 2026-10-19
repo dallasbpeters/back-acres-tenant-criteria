@@ -130,6 +130,7 @@
   margin: 0;
   font-weight: 600;
 }
+
 /* Tenant portal renters insurance. */
 .tenant-insurance-list {
   display: grid;
@@ -138,62 +139,76 @@
   margin: 0 0 1.5rem;
   list-style: none;
 }
+
 .tenant-insurance-list li + li {
   padding-block-start: 1rem;
   border-block-start: 1px solid var(--border);
 }
+
 .tenant-insurance-list .small-note {
   margin-block: 0.25rem;
 }
+
 .tenant-insurance-form {
   display: grid;
   gap: 1rem;
   justify-items: start;
 }
+
 .tenant-insurance-form .fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: 1rem;
   inline-size: 100%;
 }
+
 .tenant-insurance-form > .field {
   inline-size: 100%;
 }
+
 .tenant-insurance-form .small-note {
   margin: 0;
 }
+
 /* Owner renters insurance review. */
 .insurance-review {
   padding-block-start: 1.5rem;
   margin-block-start: 2rem;
   border-block-start: 1px solid var(--border);
 }
+
 .insurance-review-list {
   display: grid;
   gap: 1.5rem;
   padding: 0;
   list-style: none;
 }
+
 .insurance-review-list li {
   display: grid;
   gap: 0.5rem;
   justify-items: start;
 }
+
 .insurance-review-list li + li {
   padding-block-start: 1.5rem;
   border-block-start: 1px solid var(--border);
 }
+
 .insurance-review-list .field {
   inline-size: min(100%, 36rem);
 }
+
 .insurance-review-list .small-note {
   margin: 0;
 }
+
 /* Tenant portal frame: smaller page title and a tab bar. */
 .management-main:has(> .tenant-navigation) > h1 {
   margin-block-end: 0.5rem;
   font-size: var(--text-heading);
 }
+
 .tenant-navigation {
   display: flex;
   flex-wrap: wrap;
@@ -204,6 +219,7 @@
   margin-block: 0 2rem;
   border-block-end: 1px solid var(--border);
 }
+
 .tenant-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -212,6 +228,23 @@
   margin: 0;
   list-style: none;
 }
+
+.tenant-tab {
+  display: inline-block;
+  padding-block: 0.85rem;
+  margin-block-end: -1px;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  border-block-end: 2px solid transparent;
+}
+
+.tenant-tab:active {
+  background-color: transparent;
+}
+
 .tenant-tab {
   display: inline-block;
   padding-block: 0.85rem;

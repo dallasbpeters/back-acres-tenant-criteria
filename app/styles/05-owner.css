@@ -572,3 +572,75 @@ button.remove-record-button,
   gap: 0.4rem;
   align-items: center;
 }
+/* Payments: renters overview and per-payment sharing. */
+.payment-renters {
+  padding: 1rem 1.25rem;
+  margin-block: 1rem 1.5rem;
+  border: 1px solid var(--border);
+}
+.payment-renters-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.payment-renters-heading h3 {
+  margin: 0;
+}
+.payment-renters-list {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  list-style: none;
+}
+.payment-renters-list li {
+  display: grid;
+  gap: 0.1rem;
+  padding-block: 0.5rem;
+  border-block-start: 1px solid var(--border);
+}
+.payment-renter-name {
+  font-weight: 600;
+}
+.payment-renters-list .small-note {
+  margin: 0;
+}
+.renter-sharing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: end;
+  padding-block: 0.5rem;
+}
+.renter-sharing-label {
+  align-self: center;
+  font-family: var(--font-interface);
+  font-size: var(--text-label);
+  font-weight: 600;
+  color: var(--muted);
+}
+.renter-chip {
+  --bg-current: var(--paper);
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  align-self: center;
+  padding-inline: 0.6rem 0.15rem;
+  font-family: var(--font-interface);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--paper);
+  border: 1px solid var(--border-dark);
+}
+.renter-chip .renter-chip-remove {
+  min-inline-size: 2rem;
+  min-block-size: 2rem;
+  padding: 0;
+  font-size: 1.1rem;
+  box-shadow: none;
+}
+.renter-sharing .app-select {
+  min-inline-size: 14rem;
+}

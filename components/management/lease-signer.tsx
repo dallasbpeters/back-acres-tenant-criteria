@@ -32,7 +32,6 @@ interface Record {
 export function LeaseSigner({ token }: { token: string }) {
   const [record, setRecord] = useState<Record | null>(null),
     [key, setKey] = useState(""),
-    [code, setCode] = useState(""),
     [name, setName] = useState(""),
     [signature, setSignature] = useState(""),
     [consent, setConsent] = useState(false),
@@ -42,8 +41,8 @@ export function LeaseSigner({ token }: { token: string }) {
     [message, setMessage] = useState(""),
     [withdrawn, setWithdrawn] = useState(false);
   const endpoint = `/api/lease-signing/${token}`;
-  // Keep the verified session for this tab only, so a reload does not ask for
-  // a new code. It ends with the tab or when the server session expires.
+  // Keep the session for this tab only, so a reload keeps the signer's place.
+  // It ends with the tab or when the server session expires.
   const storageKey = `lease-signing-session:${token}`;
   const remember = useCallback(
     (session: string) => {
@@ -66,7 +65,7 @@ export function LeaseSigner({ token }: { token: string }) {
         setKey(saved);
       }
     } catch {
-      // Storage unavailable: the signer verifies by code as before.
+      // Storage unavailable: the page opens a new session instead.
     }
   }, [storageKey]);
   const contact = record?.contact || record?.brandName || "Back Acres Rentals";
@@ -78,13 +77,30 @@ export function LeaseSigner({ token }: { token: string }) {
         }),
         data = await r.json();
       if (r.status === 401 && session) {
-        // The saved session expired: forget it and show the code step.
+        // The saved session expired: forget it and open a new one.
         remember("");
         setKey("");
         return;
       }
       if (!r.ok) {
         throw new Error(data.error);
+      }
+      if (data.verified === false) {
+        // The private link was emailed only to this signer, so opening it is
+        // the email check. Start the signing session without a code.
+        const opened = await fetch(endpoint, {
+            body: JSON.stringify({ action: "open" }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }),
+          result = await opened.json();
+        if (!opened.ok) {
+          setRecord(data);
+          throw new Error(result.error);
+        }
+        remember(result.session);
+        setKey(result.session);
+        return;
       }
       setRecord(data);
     },
@@ -120,16 +136,7 @@ export function LeaseSigner({ token }: { token: string }) {
         throw new Error(data.error);
       }
       const { action } = body as { action: string };
-      if (action === "verify") {
-        remember(data.session);
-        setKey(data.session);
-        setCode("");
-        await load(data.session);
-      } else if (action === "code") {
-        setMessage(
-          "Check your email for a six-digit code. It expires in 10 minutes."
-        );
-      } else if (action === "withdraw") {
+      if (action === "withdraw") {
         setWithdrawn(true);
       } else {
         setSignature("");
@@ -189,7 +196,7 @@ export function LeaseSigner({ token }: { token: string }) {
             {new Date(record.signedAt).toISOString()} (UTC).{" "}
             {record.status === "completed"
               ? "All required signatures are complete. Save your signed copy above."
-              : "Waiting for the other required signatures. Return here and verify your email again to download the completed copy."}
+              : "Waiting for the other required signatures. Return here or open your tenant portal to download the completed copy."}
           </p>
         );
       }
@@ -330,43 +337,20 @@ export function LeaseSigner({ token }: { token: string }) {
       }
       return (
         <>
-          <h2>{record.name}, verify your email</h2>
-          <p>
-            We’ll send a code to {record.email} before showing the lease or
-            accepting a signature. This confirms access to your mailbox.
-          </p>
-          <Button
-            disabled={busy}
-            onClick={() => {
-              act({ action: "code" });
-            }}
-            type="submit"
-          >
-            Email verification code
-          </Button>
-          <form
-            className="signing-verification"
-            onSubmit={(e) => {
-              e.preventDefault();
-              act({ action: "verify", code });
-            }}
-          >
-            <label className="field">
-              Six-digit email code
-              <input
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                maxLength={6}
-                onChange={(e) => setCode(e.target.value)}
-                pattern="[0-9]{6}"
-                required
-                value={code}
-              />
-            </label>
-            <Button disabled={busy} type="submit" variant="primary">
-              Verify and review lease
+          <h2>{record.name}, opening your lease</h2>
+          <p role="status">Opening your lease…</p>
+          {!!error && (
+            <Button
+              onClick={() => {
+                setError("");
+                load("").catch((e) => setError(e.message));
+              }}
+              type="button"
+              variant="primary"
+            >
+              Try again
             </Button>
-          </form>
+          )}
           <p className="small-note">
             Need paper instead? Contact {contact}. This link is private; don’t
             forward it.
