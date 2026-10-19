@@ -159,6 +159,8 @@
   gap: 1rem;
   min-inline-size: 0;
   max-block-size: calc(100vh - 7rem);
+  padding: 4px;
+  overflow-y: auto;
 }
 .lease-side-panel .lease-side-tabs {
   margin: 0;
