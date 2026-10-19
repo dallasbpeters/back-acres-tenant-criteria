@@ -26,6 +26,8 @@ import {
   residentLinks,
   tenantAccess,
 } from "../../lib/db/schema";
+import { digest } from "../../lib/leases/signing-model";
+import { claimLeaseSigner } from "../../lib/tenant/lease-claims";
 import { tenantLeases, verifiedEmails } from "../../lib/tenant/leases";
 import { pg, property, propertyId, reset, start } from "../stripe/harness";
 
@@ -342,5 +344,46 @@ describe("signing without a second email code", () => {
       { emailAddress: "someone@example.invalid", status: "verified" },
     ];
     expect((await signFromPortal()).status).toBe(404);
+  });
+});
+
+describe("claiming a lease from the signing page", () => {
+  it("attaches any new account to the signer and the property", async () => {
+    await lease([{ email: "relay@privaterelay.example.invalid" }]);
+    const token = "b".repeat(64);
+    await db()
+      .update(leaseSigners)
+      .set({ tokenHash: digest(token) });
+    const params = { params: Promise.resolve({ token }) };
+    const url = `${origin}/api/lease-signing/${token}`;
+    const post = (body: unknown, key = "") =>
+      signingPost(
+        new NextRequest(url, {
+          body: JSON.stringify(body),
+          headers: {
+            "content-type": "application/json",
+            origin,
+            ...(key ? { authorization: `Bearer ${key}` } : {}),
+          },
+          method: "POST",
+        }),
+        params
+      );
+    const { session } = await (await post({ action: "open" })).json();
+    const { code } = await (await post({ action: "claim" }, session)).json();
+
+    // The new account's email does not match the signer email.
+    expect(await claimLeaseSigner("user_new", code)).toBe(true);
+    expect(await claimLeaseSigner("user_other", code)).toBe(false);
+    const [access] = await db().select().from(tenantAccess);
+    expect(access).toMatchObject({ clerkUserId: "user_new", propertyId });
+    expect(
+      await tenantLeases(propertyId, ["someone@example.invalid"], "user_new")
+    ).toHaveLength(1);
+    expect(await tenantLeases(propertyId, [], "user_other")).toEqual([]);
+  });
+  it("refuses an unknown code", async () => {
+    expect(await claimLeaseSigner("user_new", "c".repeat(64))).toBe(false);
+    expect(await claimLeaseSigner("user_new", "not-a-code")).toBe(false);
   });
 });

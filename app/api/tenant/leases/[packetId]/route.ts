@@ -24,7 +24,7 @@ export async function GET(
     const access = await assignments(userId);
     // Authorize through the same property + signer query the portal lists.
     const visible = await Promise.all(
-      access.map((row) => tenantLeases(row.propertyId, emails))
+      access.map((row) => tenantLeases(row.propertyId, emails, userId))
     );
     const allowed = visible.flat().some((lease) => lease.id === packetId);
     if (!allowed) {

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { leaseDrafts, leasePackets, leaseSigners } from "@/lib/db/schema";
 import { completePacket } from "@/lib/leases/signing-store";
@@ -33,13 +33,22 @@ export function verifiedEmails(
 /**
  * Lease packets for one owner-assigned property where the tenant is a signer.
  * Both conditions are required: property access comes from the owner's
- * assignment, and signer membership comes from the tenant's verified email.
+ * assignment, and signer membership comes from the tenant's verified email
+ * or from an account that claimed the signer through its signing link.
  */
 export async function tenantLeases(
   propertyId: string,
-  emails: string[]
+  emails: string[],
+  /** A portal account that claimed a signer from its signing link. */
+  clerkUserId?: string
 ): Promise<TenantLease[]> {
-  if (!emails.length) {
+  const mineBy = [
+    ...(emails.length
+      ? [inArray(sql`lower(${leaseSigners.email})`, emails)]
+      : []),
+    ...(clerkUserId ? [eq(leaseSigners.clerkUserId, clerkUserId)] : []),
+  ];
+  if (!mineBy.length) {
     return [];
   }
   const d = db();
@@ -57,7 +66,7 @@ export async function tenantLeases(
     .where(
       and(
         eq(leaseDrafts.propertyId, propertyId),
-        inArray(sql`lower(${leaseSigners.email})`, emails),
+        or(...mineBy),
         ne(leasePackets.status, "voided"),
         notRemoved(leaseDrafts.id),
         notRemoved(leaseDrafts.propertyId)

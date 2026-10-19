@@ -21,7 +21,11 @@ import {
 } from "@/lib/leases/document";
 import { leasePdf } from "@/lib/leases/pdf";
 import { withSignaturePages } from "@/lib/leases/signature-pdf";
-import { inviteSigner, openOwnerSigning } from "@/lib/leases/signing-invite";
+import {
+  copySigningLink,
+  inviteSigner,
+  openOwnerSigning,
+} from "@/lib/leases/signing-invite";
 import { digest, packetInput, signingText } from "@/lib/leases/signing-model";
 import { activePacket, completePacket } from "@/lib/leases/signing-store";
 import { notRemoved } from "@/lib/management/not-removed";
@@ -104,6 +108,7 @@ const command = z.discriminatedUnion("action", [
   z.object({ action: z.literal("invite"), signerId: z.uuid() }),
   z.object({ action: z.literal("void"), packetId: z.uuid() }),
   z.object({ action: z.literal("signAsOwner"), packetId: z.uuid() }),
+  z.object({ action: z.literal("link"), signerId: z.uuid() }),
 ]);
 /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export async function POST(request: NextRequest) {
@@ -224,6 +229,9 @@ export async function POST(request: NextRequest) {
     }
     if (c.action === "signAsOwner") {
       return await openOwnerSigning(c.packetId);
+    }
+    if (c.action === "link") {
+      return await copySigningLink(c.signerId);
     }
     const result = await inviteSigner(
       c.signerId,

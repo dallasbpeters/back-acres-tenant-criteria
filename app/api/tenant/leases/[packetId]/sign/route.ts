@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { currentUser } from "@clerk/nextjs/server";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { reply, sameOrigin } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
@@ -37,7 +37,7 @@ export async function POST(
     const access = await assignments(userId);
     // Authorize through the same property + signer query the portal lists.
     const visible = await Promise.all(
-      access.map((row) => tenantLeases(row.propertyId, emails))
+      access.map((row) => tenantLeases(row.propertyId, emails, userId))
     );
     if (!visible.flat().some((lease) => lease.id === packetId)) {
       return reply({ error: "Not found." }, 404);
@@ -53,7 +53,12 @@ export async function POST(
       .where(
         and(
           eq(leaseSigners.packetId, packetId),
-          inArray(sql`lower(${leaseSigners.email})`, emails),
+          or(
+            eq(leaseSigners.clerkUserId, userId),
+            ...(emails.length
+              ? [inArray(sql`lower(${leaseSigners.email})`, emails)]
+              : [])
+          ),
           isNull(leaseSigners.signedAt),
           isNull(leaseSigners.declinedAt)
         )

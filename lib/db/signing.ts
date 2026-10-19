@@ -50,6 +50,11 @@ export const leasePackets = pgTable(
   ]
 );
 export const leaseSigners = pgTable("lease_signers", {
+  claimExpiresAt: timestamp("claim_expires_at", { withTimezone: true }),
+  /** Hash of a one-time code that attaches a new portal account after signing. */
+  claimHash: text("claim_hash"),
+  /** The portal account that claimed this signer, whatever its email. */
+  clerkUserId: text("clerk_user_id"),
   codeAttempts: integer("code_attempts").notNull().default(0),
   codeExpiresAt: timestamp("code_expires_at", { withTimezone: true }),
   codeHash: text("code_hash"),

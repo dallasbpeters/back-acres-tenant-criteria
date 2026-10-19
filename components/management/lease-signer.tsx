@@ -152,6 +152,22 @@ export function LeaseSigner({ token }: { token: string }) {
       setBusy(false);
     }
   }
+  /** Gets a one-time code that attaches the next portal account to this lease. */
+  async function claim() {
+    const r = await fetch(endpoint, {
+      body: JSON.stringify({ action: "claim" }),
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      throw new Error(data.error ?? "Could not prepare your portal account.");
+    }
+    return data.code as string;
+  }
   async function download() {
     setBusy(true);
     setError("");
@@ -302,6 +318,7 @@ export function LeaseSigner({ token }: { token: string }) {
           <SigningConfirmation
             busy={busy}
             contact={contact}
+            onClaim={claim}
             onDownload={download}
             record={{ ...record, signedAt: record.signedAt }}
           />

@@ -141,6 +141,13 @@
       "when": 1792371360369,
       "tag": "0019_tenant_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792385729343,
+      "tag": "0020_lease_signer_accounts",
+      "breakpoints": true
     }
   ]
 }

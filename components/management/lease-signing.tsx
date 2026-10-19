@@ -9,6 +9,7 @@ import {
   OverflowMenu,
 } from "@/components/ui/overflow-menu";
 import { AppSelect } from "@/components/ui/select";
+import { CopySigningLink } from "./copy-signing-link";
 
 const LeasePdfPreview = dynamic(
   () => import("./lease-pdf-preview").then((m) => m.LeasePdfPreview),
@@ -388,17 +389,24 @@ export function LeaseSigning({
                           Sign as landlord
                         </Button>
                       ) : (
-                        <Button
-                          disabled={busy}
-                          onClick={() => {
-                            send([s]);
-                          }}
-                          type="button"
-                        >
-                          {s.invitedAt
-                            ? "Resend signing email"
-                            : "Send signing email"}
-                        </Button>
+                        <div className="signer-actions">
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              send([s]);
+                            }}
+                            type="button"
+                          >
+                            {s.invitedAt
+                              ? "Resend signing email"
+                              : "Send signing email"}
+                          </Button>
+                          <CopySigningLink
+                            disabled={busy}
+                            name={s.name}
+                            signerId={s.id ?? ""}
+                          />
+                        </div>
                       ))}
                   </div>
                 );

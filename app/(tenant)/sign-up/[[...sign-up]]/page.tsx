@@ -6,8 +6,9 @@ export default function SignUpPage() {
   return (
     <ManagementShell title="Create your tenant account">
       <p>
-        Use the email you gave the property owner. The owner must approve your
-        tenancy before property records become available.
+        Use an email you check, or continue with Google. If you came here after
+        signing your lease, the lease is added to your account automatically.
+        Otherwise the property owner connects your tenancy.
       </p>
       <div className="tenant-auth">
         {tenantAuthReady() ? (

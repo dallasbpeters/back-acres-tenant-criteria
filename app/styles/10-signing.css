@@ -335,3 +335,37 @@
 .signing-confirmation .management-actions {
   align-items: center;
 }
+.signer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: start;
+  justify-content: flex-end;
+}
+.copy-signing-link {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: end;
+}
+.copy-signing-link input {
+  inline-size: min(100%, 26rem);
+  padding: 0.5rem 0.65rem;
+  font-family: var(--font-interface);
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--border-dark);
+}
+.copy-signing-link .small-note {
+  margin: 0;
+}
+.portal-account-step {
+  display: grid;
+  gap: 0.75rem;
+  padding-block-start: 1.25rem;
+  border-block-start: 1px solid var(--border);
+}
+.portal-account-step h3,
+.portal-account-step p {
+  margin: 0;
+}

@@ -21,11 +21,17 @@ import { paymentMode } from "@/lib/management/stripe";
 import { assignments, tenantIdentity } from "@/lib/tenant/access";
 import { tenantAuthReady } from "@/lib/tenant/config";
 import { claimTenantInvitations } from "@/lib/tenant/invitations";
+import { claimLeaseSigner } from "@/lib/tenant/lease-claims";
 import { tenantLeases, verifiedEmails } from "@/lib/tenant/leases";
 import { tenantMaintenanceRequests } from "@/lib/tenant/maintenance";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tenant portal | Back Acres" };
-export default async function TenantPortal() {
+export default async function TenantPortal({
+  searchParams,
+}: {
+  searchParams: Promise<{ claim?: string; claimed?: string }>;
+}) {
+  const { claim, claimed } = await searchParams;
   if (!tenantAuthReady()) {
     return (
       <ManagementShell title="Tenant portal">
@@ -38,7 +44,16 @@ export default async function TenantPortal() {
   }
   const userId = await tenantIdentity();
   if (!userId) {
-    redirect("/sign-in");
+    redirect(
+      claim
+        ? `/sign-in?redirect_url=${encodeURIComponent(`/tenant?claim=${claim}`)}`
+        : "/sign-in"
+    );
+  }
+  if (claim) {
+    // A code from the signing page attaches this account to that lease.
+    const ok = await claimLeaseSigner(userId, claim).catch(() => false);
+    redirect(ok ? "/tenant?claimed=1" : "/tenant?claimed=0");
   }
   const user = await currentUser();
   let content: ReactNode;
@@ -154,6 +169,17 @@ export default async function TenantPortal() {
   return (
     <ManagementShell title="Tenant portal">
       <TenantNavigation />
+      {claimed === "1" && (
+        <p className="tenant-notice" role="status">
+          Your lease was added to this account.
+        </p>
+      )}
+      {claimed === "0" && (
+        <p className="tenant-notice" role="alert">
+          That lease link has expired or was already used. Open your signing
+          link again, or ask the property owner to connect your account.
+        </p>
+      )}
       <p className="tenant-welcome">
         Welcome{user?.firstName ? `, ${user.firstName}` : ""}.
       </p>
@@ -199,7 +225,7 @@ async function tenancyRecords(access: TenantAssignment, emails: string[]) {
             .orderBy(desc(rentSchedules.createdAt))
         : [],
       tenantMaintenanceRequests(access.residentLinkId, 3),
-      tenantLeases(access.propertyId, emails),
+      tenantLeases(access.propertyId, emails, access.clerkUserId),
       d
         .select()
         .from(insuranceDocuments)

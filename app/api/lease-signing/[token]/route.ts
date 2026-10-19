@@ -138,6 +138,7 @@ const input = z.discriminatedUnion("action", [
     signature: z.string().max(500_000),
   }),
   z.object({ action: z.literal("withdraw") }),
+  z.object({ action: z.literal("claim") }),
 ]);
 /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export async function POST(
@@ -193,6 +194,22 @@ export async function POST(
         { error: "Your signing session ended. Reload this page to continue." },
         401
       );
+    }
+    if (c.action === "claim") {
+      // A one-time code lets the portal account created next attach to this
+      // signer, whatever email or username that account uses.
+      if (signer.role !== "tenant") {
+        return reply({ error: "Only tenants have portal accounts." }, 400);
+      }
+      const code = randomBytes(32).toString("hex");
+      await d
+        .update(leaseSigners)
+        .set({
+          claimExpiresAt: sql`now()+interval '7 days'`,
+          claimHash: digest(code),
+        })
+        .where(eq(leaseSigners.id, signer.id));
+      return reply({ code });
     }
     if (c.action === "withdraw") {
       const rows = await d

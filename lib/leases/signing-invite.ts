@@ -171,3 +171,35 @@ export async function openOwnerSigning(packetId: string) {
     ? reply({ url: `/sign/lease/${token}` })
     : reply({ error: "The landlord has already signed this lease." }, 409);
 }
+
+/**
+ * Makes a fresh private signing link the owner can text to a signer. Any
+ * earlier link for this signer stops working.
+ */
+export async function copySigningLink(signerId: string) {
+  const d = db();
+  const [signer] = await d
+    .select()
+    .from(leaseSigners)
+    .where(eq(leaseSigners.id, signerId));
+  const packet = signer ? await activePacket(signer.packetId) : null;
+  if (
+    !(signer && packet) ||
+    packet.status !== "awaiting" ||
+    packet.expiresAt < new Date() ||
+    signer.signedAt ||
+    signer.declinedAt
+  ) {
+    return reply({ error: "This signer cannot sign right now." }, 409);
+  }
+  const token = randomBytes(32).toString("hex");
+  await d
+    .update(leaseSigners)
+    .set({
+      invitedAt: sql`coalesce(${leaseSigners.invitedAt},now())`,
+      sessionHash: null,
+      tokenHash: digest(token),
+    })
+    .where(and(eq(leaseSigners.id, signerId), isNull(leaseSigners.signedAt)));
+  return reply({ url: `${siteUrl()}/sign/lease/${token}` });
+}

@@ -1,6 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import type { SignerRecord } from "./lease-signer";
+import { PortalAccountStep } from "./portal-account-step";
 
 const roleNames: Record<string, string> = {
   landlord: "Landlord",
@@ -17,11 +18,13 @@ const when = (value: string) =>
 export function SigningConfirmation({
   busy,
   contact,
+  onClaim,
   onDownload,
   record,
 }: {
   busy: boolean;
   contact: string;
+  onClaim: () => Promise<string>;
   onDownload: () => void;
   record: SignerRecord & { signedAt: string };
 }) {
@@ -69,12 +72,8 @@ export function SigningConfirmation({
             ? "Download signed lease (PDF)"
             : "Download a copy with your signature (PDF)"}
         </Button>
-        {record.role === "tenant" && (
-          <a className="property-details-link" href="/tenant">
-            Go to your tenant portal
-          </a>
-        )}
       </div>
+      {record.role === "tenant" && <PortalAccountStep onClaim={onClaim} />}
       <details className="signing-audit-details">
         <summary>Document audit details</summary>
         <p className="document-fingerprint">
