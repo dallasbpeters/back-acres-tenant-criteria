@@ -492,3 +492,25 @@
   font-family: var(--font-interface);
   font-size: 0.95rem;
 }
+.tenant-welcome + .tenant-tenancy {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+.tenant-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.tenant-section-head .small-note {
+  grid-column: 1 / -1;
+}
+.tenant-lease-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+}
+.tenant-lease-actions .property-details-link {
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+}

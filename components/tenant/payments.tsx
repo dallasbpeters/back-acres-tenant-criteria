@@ -108,11 +108,13 @@ export function PaymentHistory({
           No automatic payment schedules have been shared.
         </p>
       )}
-      <p className="small-note">
-        Use your private enrollment link to authorize or stop automatic
-        payments. Contact {contact} to change the payment amount or bank
-        account.
-      </p>
+      {schedules.length > 0 && (
+        <p className="small-note">
+          Use your private enrollment link to authorize or stop automatic
+          payments. Contact {contact} to change the payment amount or bank
+          account.
+        </p>
+      )}
     </>
   );
 }
