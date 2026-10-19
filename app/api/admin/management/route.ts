@@ -448,6 +448,15 @@ export async function POST(request: NextRequest) {
       if (!invoice) {
         return reply({ error: "Payment request not found." }, 404);
       }
+      if (invoice.mode === "test" && paymentMode() === "live") {
+        // Test requests never move real money, and the live key cannot reach
+        // test-mode Stripe objects. Void it here so it can be cleaned up.
+        await d
+          .update(invoices)
+          .set({ status: "void" })
+          .where(eq(invoices.id, c.id));
+        return reply({ ok: true });
+      }
       if (invoice.mode !== paymentMode()) {
         return reply(
           { error: "This request belongs to another payment environment." },

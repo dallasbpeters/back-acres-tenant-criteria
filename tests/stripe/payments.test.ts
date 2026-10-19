@@ -1884,3 +1884,33 @@ it("ignores checkout events without an ACH enrollment relationship", async () =>
   );
   expect(client.checkout.sessions.retrieve).not.toHaveBeenCalled();
 });
+
+describe("test records after switching to live mode", () => {
+  it("closes a test schedule and voids a test request without calling Stripe", async () => {
+    await schedule();
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_isolated_fixture");
+    vi.stubEnv("PAYMENTS_LIVE_ENABLED", "true");
+    const closed = await billing(
+      request("/api/admin/billing", { action: "cancel", id })
+    );
+    expect(closed.status).toBe(200);
+    expect((await stored(schema.rentSchedules)).status).toBe("canceled");
+    await pg.exec("TRUNCATE rental_invoices CASCADE");
+    await db().insert(schema.invoices).values({
+      amountCents: 125_000,
+      category: "deposit",
+      description: "Security deposit",
+      dueDate: "2099-01-10",
+      id,
+      mode: "test",
+      payerEmail: "tenant@example.invalid",
+      payerName: "Tenant",
+      propertyId,
+    });
+    const voided = await manage(
+      request("/api/admin/management", { action: "voidInvoice", id })
+    );
+    expect(voided.status).toBe(200);
+    expect((await stored(schema.invoices)).status).toBe("void");
+  });
+});

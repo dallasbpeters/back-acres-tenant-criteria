@@ -46,11 +46,21 @@ export async function POST(request: NextRequest) {
         .select()
         .from(rentSchedules)
         .where(eq(rentSchedules.id, c.id));
-      if (!r || r.mode !== paymentMode()) {
+      if (!r) {
+        return reply({ error: "This schedule does not exist." }, 404);
+      }
+      if (r.mode === "test" && paymentMode() === "live") {
+        // A test schedule can never move real money, and the live key cannot
+        // reach test-mode Stripe objects. Close it here so it can be removed.
+        await d
+          .update(rentSchedules)
+          .set({ status: "canceled" })
+          .where(eq(rentSchedules.id, c.id));
+        return reply({ ok: true });
+      }
+      if (r.mode !== paymentMode()) {
         return reply(
-          {
-            error: "This schedule is in another environment or does not exist.",
-          },
+          { error: "This schedule belongs to another payment environment." },
           409
         );
       }
