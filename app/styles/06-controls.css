@@ -40,7 +40,7 @@
 a:not(.submit-button):not(.ui-button):active {
   --bg-current: var(--tint);
   color: contrast-color(var(--tint));
-  background: var(--tint);
+  background: transparent;
 }
 .small-note {
   max-inline-size: 75ch;
