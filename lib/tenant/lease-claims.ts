@@ -8,6 +8,7 @@ import {
   tenantAccess,
   tenantInvitations,
 } from "@/lib/db/schema";
+import { shareLeaseDeposits } from "@/lib/leases/deposits";
 import { digest } from "@/lib/leases/signing-model";
 import { grantTenantAccess } from "./grants";
 
@@ -43,6 +44,10 @@ export async function claimLeaseSigner(clerkUserId: string, code: string) {
     return false;
   }
   await grantForSigner(clerkUserId, claimed);
+  await shareLeaseDeposits(claimed.packetId, {
+    clerkUserId,
+    email: claimed.email,
+  });
   return true;
 }
 
@@ -130,6 +135,10 @@ export async function claimLeaseSignersByPhone(
   for (const signer of claimed) {
     // biome-ignore lint/performance/noAwaitInLoops: Grants for one account share rows; run them in order.
     await grantForSigner(clerkUserId, signer);
+    await shareLeaseDeposits(signer.packetId, {
+      clerkUserId,
+      email: signer.email,
+    });
   }
   return claimed.length;
 }
@@ -155,6 +164,13 @@ export async function claimLeaseSignersByEmail(
         eq(leaseSigners.role, "tenant")
       )
     )
-    .returning({ id: leaseSigners.id });
+    .returning({ email: leaseSigners.email, packetId: leaseSigners.packetId });
+  for (const signer of claimed) {
+    // biome-ignore lint/performance/noAwaitInLoops: Updates share this account's access rows; run them in order.
+    await shareLeaseDeposits(signer.packetId, {
+      clerkUserId,
+      email: signer.email,
+    });
+  }
   return claimed.length;
 }

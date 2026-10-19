@@ -8,6 +8,14 @@ import { invoices } from "@/lib/db/schema";
 import { notRemoved } from "@/lib/management/not-removed";
 import { allowIntake, siteUrl, tokenId } from "@/lib/management/security";
 import { paymentMode, paymentReady, stripe } from "@/lib/management/stripe";
+
+/** Deposits are paid by bank transfer only, avoiding card fees. */
+const depositOptions = (category: string) =>
+  category === "deposit"
+    ? { payment_method_types: ["us_bank_account" as const] }
+    : {};
+/** A tenant reached by phone may have no email for Stripe's receipt. */
+const payerEmail = (email: string) => (email ? { customer_email: email } : {});
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) {
     return reply({ error: "Invalid origin." }, 403);
@@ -95,7 +103,7 @@ export async function POST(request: NextRequest) {
         {
           cancel_url: `${siteUrl()}/pay/${b.data.token}`,
           client_reference_id: invoice.id,
-          customer_email: invoice.payerEmail,
+          ...payerEmail(invoice.payerEmail),
           integration_identifier: `back-acres-checkout-${id
             .replaceAll("-", "")
             .slice(0, 8)
@@ -114,6 +122,7 @@ export async function POST(request: NextRequest) {
           ],
           metadata: { invoiceId: invoice.id },
           mode: "payment",
+          ...depositOptions(invoice.category),
           success_url: `${siteUrl()}/pay/${b.data.token}?submitted=1`,
         },
         { idempotencyKey: `rental-invoice-${id}` }

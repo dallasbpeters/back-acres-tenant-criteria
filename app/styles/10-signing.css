@@ -369,3 +369,53 @@
 .portal-account-step p {
   margin: 0;
 }
+/* Initials: one marked spot at a time, then a short summary. */
+.initials-step {
+  display: grid;
+  gap: 0.75rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--border);
+}
+.initials-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.initials-step h3,
+.initials-step p {
+  margin: 0;
+}
+.initials-progress {
+  font-family: var(--font-interface);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.initials-input {
+  max-inline-size: 10rem;
+}
+.initials-input input {
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+.initials-card {
+  --bg-current: color-mix(in oklch, var(--primary) 6%, var(--paper));
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: color-mix(in oklch, var(--primary) 6%, var(--paper));
+  border-inline-start: 3px solid var(--primary);
+}
+.initials-card blockquote {
+  margin: 0;
+  font-family: var(--font-document);
+  line-height: 1.55;
+}
+.initials-complete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}

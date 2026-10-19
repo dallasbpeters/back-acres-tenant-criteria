@@ -4,14 +4,19 @@ const pattern1 = /(?:RESIDENTIAL|LEASE|AGREEMENT)/i;
 const pattern2 =
   /^(?:§|\d+\.\s.{1,90}$|TERMS$|TENANTS$|LANDLORD$|TEXAS RESIDENTIAL)/;
 const pattern3 = /(\n|[^\S\n]+)/;
+const blankRun = /_{3,}/;
+const possessive = /['’]s$/;
 const signaturesHeading = /^(?:§\s*)?(?:\d+\.\s*)?signatures?\b/i;
 
 import { PDFDocument, type PDFFont, rgb } from "pdf-lib";
 import { documentLines, type LeaseNode, type LeaseRun } from "./document";
+import { initialRoleOf, isBlank, isInitialsLabel } from "./initials";
 import { leaseFonts } from "./pdf-fonts";
 import {
   drawSignatureBlock,
+  encodeInitialPositions,
   encodePositions,
+  type InitialPosition,
   SIGNATURE_BLOCK_HEIGHT,
   type SignaturePosition,
   signatureOrder,
@@ -96,6 +101,10 @@ export async function leasePdf(
     ? signatureOrder(branding.signers)
     : [];
   const positions: SignaturePosition[] = [];
+  /** Initials blanks in a signing copy, in reading order. */
+  const initialBlanks: InitialPosition[] = [];
+  // The last two words drawn, to spot "Tenant initials: ____".
+  let lastWords: string[] = [];
   let skipping = false;
   /** Draws a signature block per signer from the current line down. */
   const drawBlocks = () => {
@@ -354,6 +363,23 @@ export async function leasePdf(
       let x = left;
       for (const chunk of row) {
         page.drawText(chunk.text, { color: ink, font: chunk.font, size, x, y });
+        if (chunk.text.trim()) {
+          if (
+            signers.length &&
+            isBlank(chunk.text) &&
+            isInitialsLabel(lastWords.at(-1) ?? "")
+          ) {
+            const underscores = chunk.text.match(blankRun)?.[0] ?? "";
+            initialBlanks.push({
+              page: pdf.getPageCount() - 1,
+              role: initialRoleOf(lastWords.at(-2)?.replace(possessive, "")),
+              width: chunk.font.widthOfTextAtSize(underscores, size),
+              x,
+              y,
+            });
+          }
+          lastWords = [...lastWords.slice(-1), chunk.text];
+        }
         if (chunk.underline) {
           page.drawLine({
             color: ink,
@@ -391,8 +417,11 @@ export async function leasePdf(
     y -= 22;
     drawBlocks();
   }
-  if (positions.length) {
-    pdf.setKeywords([encodePositions(positions)]);
+  if (positions.length || initialBlanks.length) {
+    pdf.setKeywords([
+      encodePositions(positions),
+      encodeInitialPositions(initialBlanks),
+    ]);
   }
   const pages = pdf.getPages();
   pages.forEach(

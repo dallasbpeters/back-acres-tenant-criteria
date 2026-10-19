@@ -20,6 +20,7 @@ import {
 } from "../../app/api/lease-signing/[token]/route";
 import { db } from "../../lib/db";
 import {
+  invoices,
   leaseDrafts,
   leaseSigners,
   leaseTemplates,
@@ -66,7 +67,7 @@ beforeAll(start);
 beforeEach(async () => {
   await reset();
   await pg.exec(
-    "TRUNCATE lease_signers, lease_packets, lease_drafts, lease_templates, tenant_invitations CASCADE"
+    "TRUNCATE lease_signers, lease_packets, lease_drafts, lease_templates, tenant_invitations, rental_invoices CASCADE"
   );
   vi.stubEnv("RESEND_API_KEY", "re_fixture");
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture");
@@ -87,13 +88,19 @@ beforeEach(async () => {
   await db()
     .insert(leaseTemplates)
     .values({ body: "Lease", id: templateId, name: "Lease" });
-  await db().insert(leaseDrafts).values({
-    body: "RESIDENTIAL LEASE\n\n1. PARTIES. Landlord and Tenant agree.\n\n§ Signatures\n\nTenant signature: ________ Date: ______\n\n§ Clauses\n\n2. RENT. Tenant pays rent monthly.",
-    id: draftId,
-    propertyId,
-    templateId,
-    tenantName: "Tenant A",
-  });
+  await db()
+    .insert(leaseDrafts)
+    .values({
+      body: "RESIDENTIAL LEASE\n\n1. PARTIES. Landlord and Tenant agree.\n\n§ Signatures\n\nTenant signature: ________ Date: ______\n\n§ Clauses\n\n2. RENT. Tenant pays rent monthly.\n\n3. LEAD. Tenant received the lead pamphlet. Tenant initials: __________.",
+      id: draftId,
+      propertyId,
+      templateId,
+      tenantName: "Tenant A",
+      values: {
+        security_deposit: "$1,250.00",
+        start_date: "2099-01-01",
+      } as never,
+    });
 });
 afterAll(async () => {
   await pg.close();
@@ -117,7 +124,11 @@ const signature = async () =>
       .toBuffer()
   ).toString("base64")}`;
 
-async function signWith(token: string, name: string) {
+async function signWith(
+  token: string,
+  name: string,
+  { initials = true }: { initials?: boolean } = {}
+) {
   const params = { params: Promise.resolve({ token }) };
   const url = `${origin}/api/lease-signing/${token}`;
   const opened = await signingPost(
@@ -144,6 +155,14 @@ async function signWith(token: string, name: string) {
         consent: true,
         consentVersion: record.consentVersion,
         documentHash: record.documentHash,
+        ...(initials && record.initialSpots.length
+          ? {
+              initialed: record.initialSpots.map(
+                (spot: { index: number }) => spot.index
+              ),
+              initials: "TA",
+            }
+          : {}),
         name,
         signature: await signature(),
       }),
@@ -152,7 +171,14 @@ async function signWith(token: string, name: string) {
     }),
     params
   );
-  return { auth, params, signed: await signed.json(), url };
+  return {
+    auth,
+    params,
+    record,
+    signed: await signed.json(),
+    status: signed.status,
+    url,
+  };
 }
 
 describe("landlord signs first", () => {
@@ -206,6 +232,7 @@ describe("landlord signs first", () => {
     const document = await PDFDocument.load(await pdf.arrayBuffer());
     // Signature blocks sit in the lease's own Signatures section.
     expect(document.getKeywords()).toContain("sigpos:");
+    expect(document.getKeywords()).toContain("initpos:");
 
     // Reissue the tenant link the way the portal does, then sign as tenant.
     const tenantToken = "a".repeat(64);
@@ -214,6 +241,13 @@ describe("landlord signs first", () => {
       .set({ tokenHash: digest(tenantToken) })
       .where(eq(leaseSigners.email, "tenant@example.invalid"));
     mail = [];
+    const refused = await signWith(tenantToken, "Tenant A", {
+      initials: false,
+    });
+    expect(refused.status).toBe(400);
+    expect(refused.record.initialSpots).toEqual([
+      expect.objectContaining({ index: 0, role: "tenant" }),
+    ]);
     await signWith(tenantToken, "Tenant A");
     const finished = mail.filter((m) =>
       m.subject.includes("your lease is fully signed")
@@ -224,6 +258,18 @@ describe("landlord signs first", () => {
     expect(finished[0].attachments.map((a) => a.filename)).toContain(
       "signed-lease.pdf"
     );
+    // The fully signed lease requests its deposit and shares it.
+    const deposits = await db().select().from(invoices);
+    expect(deposits).toEqual([
+      expect.objectContaining({
+        amountCents: 125_000,
+        category: "deposit",
+        description: "Security deposit",
+        dueDate: "2099-01-01",
+      }),
+    ]);
+    const [invitation] = await db().select().from(tenantInvitations);
+    expect(invitation.invoiceIds).toEqual([deposits[0].id]);
   });
   it("handles a tenant with only a mobile number", async () => {
     const created = await owner({

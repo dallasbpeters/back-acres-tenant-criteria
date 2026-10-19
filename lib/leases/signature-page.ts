@@ -4,6 +4,8 @@ import { type PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
 export const SIGNATURE_PAGE_KEYWORD = "back-acres-signature-page-v1";
 /** Newer frozen leases list each signature block's spot in the keywords. */
 const POSITIONS_PREFIX = "sigpos:";
+/** And each initials blank: page, x, y, width and whose initials go there. */
+const INITIALS_PREFIX = "initpos:";
 
 const PER_PAGE = 4;
 const BLOCK = 150;
@@ -23,6 +25,7 @@ interface SignerLike {
 }
 interface Fonts {
   bold: PDFFont;
+  italic?: PDFFont;
   label: PDFFont;
   labelBold: PDFFont;
 }
@@ -32,6 +35,14 @@ export interface SignaturePosition {
   left: number;
   page: number;
   right: number;
+  y: number;
+}
+/** Where one initials blank sits, in reading order. */
+export interface InitialPosition {
+  page: number;
+  role: "landlord" | "tenant";
+  width: number;
+  x: number;
   y: number;
 }
 const contact = (s: SignerLike) => (s.email ?? s.phone ?? "").toLowerCase();
@@ -122,6 +133,85 @@ export function encodePositions(positions: SignaturePosition[]) {
     )
     .join(";")}`;
 }
+/** Stores initials blanks in the PDF keywords, without spaces. */
+export function encodeInitialPositions(blanks: InitialPosition[]) {
+  return `${INITIALS_PREFIX}${blanks
+    .map((b) =>
+      [
+        b.page,
+        Math.round(b.x * 10) / 10,
+        Math.round(b.y * 10) / 10,
+        Math.round(b.width * 10) / 10,
+        b.role === "landlord" ? "l" : "t",
+      ].join(",")
+    )
+    .join(";")}`;
+}
+function decodeInitialPositions(keywords: string): InitialPosition[] {
+  const entry = keywords
+    .split(" ")
+    .find((word) => word.startsWith(INITIALS_PREFIX));
+  if (!entry || entry === INITIALS_PREFIX) {
+    return [];
+  }
+  return entry
+    .slice(INITIALS_PREFIX.length)
+    .split(";")
+    .map((part) => {
+      const [page, x, y, width, role] = part.split(",");
+      return {
+        page: Number(page),
+        role: role === "l" ? "landlord" : "tenant",
+        width: Number(width),
+        x: Number(x),
+        y: Number(y),
+      };
+    });
+}
+/** The initials a signer adopted, from their signature evidence. */
+function signerInitials(evidence: string | null | undefined) {
+  try {
+    const value = evidence ? JSON.parse(evidence).initials : null;
+    return typeof value === "string" && value ? value : null;
+  } catch {
+    return null;
+  }
+}
+/**
+ * Writes each signer's initials on the blanks for their role. Several
+ * tenants share one blank, so their initials sit side by side.
+ */
+function fillInitials(
+  pdf: PDFDocument,
+  signers: (SignerLike & {
+    evidence?: string | null;
+    signedAt: Date | null;
+  })[],
+  font: PDFFont
+) {
+  const blanks = decodeInitialPositions(pdf.getKeywords() ?? "");
+  for (const blank of blanks) {
+    const text = signatureOrder(signers)
+      .filter((s) => s.signedAt && s.role === blank.role)
+      .map((s) => signerInitials(s.evidence))
+      .filter(Boolean)
+      .join(" / ");
+    if (!text) {
+      continue;
+    }
+    let size = 14;
+    while (size > 6 && font.widthOfTextAtSize(text, size) > blank.width - 4) {
+      size -= 0.5;
+    }
+    pdf.getPage(blank.page).drawText(text, {
+      color: rgb(0.1, 0.18, 0.45),
+      font,
+      size,
+      x: blank.x + 2,
+      y: blank.y + 2,
+    });
+  }
+}
 function decodePositions(keywords: string): SignaturePosition[] | null {
   const entry = keywords
     .split(" ")
@@ -205,11 +295,13 @@ function signaturePositions(
 export async function fillSignatures(
   pdf: PDFDocument,
   signers: (SignerLike & {
+    evidence?: string | null;
     signaturePng: string | null;
     signedAt: Date | null;
   })[],
   fonts: Fonts
 ) {
+  fillInitials(pdf, signers, fonts.italic ?? fonts.label);
   const ordered = signatureOrder(signers);
   for (const position of signaturePositions(pdf, signers, fonts)) {
     const signer = ordered[position.index];

@@ -14,6 +14,8 @@ import { db } from "@/lib/db";
 import { leaseSigners } from "@/lib/db/schema";
 import { signaturePng } from "@/lib/leases/branding";
 import { leaseContact } from "@/lib/leases/contact";
+import { createLeaseDeposits } from "@/lib/leases/deposits";
+import { initialSpots, initialsInput } from "@/lib/leases/initials";
 import { signatureOrder } from "@/lib/leases/signature-page";
 import { inviteRemainingSigners } from "@/lib/leases/signing-invite";
 import {
@@ -116,6 +118,10 @@ export async function GET(
       email: signer.email,
       expiresAt: packet.expiresAt,
       finalHash: finalized.finalHash,
+      initialSpots: initialSpots(packet.body).filter(
+        (spot) =>
+          spot.role === (signer.role === "landlord" ? "landlord" : "tenant")
+      ),
       name: signer.name,
       role: signer.role,
       signedAt: signer.signedAt,
@@ -136,6 +142,9 @@ const input = z.discriminatedUnion("action", [
     consent: z.literal(true),
     consentVersion: z.literal(SIGNING_CONSENT_VERSION),
     documentHash: z.string().length(64),
+    /** Present when the lease has initials blanks for this signer. */
+    initialed: z.array(z.number().int().min(0).max(200)).max(200).optional(),
+    initials: initialsInput.optional(),
     name: z.string().trim().min(2).max(150),
     signature: z.string().max(500_000),
   }),
@@ -250,6 +259,17 @@ export async function POST(
         400
       );
     }
+    // Every initials blank for this signer's role must be initialed first.
+    const spots = initialSpots(packet.body).filter(
+      (spot) =>
+        spot.role === (signer.role === "landlord" ? "landlord" : "tenant")
+    );
+    if (
+      spots.length &&
+      !(c.initials && spots.every((spot) => c.initialed?.includes(spot.index)))
+    ) {
+      return reply({ error: "Initial every marked spot before signing." }, 400);
+    }
     let png: Buffer;
     try {
       png = await signaturePng(c.signature);
@@ -271,6 +291,15 @@ export async function POST(
       consentVersion: SIGNING_CONSENT_VERSION,
       documentHash: packet.documentHash,
       email: signer.email ?? signer.phone ?? "",
+      ...(spots.length
+        ? {
+            initialedSpots: spots.map(({ excerpt, index }) => ({
+              excerpt,
+              index,
+            })),
+            initials: c.initials,
+          }
+        : {}),
       ip,
       name: signer.name,
       packetId: packet.id,
@@ -300,7 +329,16 @@ export async function POST(
         409
       );
     }
-    await completePacket(packet.id);
+    const finished = await completePacket(packet.id);
+    if (finished?.status === "completed") {
+      // Fully signed: request the lease's deposits from the tenants.
+      await createLeaseDeposits(packet.id).catch((error) =>
+        console.error(
+          "Lease deposit requests failed",
+          error instanceof Error ? error.message : String(error)
+        )
+      );
+    }
     // The landlord signs first; tenants are emailed only after that, so they
     // receive a lease the landlord already signed.
     const invited =

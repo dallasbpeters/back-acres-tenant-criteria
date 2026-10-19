@@ -5,6 +5,8 @@ const pattern1 = /filename="([^"]+)"/;
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { defaultInitials } from "@/lib/leases/initials";
+import { InitialsStep } from "./initials-step";
 import { SigningConfirmation } from "./signing-confirmation";
 
 const SignerPdfViewer = dynamic(
@@ -25,6 +27,8 @@ export interface SignerRecord {
   documentHash?: string;
   email: string | null;
   finalHash?: string;
+  /** Initials blanks this signer must initial before signing. */
+  initialSpots?: { excerpt: string; index: number }[];
   name: string;
   role?: string;
   signedAt?: string;
@@ -42,7 +46,11 @@ export function LeaseSigner({ token }: { token: string }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
-    [withdrawn, setWithdrawn] = useState(false);
+    [withdrawn, setWithdrawn] = useState(false),
+    [initialing, setInitialing] = useState<{
+      done: number[];
+      initials: string;
+    }>({ done: [], initials: "" });
   const endpoint = `/api/lease-signing/${token}`;
   // Keep the session for this tab only, so a reload keeps the signer's place.
   // It ends with the tab or when the server session expires.
@@ -72,6 +80,11 @@ export function LeaseSigner({ token }: { token: string }) {
     }
   }, [storageKey]);
   const contact = record?.contact || record?.brandName || "Back Acres Rentals";
+  const spots = record?.initialSpots ?? [];
+  const initialsDone =
+    !spots.length ||
+    (!!initialing.initials.trim() &&
+      spots.every((spot) => initialing.done.includes(spot.index)));
   const load = useCallback(
     async (session = key) => {
       const r = await fetch(endpoint, {
@@ -238,11 +251,25 @@ export function LeaseSigner({ token }: { token: string }) {
                 consent,
                 consentVersion: record.consentVersion,
                 documentHash: record.documentHash,
+                ...(spots.length
+                  ? {
+                      initialed: initialing.done,
+                      initials: initialing.initials,
+                    }
+                  : {}),
                 name,
                 signature,
               });
             }}
           >
+            {spots.length > 0 && (
+              <InitialsStep
+                defaultValue={defaultInitials(record.name)}
+                disabled={busy || !downloaded}
+                onChange={setInitialing}
+                spots={spots}
+              />
+            )}
             <label className="field">
               Confirm your full legal name
               <input
@@ -279,7 +306,9 @@ export function LeaseSigner({ token }: { token: string }) {
               government identity verification.
             </p>
             <Button
-              disabled={busy || !downloaded || !signature || !consent}
+              disabled={
+                busy || !downloaded || !signature || !consent || !initialsDone
+              }
               type="submit"
               variant="primary"
             >

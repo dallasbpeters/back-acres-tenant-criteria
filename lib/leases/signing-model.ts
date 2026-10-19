@@ -100,6 +100,9 @@ export function signingEvidence(data: {
   pdfViewedAt: string;
   ip: string;
   userAgent: string;
+  /** Initials the signer adopted, and the blanks they initialed. */
+  initials?: string;
+  initialedSpots?: { excerpt: string; index: number }[];
 }) {
   const canonical = JSON.stringify(data);
   return { canonical, hash: digest(canonical) };

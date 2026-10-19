@@ -673,3 +673,20 @@ a:not(.submit-button):not(.ui-button).tenant-tab:active {
     justify-content: flex-start;
   }
 }
+/* Pay actions in the tenant portal. */
+.tenant-pay-button {
+  min-block-size: 2.25rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.tenant-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 0.6rem;
+  border-block-end: 1px solid var(--border);
+}
