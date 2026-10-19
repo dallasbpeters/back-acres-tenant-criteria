@@ -231,7 +231,7 @@
   font-size: 0.8em;
   color: contrast-color(var(--tint));
   white-space: normal;
-  background: var(--tint);
+  background: var(--bg-current);
   border: 1px solid var(--border);
 }
 @media (max-width: 1050px) {
