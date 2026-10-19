@@ -16,7 +16,7 @@
   /* One neutral color for every visible border and keyboard outline. */
   --border: #e6e5df;
   --border-dark: #646e51;
-  --tint: color-mix(in oklch, var(--primary) 12%, var(--paper));
+  --tint: color-mix(in oklch, var(--accent) 12%, var(--paper));
   --danger: #ff7141;
   --warning: #f0b03e;
   --font-document: "Source Serif 4 Variable", Georgia, serif;
@@ -102,7 +102,7 @@ button {
     color 140ms ease;
 }
 :root {
-  --control-hover: color-mix(in oklch, var(--primary) 10%, var(--paper));
+  --control-hover: color-mix(in oklch, var(--primary) 2%, var(--paper));
   --control-active: color-mix(in oklch, var(--ink) 16%, var(--paper));
   --on-accent: var(--paper);
 }
