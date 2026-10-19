@@ -127,6 +127,13 @@
       "when": 1792358753841,
       "tag": "0017_brand_colors",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792369393258,
+      "tag": "0018_insurance_documents",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,7 @@
 import {
+  date,
+  index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -33,4 +36,37 @@ export const tenantAccess = pgTable(
   (t) => [
     uniqueIndex("tenant_property_account").on(t.propertyId, t.clerkUserId),
   ]
+);
+
+// Renter-uploaded insurance proof. The file lives in private Blob storage;
+// these rows hold the policy details and the owner's review.
+export const insuranceDocuments = pgTable(
+  "insurance_documents",
+  {
+    blobPath: text("blob_path").notNull(),
+    carrier: text("carrier").notNull(),
+    contentType: text("content_type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    endsOn: date("ends_on").notNull(),
+    fileName: text("file_name").notNull(),
+    fileSha256: text("file_sha256").notNull(),
+    id: uuid("id").primaryKey(),
+    policyNumber: text("policy_number").notNull(),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => properties.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: text("reviewed_by"),
+    reviewNote: text("review_note").notNull().default(""),
+    size: integer("size").notNull(),
+    startsOn: date("starts_on").notNull(),
+    // pending | accepted | rejected
+    status: text("status").notNull().default("pending"),
+    tenantAccessId: uuid("tenant_access_id")
+      .notNull()
+      .references(() => tenantAccess.id),
+  },
+  (t) => [index("insurance_by_access").on(t.tenantAccessId, t.createdAt)]
 );

@@ -69,6 +69,9 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
   await page.setViewportSize({ height: 1050, width: 1440 });
   await page.goto("/admin#leases");
   const workspace = page.locator(".lease-workspace");
+  await workspace
+    .getByRole("button", { exact: true, name: "New lease" })
+    .click();
   await expect(
     page.getByRole("heading", { exact: true, name: "Prepare a lease" })
   ).toBeVisible();
@@ -156,7 +159,7 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
     .getByRole("button", { exact: true, name: "Save lease draft" })
     .click();
   await expect(
-    workspace.getByRole("button", { exact: true, name: "Draft saved" })
+    workspace.getByText("All changes saved", { exact: true })
   ).toBeVisible();
   let records = await (await page.request.get("/api/admin/management")).json();
   const original = records.drafts.find(
@@ -176,7 +179,7 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
     .getByRole("button", { exact: true, name: "Save new version" })
     .click();
   await expect(
-    workspace.getByRole("button", { exact: true, name: "Draft saved" })
+    workspace.getByText("All changes saved", { exact: true })
   ).toBeVisible();
   records = await (await page.request.get("/api/admin/management")).json();
   const versions = records.drafts.filter(
@@ -196,6 +199,9 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
     fullPage: false,
     path: "test-results/lease-guided-review.png",
   });
+  await page
+    .getByRole("button", { exact: true, name: "Back to all leases" })
+    .click();
   // Scope to this test's lease: a shared database can hold other drafts.
   await workspace
     .getByRole("article")
@@ -215,6 +221,9 @@ test("lease questions, applicant autofill, preview, durable versions and visual 
   await expect(
     page.getByLabel("Tenant legal names", { exact: true })
   ).toHaveValue("LEASE UX TEST tenant");
+  await page
+    .getByRole("button", { exact: true, name: "Back to all leases" })
+    .click();
   await workspace
     .getByRole("button", { exact: true, name: "Lease wording" })
     .click();

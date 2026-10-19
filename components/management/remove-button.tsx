@@ -22,6 +22,8 @@ export function RemoveButton({
   onRemoved,
   disabled,
   cancelFirst = false,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   kind: RemovalKind;
   id: string;
@@ -29,10 +31,25 @@ export function RemoveButton({
   onRemoved: () => unknown;
   disabled?: boolean;
   cancelFirst?: boolean;
+  /** When set, the dialog is opened elsewhere (for example, from a menu) and no trigger renders. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false),
+  const [localOpen, setLocalOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : localOpen;
+  const setOpen = (value: boolean) => {
+    if (value) {
+      setError("");
+    }
+    if (controlled) {
+      onOpenChange?.(value);
+    } else {
+      setLocalOpen(value);
+    }
+  };
   const label = removalLabels[kind].toLowerCase();
 
   const resolveResult1 = () => {
@@ -49,18 +66,20 @@ export function RemoveButton({
   };
   return (
     <>
-      <Button
-        aria-label={`Remove ${label}: ${name}`}
-        className="remove-record-button"
-        disabled={disabled}
-        onClick={() => {
-          setError("");
-          setOpen(true);
-        }}
-        type="button"
-      >
-        Remove
-      </Button>
+      {!controlled && (
+        <Button
+          aria-label={`Remove ${label}: ${name}`}
+          className="remove-record-button"
+          disabled={disabled}
+          onClick={() => {
+            setError("");
+            setOpen(true);
+          }}
+          type="button"
+        >
+          Remove
+        </Button>
+      )}
       <ModalOverlay
         className="remove-overlay"
         isDismissable={!busy}

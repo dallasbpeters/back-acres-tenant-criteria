@@ -1022,8 +1022,10 @@ footer {
 .management-main {
   display: grid;
   gap: 1.5rem;
+  min-block-size: 80vh;
   padding-block: 2.5rem 4rem;
 }
+
 .management-nav,
 .management-tabs,
 .management-actions {
@@ -4052,4 +4054,417 @@ button,
   block-size: 0.375rem;
   background: var(--secondary);
   border-block-start: 1px solid var(--border);
+}
+/* Tenant portal lease list. */
+.tenant-leases {
+  padding-block-end: 1.5rem;
+  margin-block-end: 1.5rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-lease-list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.tenant-lease-list li {
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-lease-list li:first-child {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+.tenant-lease-list .small-note {
+  margin-block: 0.25rem;
+}
+.tenant-lease-title {
+  margin: 0;
+  font-weight: 600;
+}
+/* Tenant portal renters insurance. */
+.tenant-insurance-list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  list-style: none;
+}
+.tenant-insurance-list li + li {
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-insurance-list .small-note {
+  margin-block: 0.25rem;
+}
+.tenant-insurance-form {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+.tenant-insurance-form .fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1rem;
+  inline-size: 100%;
+}
+.tenant-insurance-form > .field {
+  inline-size: 100%;
+}
+.tenant-insurance-form .small-note {
+  margin: 0;
+}
+/* Owner renters insurance review. */
+.insurance-review {
+  padding-block-start: 1.5rem;
+  margin-block-start: 2rem;
+  border-block-start: 1px solid var(--border);
+}
+.insurance-review-list {
+  display: grid;
+  gap: 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+.insurance-review-list li {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.insurance-review-list li + li {
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--border);
+}
+.insurance-review-list .field {
+  inline-size: min(100%, 36rem);
+}
+.insurance-review-list .small-note {
+  margin: 0;
+}
+/* Lease workspace: list of saved leases and the focused editor. */
+.lease-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.lease-list-header h2,
+.lease-list-header p {
+  margin: 0;
+}
+.lease-list-header p {
+  margin-block-start: 0.35rem;
+  color: var(--muted);
+}
+.lease-tabs,
+.lease-side-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-block: 1.25rem 0;
+  border-block-end: 1px solid var(--border);
+}
+.lease-tabs .ui-button,
+.lease-side-tabs .ui-button,
+.lease-document-modes .ui-button {
+  min-block-size: 2.5rem;
+  margin-block-end: -1px;
+  border: 0;
+  border-block-end: 2px solid transparent;
+}
+.lease-tabs .ui-button[aria-pressed="true"],
+.lease-side-tabs .ui-button[aria-pressed="true"],
+.lease-document-modes .ui-button[aria-pressed="true"] {
+  font-weight: 700;
+  color: var(--ink);
+  border-block-end-color: var(--primary);
+}
+.lease-saved .lease-record {
+  gap: 0;
+  padding-block: 1.25rem;
+}
+.lease-saved .lease-record .lease-signing-admin {
+  margin: 0;
+}
+.lease-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.lease-row-heading {
+  min-inline-size: 0;
+}
+.lease-row-heading h4 {
+  margin: 0;
+}
+.lease-row-heading p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.lease-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.lease-versions {
+  margin-block-start: 0.75rem;
+  font-size: 0.85rem;
+}
+.lease-versions summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.lease-saved .lease-history-row {
+  display: block;
+  padding-block: 0.75rem;
+  border-block-start: 1px solid var(--border);
+}
+.lease-empty {
+  padding-block: 2rem;
+}
+.overflow-menu-trigger {
+  min-inline-size: 2.75rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.overflow-menu-popover {
+  min-inline-size: 12rem;
+  background: var(--surface);
+  border: 1px solid var(--border-dark);
+}
+.overflow-menu {
+  display: grid;
+  padding: 0.25rem;
+  outline: 0;
+}
+.overflow-menu-item {
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-interface);
+  font-size: 0.9rem;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  outline: 0;
+}
+.overflow-menu-item[data-focused] {
+  background: var(--tint);
+}
+.overflow-menu-item--danger {
+  color: var(--danger);
+}
+.lease-editor-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding-block: 0.75rem;
+  margin-block-end: 1.5rem;
+  background: var(--bg);
+  border-block-end: 1px solid var(--border);
+}
+.lease-editor-title h2 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-subheading);
+  white-space: nowrap;
+}
+.lease-editor-title p {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.lease-save-state.is-unsaved {
+  font-weight: 700;
+  color: var(--ink);
+}
+.lease-save-state.is-unsaved::before {
+  display: inline-block;
+  inline-size: 0.45rem;
+  block-size: 0.45rem;
+  margin-inline-end: 0.35rem;
+  vertical-align: 0.1em;
+  content: "";
+  background: var(--warning);
+  border-radius: 50%;
+}
+.lease-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+.lease-editor .lease-progress {
+  margin-block-start: 0;
+}
+.lease-document-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: 2rem;
+  align-items: start;
+}
+.lease-document-column {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+.lease-document-modes {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-block-end: 1px solid var(--border);
+}
+.lease-side-panel {
+  position: sticky;
+  top: 5.5rem;
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+  max-block-size: calc(100vh - 7rem);
+  overflow-y: auto;
+}
+.lease-side-panel .lease-side-tabs {
+  margin: 0;
+}
+.lease-side-body {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+.lease-side-body.lease-summary {
+  position: static;
+  padding: 0;
+  border: 0;
+}
+.lease-side-body h3,
+.lease-side-body h4 {
+  margin: 0;
+}
+.signing-panel--embedded {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+}
+@media (max-width: 960px) {
+  .lease-document-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lease-side-panel {
+    position: static;
+    max-block-size: none;
+  }
+  .lease-editor-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .lease-editor-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+.lease-editor .lease-step-heading {
+  scroll-margin-block-start: 7rem;
+}
+.signing-panel--embedded .signer-fields {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* Branding: solid strip of color swatches with dropdown pickers. */
+.brand-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
+  padding: 0;
+  margin: 0.75rem 0 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--border-dark);
+}
+.brand-swatch {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-block-size: 8rem;
+  color: var(--swatch-ink);
+  background: var(--swatch);
+}
+.brand-swatch--primary {
+  grid-column: span 2;
+}
+.brand-swatch-button {
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+  justify-items: end;
+  inline-size: 100%;
+  min-block-size: 100%;
+  padding: 1rem;
+  font-family: var(--font-interface);
+  color: inherit;
+  text-align: end;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+.brand-swatch-button[data-focus-visible] {
+  outline: 3px solid var(--swatch-ink);
+  outline-offset: -6px;
+}
+.brand-swatch-button[data-hovered] .brand-swatch-hex {
+  text-decoration: underline;
+}
+.brand-swatch-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.brand-swatch--primary .brand-swatch-name {
+  font-size: 1.5rem;
+}
+.brand-swatch-hex {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  background: color-mix(in oklch, var(--swatch-ink) 14%, transparent);
+}
+.brand-swatch-tints {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  block-size: 2.25rem;
+}
+.brand-swatch-popover {
+  inline-size: min(22rem, calc(100vw - 2rem));
+  max-block-size: min(36rem, 80vh);
+  padding: 1rem;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-dark);
+}
+.brand-swatch-popover [role="dialog"] {
+  outline: 0;
+}
+.brand-swatch-popover .color-picker {
+  padding: 0;
+  border: 0;
+}
+/* Wrap swatches so every row fills the full strip width. */
+.brand-strip {
+  display: flex;
+  flex-wrap: wrap;
+}
+.brand-swatch {
+  flex: 1 1 8.5rem;
+}
+.brand-swatch--primary {
+  flex: 2 1 17rem;
 }

@@ -257,6 +257,7 @@ test("property lifecycle, private records, public applications, resident links, 
   ).toBe(true);
   await page.goto("/admin");
   await page.getByRole("link", { exact: true, name: "Leases" }).click();
+  await page.getByRole("button", { exact: true, name: "New lease" }).click();
   await page
     .locator(".lease-form")
     .getByRole("button", { name: pattern1 })
@@ -288,7 +289,7 @@ test("property lifecycle, private records, public applications, resident links, 
     .getByRole("button", { exact: true, name: "Save lease draft" })
     .click();
   await expect(
-    page.getByRole("button", { exact: true, name: "Draft saved" })
+    page.getByText("All changes saved", { exact: true })
   ).toBeVisible();
   records = await (await page.request.get("/api/admin/management")).json();
   draftId = records.drafts.find(

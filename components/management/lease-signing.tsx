@@ -2,8 +2,12 @@
 "use client";
 import dynamic from "next/dynamic";
 import posthog from "posthog-js";
-import { useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  type OverflowAction,
+  OverflowMenu,
+} from "@/components/ui/overflow-menu";
 import { AppSelect } from "@/components/ui/select";
 
 const LeasePdfPreview = dynamic(
@@ -34,15 +38,27 @@ export function LeaseSigning({
   landlordName,
   landlordEmail = "",
   tenantEmail = "",
+  embedded = false,
+  heading,
+  leading,
+  menuActions = [],
 }: {
   draftId: string;
   tenantName: string;
   landlordName: string;
   landlordEmail?: string;
   tenantEmail?: string;
+  /** Render only the signing panel, always open (the lease editor's side panel). */
+  embedded?: boolean;
+  /** Record details shown at the start of the action row. */
+  heading?: ReactNode;
+  /** Actions placed before Preview PDF and Send lease (for example, Open lease). */
+  leading?: ReactNode;
+  /** Less frequent actions added to the "⋯" menu after Download PDF. */
+  menuActions?: OverflowAction[];
 }) {
   const panelId = useId();
-  const [open, setOpen] = useState(false),
+  const [open, setOpen] = useState(embedded),
     [preview, setPreview] = useState(false),
     [loaded, setLoaded] = useState(false),
     [packets, setPackets] = useState<Packet[]>([]),
@@ -78,6 +94,12 @@ export function LeaseSigning({
     setRevision((v) => v + 1);
     return data.packets as Packet[];
   }
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Load once per lease when the panel is embedded; later refreshes are explicit.
+  useEffect(() => {
+    if (embedded) {
+      load().catch((e) => setError(e.message));
+    }
+  }, [embedded, draftId]);
   async function post(body: unknown) {
     const r = await fetch("/api/admin/lease-signing", {
         body: JSON.stringify(body),
@@ -432,37 +454,85 @@ export function LeaseSigning({
         </>
       );
     };
+  const panel = (
+    <section
+      aria-busy={busy}
+      aria-label={`Send lease to ${tenantName}`}
+      className={
+        embedded ? "signing-panel signing-panel--embedded" : "signing-panel"
+      }
+      id={panelId}
+    >
+      {!embedded && (
+        <div className="signing-panel-heading">
+          <p className="eyebrow">Lease delivery</p>
+          <h4>
+            {active?.status === "completed"
+              ? "Signed lease"
+              : "Send for signature"}
+          </h4>
+        </div>
+      )}
+      {!!error && <p role="alert">{error}</p>}
+      {!!message && <p role="status">{message}</p>}
+      {resolveResult1()}
+      {!!packets.some((p) => p.status === "voided") && (
+        <p className="small-note">
+          {packets.filter((p) => p.status === "voided").length} canceled signing
+          request(s) retained in the audit history.
+        </p>
+      )}
+    </section>
+  );
+  if (embedded) {
+    return panel;
+  }
   return (
     <div className="lease-signing-admin">
-      <div className="management-actions lease-delivery-actions">
-        <Button
-          aria-controls={panelId}
-          aria-expanded={open}
-          disabled={busy}
-          onClick={() => {
-            setOpen((v) => !v);
-            if (!open) {
-              setLoaded(false);
-              setError("");
-              load().catch((e) => setError(e.message));
-            }
-          }}
-          type="button"
-          variant="primary"
-        >
-          {active?.status === "completed"
-            ? "View signing details"
-            : "Send lease"}
-        </Button>
-        <Button
-          aria-expanded={preview}
-          disabled={busy}
-          onClick={() => setPreview((v) => !v)}
-          type="button"
-        >
-          {preview ? "Hide PDF preview" : "Preview PDF"}
-        </Button>
-        <a href={`/api/admin/leases/${draftId}/pdf?preview=1`}>Download PDF</a>
+      <div className="lease-row">
+        {heading}
+        <div className="lease-row-actions">
+          {leading}
+          <Button
+            aria-expanded={preview}
+            disabled={busy}
+            onClick={() => setPreview((v) => !v)}
+            type="button"
+            variant="quiet"
+          >
+            {preview ? "Hide PDF preview" : "Preview PDF"}
+          </Button>
+          <Button
+            aria-controls={panelId}
+            aria-expanded={open}
+            disabled={busy}
+            onClick={() => {
+              setOpen((v) => !v);
+              if (!open) {
+                setLoaded(false);
+                setError("");
+                load().catch((e) => setError(e.message));
+              }
+            }}
+            type="button"
+            variant="primary"
+          >
+            {active?.status === "completed"
+              ? "View signing details"
+              : "Send lease"}
+          </Button>
+          <OverflowMenu
+            actions={[
+              {
+                href: `/api/admin/leases/${draftId}/pdf?preview=1`,
+                label: "Download PDF",
+              },
+              ...menuActions,
+            ]}
+            disabled={busy}
+            label={`More actions for ${tenantName}`}
+          />
+        </div>
       </div>
       {!!preview && (
         <LeasePdfPreview
@@ -471,32 +541,7 @@ export function LeaseSigning({
           revision={revision}
         />
       )}
-      {!!open && (
-        <section
-          aria-busy={busy}
-          aria-label={`Send lease to ${tenantName}`}
-          className="signing-panel"
-          id={panelId}
-        >
-          <div className="signing-panel-heading">
-            <p className="eyebrow">Lease delivery</p>
-            <h4>
-              {active?.status === "completed"
-                ? "Signed lease"
-                : "Send for signature"}
-            </h4>
-          </div>
-          {!!error && <p role="alert">{error}</p>}
-          {!!message && <p role="status">{message}</p>}
-          {resolveResult1()}
-          {!!packets.some((p) => p.status === "voided") && (
-            <p className="small-note">
-              {packets.filter((p) => p.status === "voided").length} canceled
-              signing request(s) retained in the audit history.
-            </p>
-          )}
-        </section>
-      )}
+      {!!open && panel}
     </div>
   );
 }

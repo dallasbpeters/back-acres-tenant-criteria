@@ -57,6 +57,7 @@ test("supplied disclosures, reusable property defaults, visible Tiptap and forma
   ]);
   await page.setViewportSize({ height: 1050, width: 1440 });
   async function toDisclosures() {
+    await page.getByRole("button", { exact: true, name: "New lease" }).click();
     await page
       .getByRole("heading", { exact: true, name: "Property & people" })
       .waitFor();
@@ -168,7 +169,7 @@ test("supplied disclosures, reusable property defaults, visible Tiptap and forma
     .getByRole("button", { exact: true, name: "Save lease draft" })
     .click();
   await expect(
-    page.getByRole("button", { exact: true, name: "Draft saved" })
+    page.getByText("All changes saved", { exact: true })
   ).toBeVisible();
   const records = await (
       await page.request.get("/api/admin/management")
@@ -178,6 +179,9 @@ test("supplied disclosures, reusable property defaults, visible Tiptap and forma
     );
   expect(draft.body.length).toBeGreaterThan(42_000);
   expect(JSON.stringify(draft.document)).toContain('"bold"');
+  await page
+    .getByRole("button", { exact: true, name: "Back to all leases" })
+    .click();
   await page
     .locator(".lease-saved .record")
     .filter({ has: page.getByRole("heading", { exact: true, name }) })

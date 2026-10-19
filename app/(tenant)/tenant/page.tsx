@@ -3,11 +3,14 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { ManagementShell } from "@/components/management/shell";
+import { TenantInsurance } from "@/components/tenant/insurance";
+import { TenantLeaseList } from "@/components/tenant/leases";
 import { MaintenanceRequestList } from "@/components/tenant/maintenance-requests";
 import { TenantNavigation } from "@/components/tenant/navigation";
 import { PaymentHistory } from "@/components/tenant/payments";
 import { db } from "@/lib/db";
 import {
+  insuranceDocuments,
   invoices,
   paymentHistory,
   properties,
@@ -17,6 +20,7 @@ import { notRemoved } from "@/lib/management/not-removed";
 import { paymentMode } from "@/lib/management/stripe";
 import { assignments, tenantIdentity } from "@/lib/tenant/access";
 import { tenantAuthReady } from "@/lib/tenant/config";
+import { tenantLeases, verifiedEmails } from "@/lib/tenant/leases";
 import { tenantMaintenanceRequests } from "@/lib/tenant/maintenance";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tenant portal | Back Acres" };
@@ -39,64 +43,53 @@ export default async function TenantPortal() {
   let content: ReactNode;
   try {
     const accessRows = await assignments(userId);
+    const emails = verifiedEmails(user);
     content = accessRows.length ? (
       await Promise.all(
         accessRows.map(async (access, index) => {
-          const d = db();
-          const [propertyRows, payments, schedules, requests] =
-            await Promise.all([
-              d
-                .select()
-                .from(properties)
-                .where(eq(properties.id, access.propertyId)),
-              access.invoiceIds.length
-                ? d
-                    .select()
-                    .from(invoices)
-                    .where(
-                      and(
-                        eq(invoices.propertyId, access.propertyId),
-                        inArray(invoices.id, access.invoiceIds),
-                        eq(invoices.mode, paymentMode()),
-                        notRemoved(invoices.id)
-                      )
-                    )
-                    .orderBy(desc(invoices.createdAt))
-                : [],
-              access.scheduleIds.length
-                ? d
-                    .select()
-                    .from(rentSchedules)
-                    .where(
-                      and(
-                        eq(rentSchedules.propertyId, access.propertyId),
-                        inArray(rentSchedules.id, access.scheduleIds),
-                        eq(rentSchedules.mode, paymentMode()),
-                        notRemoved(rentSchedules.id)
-                      )
-                    )
-                    .orderBy(desc(rentSchedules.createdAt))
-                : [],
-              tenantMaintenanceRequests(access.residentLinkId, 3),
-            ]);
-          const [property] = propertyRows;
-          // The history query uses the already-authorized invoice rows, never URL IDs.
-          const history = payments.length
-            ? await d
-                .select()
-                .from(paymentHistory)
-                .where(
-                  inArray(
-                    paymentHistory.invoiceId,
-                    payments.map((payment) => payment.id)
-                  )
-                )
-                .orderBy(desc(paymentHistory.observedAt))
-            : [];
+          const {
+            history,
+            insurance,
+            leases,
+            payments,
+            property,
+            requests,
+            schedules,
+          } = await tenancyRecords(access, emails);
           return (
             <section className="tenant-tenancy" key={access.id}>
               <h2>{property?.data.name}</h2>
               <p>{property?.data.address}</p>
+              <section
+                aria-label={`${property?.data.name} leases`}
+                className="tenant-leases"
+                id={index === 0 ? "leases" : undefined}
+              >
+                <TenantLeaseList
+                  contact={property?.data.contact}
+                  leases={leases}
+                />
+              </section>
+              <section
+                aria-label={`${property?.data.name} renters insurance`}
+                className="tenant-leases"
+                id={index === 0 ? "insurance" : undefined}
+              >
+                <TenantInsurance
+                  accessId={access.id}
+                  documents={insurance.map((document) => ({
+                    carrier: document.carrier,
+                    createdAt: document.createdAt.toISOString(),
+                    endsOn: document.endsOn,
+                    fileName: document.fileName,
+                    id: document.id,
+                    policyNumber: document.policyNumber,
+                    reviewNote: document.reviewNote,
+                    startsOn: document.startsOn,
+                    status: document.status,
+                  }))}
+                />
+              </section>
               <div className="tenant-grid">
                 <section
                   aria-label={`${property?.data.name} payments`}
@@ -156,4 +149,74 @@ export default async function TenantPortal() {
       {content}
     </ManagementShell>
   );
+}
+
+type TenantAssignment = Awaited<ReturnType<typeof assignments>>[number];
+
+/** Everything one tenancy shows, loaded only through the owner's grants. */
+async function tenancyRecords(access: TenantAssignment, emails: string[]) {
+  const d = db();
+  const [propertyRows, payments, schedules, requests, leases, insurance] =
+    await Promise.all([
+      d.select().from(properties).where(eq(properties.id, access.propertyId)),
+      access.invoiceIds.length
+        ? d
+            .select()
+            .from(invoices)
+            .where(
+              and(
+                eq(invoices.propertyId, access.propertyId),
+                inArray(invoices.id, access.invoiceIds),
+                eq(invoices.mode, paymentMode()),
+                notRemoved(invoices.id)
+              )
+            )
+            .orderBy(desc(invoices.createdAt))
+        : [],
+      access.scheduleIds.length
+        ? d
+            .select()
+            .from(rentSchedules)
+            .where(
+              and(
+                eq(rentSchedules.propertyId, access.propertyId),
+                inArray(rentSchedules.id, access.scheduleIds),
+                eq(rentSchedules.mode, paymentMode()),
+                notRemoved(rentSchedules.id)
+              )
+            )
+            .orderBy(desc(rentSchedules.createdAt))
+        : [],
+      tenantMaintenanceRequests(access.residentLinkId, 3),
+      tenantLeases(access.propertyId, emails),
+      d
+        .select()
+        .from(insuranceDocuments)
+        .where(eq(insuranceDocuments.tenantAccessId, access.id))
+        .orderBy(desc(insuranceDocuments.createdAt))
+        .limit(10),
+    ]);
+  const [property] = propertyRows;
+  // The history query uses the already-authorized invoice rows, never URL IDs.
+  const history = payments.length
+    ? await d
+        .select()
+        .from(paymentHistory)
+        .where(
+          inArray(
+            paymentHistory.invoiceId,
+            payments.map((payment) => payment.id)
+          )
+        )
+        .orderBy(desc(paymentHistory.observedAt))
+    : [];
+  return {
+    history,
+    insurance,
+    leases,
+    payments,
+    property,
+    requests,
+    schedules,
+  };
 }

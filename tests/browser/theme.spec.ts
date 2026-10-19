@@ -192,9 +192,7 @@ test("owner workspace, Tiptap and menus use dark surfaces and fit phones", async
     },
   ]);
   await page.goto("/admin#leases");
-  await page
-    .getByRole("heading", { exact: true, name: "Prepare a lease" })
-    .waitFor();
+  await page.getByRole("heading", { exact: true, name: "Leases" }).waitFor();
   await page
     .getByRole("button", { exact: true, name: "Color theme: System" })
     .click();

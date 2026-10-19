@@ -8,11 +8,10 @@ import {
   type BrandColors,
   type BrandPalette,
   brandColorTokens,
-  contrastChecks,
   defaultBrandColors,
 } from "@/lib/brand-colors";
+import { BrandColorStrip } from "./brand-color-strip";
 import { EmailTest } from "./email-test";
-import { OklchPicker } from "./oklch-picker";
 
 interface Brand {
   colors?: BrandColors;
@@ -153,24 +152,18 @@ export function BrandingWorkspace() {
                   Reset to defaults
                 </Button>
               </div>
+              <BrandColorStrip
+                disabled={busy}
+                mode={mode}
+                onChange={(token, value) =>
+                  setColors((previous) => ({
+                    ...previous,
+                    [mode]: { ...previous[mode], [token]: value },
+                  }))
+                }
+                palette={colors[mode]}
+              />
               <BrandPreview mode={mode} palette={colors[mode]} />
-              <div className="brand-color-grid">
-                {brandColorTokens.map((item) => (
-                  <OklchPicker
-                    checks={contrastChecks(colors[mode], item.token)}
-                    description={item.description}
-                    key={item.token}
-                    label={`${item.label} (--${item.token})`}
-                    onChange={(value) =>
-                      setColors((previous) => ({
-                        ...previous,
-                        [mode]: { ...previous[mode], [item.token]: value },
-                      }))
-                    }
-                    value={colors[mode][item.token]}
-                  />
-                ))}
-              </div>
             </section>
           ))}
         </div>
