@@ -1,4 +1,5 @@
 import { asc, eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import { ListingGallery } from "@/components/management/listing-gallery";
 import { PropertyDescription } from "@/components/management/property-description";
 import { ManagementShell } from "@/components/management/shell";
@@ -8,7 +9,9 @@ import { listingPhotos, properties } from "@/lib/db/schema";
 import { dollars } from "@/lib/management/model";
 import { notRemoved } from "@/lib/management/not-removed";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Available properties | Back Acres" };
+export const metadata: Metadata = {
+  title: "Available properties | Back Acres",
+};
 export default async function PropertiesPage() {
   const rows = await db()
     .select()

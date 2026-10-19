@@ -39,6 +39,7 @@
 /* contrast-color() only where the state paints a background behind the text. */
 a:not(.submit-button):not(.ui-button):active {
   --bg-current: var(--tint);
+  font-size: var(--text-label);
   color: contrast-color(var(--tint));
   background: transparent;
 }

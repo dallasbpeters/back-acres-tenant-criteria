@@ -128,14 +128,16 @@
   filter: brightness(0.88);
 }
 .listing-photo-more {
-  --bg-current: var(--surface);
+  --bg-current: rgb(0 0 0 / 0.55);
   position: absolute;
-  inset-block-end: 0;
-  inset-inline: 0;
-  padding: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--ink);
-  background: var(--surface);
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-interface);
+  font-size: 1rem;
+  font-weight: 650;
+  color: #fff;
+  background: rgb(0 0 0 / 0.55);
 }
 .listing-gallery-footer {
   display: flex;
@@ -668,6 +670,27 @@
 }
 .property-listing:only-child .property-about {
   grid-column: 1 / -1;
+}
+/* One listing: the gallery's parts join the card grid, so the photo footer
+   runs under both the photos and the details. */
+.property-listing:only-child .listing-gallery {
+  display: contents;
+}
+.property-listing:only-child .listing-photo-grid {
+  grid-row: 1;
+  grid-column: 1;
+}
+.property-listing:only-child .property-listing-info {
+  grid-row: 1;
+  grid-column: 2;
+}
+.property-listing:only-child .listing-gallery-footer {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  border-block-start: 1px solid var(--border);
+}
+.property-listing:only-child .property-about {
+  grid-row: 3;
 }
 .amenity-picker {
   margin: 0;
