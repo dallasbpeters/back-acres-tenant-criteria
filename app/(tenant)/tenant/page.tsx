@@ -20,6 +20,7 @@ import { notRemoved } from "@/lib/management/not-removed";
 import { paymentMode } from "@/lib/management/stripe";
 import { assignments, tenantIdentity } from "@/lib/tenant/access";
 import { tenantAuthReady } from "@/lib/tenant/config";
+import { claimTenantInvitations } from "@/lib/tenant/invitations";
 import { tenantLeases, verifiedEmails } from "@/lib/tenant/leases";
 import { tenantMaintenanceRequests } from "@/lib/tenant/maintenance";
 export const dynamic = "force-dynamic";
@@ -42,8 +43,10 @@ export default async function TenantPortal() {
   const user = await currentUser();
   let content: ReactNode;
   try {
-    const accessRows = await assignments(userId);
     const emails = verifiedEmails(user);
+    // Owner invitations wait for this verified email; apply them first.
+    await claimTenantInvitations(userId, emails);
+    const accessRows = await assignments(userId);
     content = accessRows.length ? (
       await Promise.all(
         accessRows.map(async (access, index) => {

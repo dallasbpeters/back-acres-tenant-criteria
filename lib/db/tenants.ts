@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   date,
   index,
@@ -69,4 +70,34 @@ export const insuranceDocuments = pgTable(
       .references(() => tenantAccess.id),
   },
   (t) => [index("insurance_by_access").on(t.tenantAccessId, t.createdAt)]
+);
+
+// Owner invitations for tenants who have no verified account yet. The grant
+// details wait here and apply when that email verifies and signs in.
+export const tenantInvitations = pgTable(
+  "tenant_invitations",
+  {
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    actor: text("actor").notNull(),
+    clerkInvitationId: text("clerk_invitation_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    email: text("email").notNull(),
+    id: uuid("id").primaryKey(),
+    invoiceIds: jsonb("invoice_ids").$type<string[]>().notNull().default([]),
+    name: text("name").notNull(),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => properties.id),
+    scheduleIds: jsonb("schedule_ids").$type<string[]>().notNull().default([]),
+    // pending | accepted | canceled
+    status: text("status").notNull().default("pending"),
+    tenantAccessId: uuid("tenant_access_id").references(() => tenantAccess.id),
+  },
+  (t) => [
+    uniqueIndex("one_pending_invitation")
+      .on(t.propertyId, t.email)
+      .where(sql`${t.status} = 'pending'`),
+  ]
 );

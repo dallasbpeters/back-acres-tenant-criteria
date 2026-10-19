@@ -40,6 +40,7 @@ import {
 } from "../stripe/harness";
 
 const clerk = vi.hoisted(() => ({
+  invite: vi.fn(),
   userId: "user_tenant_a" as string | null,
   users: vi.fn(),
 }));
@@ -50,7 +51,10 @@ vi.mock("@clerk/nextjs/server", () => ({
       userId: clerk.userId,
     })
   ),
-  createClerkClient: vi.fn(() => ({ users: { getUserList: clerk.users } })),
+  createClerkClient: vi.fn(() => ({
+    invitations: { createInvitation: clerk.invite },
+    users: { getUserList: clerk.users },
+  })),
 }));
 const verifiedUser = {
   emailAddresses: [
@@ -68,6 +72,7 @@ beforeEach(async () => {
   await reset();
   clerk.userId = "user_tenant_a";
   clerk.users.mockResolvedValue({ data: [verifiedUser] });
+  clerk.invite.mockResolvedValue({ id: "inv_fixture" });
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture");
   vi.stubEnv("CLERK_SECRET_KEY", "sk_test_fixture");
 });
@@ -198,7 +203,7 @@ describe("Clerk identity and tenancy boundaries", () => {
     expect(state.session).not.toBeNull();
     expect((await settings()).status).toBe(401);
   });
-  it("requires existing verified email ownership for owner assignment", async () => {
+  it("invites instead of granting access when the email is not verified", async () => {
     await property();
     clerk.users.mockResolvedValue({
       data: [
@@ -213,7 +218,12 @@ describe("Clerk identity and tenancy boundaries", () => {
         },
       ],
     });
-    expect((await assign()).status).toBe(409);
+    const response = await assign();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ invited: true });
+    expect(clerk.invite).toHaveBeenCalledWith(
+      expect.objectContaining({ emailAddress: "tenant@example.invalid" })
+    );
     expect(await db().select().from(tenantAccess)).toEqual([]);
   });
   it("rejects ambiguous or mismatched account emails", () => {

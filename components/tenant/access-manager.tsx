@@ -23,6 +23,13 @@ interface Schedule {
   propertyId: string;
   status: string;
 }
+interface Invitation {
+  createdAt: string;
+  email: string;
+  id: string;
+  name: string;
+  propertyId: string;
+}
 interface Assignment {
   id: string;
   name: string;
@@ -34,6 +41,7 @@ export function TenantAccessManager() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [propertyId, setPropertyId] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -55,12 +63,13 @@ export function TenantAccessManager() {
     setInvoices(management.invoices);
     setSchedules(management.rentSchedules);
     setAssignments(access.assignments);
+    setInvitations(access.invitations ?? []);
     setReady(access.ready);
   }, []);
   useEffect(() => {
     load().catch((error: Error) => setMessage(error.message));
   }, [load]);
-  async function send(body: unknown) {
+  async function send(body: unknown, success = "Tenant access updated.") {
     setPending(true);
     setMessage("");
     try {
@@ -74,7 +83,11 @@ export function TenantAccessManager() {
         throw new Error(result.error || "Could not save tenant access.");
       }
       await load();
-      setMessage("Tenant access updated.");
+      setMessage(
+        result.invited
+          ? "No verified account uses this email yet, so we emailed an invitation. Access starts when they create their account."
+          : success
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Please try again.");
     } finally {
@@ -98,13 +111,10 @@ export function TenantAccessManager() {
   return (
     <>
       <p>
-        Tenants first create an account at{" "}
-        <a href="/sign-up" rel="noreferrer" target="_blank">
-          Tenant registration
-        </a>{" "}
-        and verify their email. Then connect the account to a property and
-        choose the records they can see. No invitation email is sent by this
-        form.
+        Enter the tenant’s email and choose what they can see. If they already
+        have a verified account, access starts now. If not, we email them an
+        invitation, and access starts when they create their account with that
+        email.
       </p>
       {!ready && (
         <p role="status">
@@ -143,6 +153,53 @@ export function TenantAccessManager() {
           <p>No tenant accounts connected yet.</p>
         )}
       </section>
+      {!!invitations.length && (
+        <section>
+          <h2>Pending invitations</h2>
+          <ul className="tenant-access-list">
+            {invitations.map((invitation) => (
+              <li key={invitation.id}>
+                <div>
+                  <strong>{invitation.name}</strong>
+                  <p>
+                    {invitation.email} ·{" "}
+                    {properties.find(
+                      (property) => property.id === invitation.propertyId
+                    )?.data.name ?? "Removed property"}{" "}
+                    · Invited{" "}
+                    {new Date(invitation.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="tenant-navigation">
+                  <Button
+                    disabled={pending || !ready}
+                    onPress={() =>
+                      send(
+                        { action: "resendInvite", id: invitation.id },
+                        `Invitation sent again to ${invitation.email}.`
+                      )
+                    }
+                  >
+                    Resend invitation
+                  </Button>
+                  <Button
+                    disabled={pending || !ready}
+                    onPress={() =>
+                      send(
+                        { action: "cancelInvite", id: invitation.id },
+                        "Invitation canceled."
+                      )
+                    }
+                    variant="quiet"
+                  >
+                    Cancel invitation
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section>
         <h2>Connect a tenant</h2>
         <p className="small-note">
@@ -170,7 +227,7 @@ export function TenantAccessManager() {
               <input maxLength={300} name="name" required />
             </label>
             <label>
-              Verified account email
+              Tenant email
               <input maxLength={254} name="email" required type="email" />
             </label>
           </div>
@@ -210,7 +267,7 @@ export function TenantAccessManager() {
             type="submit"
             variant="primary"
           >
-            {pending ? "Saving…" : "Save tenant access"}
+            {pending ? "Saving…" : "Save or invite tenant"}
           </Button>
         </form>
       </section>

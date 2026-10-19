@@ -134,6 +134,13 @@
       "when": 1792369393258,
       "tag": "0018_insurance_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792371360369,
+      "tag": "0019_tenant_invitations",
+      "breakpoints": true
     }
   ]
 }

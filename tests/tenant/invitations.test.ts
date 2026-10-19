@@ -1,0 +1,163 @@
+// Register isolated database and owner-session fixtures before importing route code.
+import "../stripe/harness";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { POST as ownerCommand } from "../../app/api/admin/tenants/route";
+import { db } from "../../lib/db";
+import { tenantAccess, tenantInvitations } from "../../lib/db/schema";
+import { claimTenantInvitations } from "../../lib/tenant/invitations";
+import {
+  invoice,
+  id as invoiceId,
+  pg,
+  propertyId,
+  request,
+  reset,
+  start,
+} from "../stripe/harness";
+
+const clerk = vi.hoisted(() => ({
+  invite: vi.fn(),
+  revoke: vi.fn(),
+  users: vi.fn(),
+}));
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: vi.fn(() => Promise.resolve({ isAuthenticated: false, userId: null })),
+  createClerkClient: vi.fn(() => ({
+    invitations: {
+      createInvitation: clerk.invite,
+      revokeInvitation: clerk.revoke,
+    },
+    users: { getUserList: clerk.users },
+  })),
+}));
+
+beforeAll(start);
+beforeEach(async () => {
+  await reset();
+  clerk.users.mockResolvedValue({ data: [] });
+  let count = 0;
+  clerk.invite.mockImplementation(() => {
+    count += 1;
+    return Promise.resolve({ id: `inv_${count}` });
+  });
+  clerk.revoke.mockResolvedValue({});
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture");
+  vi.stubEnv("CLERK_SECRET_KEY", "sk_test_fixture");
+  // invoice() also creates the fixture property.
+  await invoice();
+});
+afterAll(async () => {
+  await pg.close();
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+const invite = (patch = {}) =>
+  ownerCommand(
+    request("/api/admin/tenants", {
+      action: "assign",
+      data: {
+        email: "New.Tenant@example.invalid",
+        invoiceIds: [invoiceId],
+        name: "New Tenant",
+        propertyId,
+        scheduleIds: [],
+        ...patch,
+      },
+    })
+  );
+const pending = () => db().select().from(tenantInvitations);
+
+describe("tenant invitations", () => {
+  it("emails a Clerk invitation and keeps the grant pending", async () => {
+    const response = await invite();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ invited: true });
+    expect(clerk.invite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        emailAddress: "new.tenant@example.invalid",
+        notify: true,
+        redirectUrl: "https://rental.example.invalid/sign-up",
+      })
+    );
+    const [row] = await pending();
+    expect(row).toMatchObject({
+      actor: "owner@example.invalid",
+      clerkInvitationId: "inv_1",
+      email: "new.tenant@example.invalid",
+      invoiceIds: [invoiceId],
+      propertyId,
+      status: "pending",
+    });
+    expect(await db().select().from(tenantAccess)).toEqual([]);
+  });
+  it("updates one pending invitation when the owner invites again", async () => {
+    await invite();
+    await invite({ invoiceIds: [], name: "Renamed Tenant" });
+    const rows = await pending();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      clerkInvitationId: "inv_2",
+      invoiceIds: [],
+      name: "Renamed Tenant",
+    });
+  });
+  it("grants access once the invited email is verified and signs in", async () => {
+    await invite();
+    expect(
+      await claimTenantInvitations("user_other", ["other@example.invalid"])
+    ).toBe(0);
+    expect(
+      await claimTenantInvitations("user_new", ["new.tenant@example.invalid"])
+    ).toBe(1);
+    const [access] = await db().select().from(tenantAccess);
+    expect(access).toMatchObject({
+      clerkUserId: "user_new",
+      invoiceIds: [invoiceId],
+      name: "New Tenant",
+      propertyId,
+      revokedAt: null,
+    });
+    const [row] = await pending();
+    expect(row).toMatchObject({
+      status: "accepted",
+      tenantAccessId: access.id,
+    });
+    expect(
+      await claimTenantInvitations("user_new", ["new.tenant@example.invalid"])
+    ).toBe(0);
+  });
+  it("lets the owner resend or cancel a pending invitation", async () => {
+    await invite();
+    const [row] = await pending();
+    const resend = await ownerCommand(
+      request("/api/admin/tenants", { action: "resendInvite", id: row.id })
+    );
+    expect(resend.status).toBe(200);
+    expect(clerk.revoke).toHaveBeenCalledWith("inv_1");
+    expect((await pending())[0].clerkInvitationId).toBe("inv_2");
+    const cancel = await ownerCommand(
+      request("/api/admin/tenants", { action: "cancelInvite", id: row.id })
+    );
+    expect(cancel.status).toBe(200);
+    expect((await pending())[0].status).toBe("canceled");
+    expect(
+      await claimTenantInvitations("user_new", ["new.tenant@example.invalid"])
+    ).toBe(0);
+    expect(
+      (
+        await ownerCommand(
+          request("/api/admin/tenants", { action: "cancelInvite", id: row.id })
+        )
+      ).status
+    ).toBe(404);
+  });
+});
