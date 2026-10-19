@@ -276,3 +276,21 @@
 .brand-swatch--primary {
   flex: 2 1 17rem;
 }
+/* Logo redrawn from color masks, each painted with a brand color, so it
+   follows light and dark mode. */
+.brand-logo-layers {
+  position: relative;
+  display: inline-block;
+}
+.brand-logo-layers > span {
+  position: absolute;
+  inset: 0;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+@media (forced-colors: active) {
+  .brand-logo-layers > span {
+    forced-color-adjust: none;
+  }
+}

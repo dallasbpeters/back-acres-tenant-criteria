@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 
 interface Branding {
   hasLogo: boolean;
+  /** Brand color token per logo color layer; empty shows the plain image. */
+  logoLayers?: string[];
   name: string;
   revision: string;
 }
@@ -46,6 +48,26 @@ export function BrandLogoImage({ brand }: { brand: Branding }) {
     return null;
   }
 
+  const revision = encodeURIComponent(brand.revision);
+  if (brand.logoLayers?.length) {
+    return (
+      <span
+        aria-label={`${brand.name} logo`}
+        className="brand-logo brand-logo-layers"
+        role="img"
+      >
+        {brand.logoLayers.map((token, index) => (
+          <span
+            key={`${token}-${index.toString()}`}
+            style={{
+              background: `var(--${token})`,
+              maskImage: `url(/api/branding/logo/layer?v=${revision}&i=${index})`,
+            }}
+          />
+        ))}
+      </span>
+    );
+  }
   return (
     <Image
       alt={`${brand.name} logo`}
