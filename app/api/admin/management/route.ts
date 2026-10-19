@@ -175,7 +175,10 @@ export async function GET(request: NextRequest) {
       d
         .select()
         .from(leaseDrafts)
-        .where(notRemoved(leaseDrafts.id))
+        // A removed property hides its leases too; restoring it brings them back.
+        .where(
+          and(notRemoved(leaseDrafts.id), notRemoved(leaseDrafts.propertyId))
+        )
         .orderBy(desc(leaseDrafts.createdAt))
         .limit(200),
       d

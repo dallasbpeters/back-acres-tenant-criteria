@@ -137,7 +137,21 @@ export async function POST(request: NextRequest) {
           )
         );
       if (!draft) {
-        return reply({ error: "Lease not found." }, 404);
+        const [orphan] = await d
+          .select({ id: leaseDrafts.id })
+          .from(leaseDrafts)
+          .where(
+            and(eq(leaseDrafts.id, c.data.draftId), notRemoved(leaseDrafts.id))
+          );
+        return orphan
+          ? reply(
+              {
+                error:
+                  "This lease's property was removed. Restore the property from Removed items, then send the lease.",
+              },
+              409
+            )
+          : reply({ error: "Lease not found." }, 404);
       }
       if (pattern1.test(draft.body)) {
         return reply(
