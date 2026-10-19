@@ -7,7 +7,7 @@ import { sendErrors } from "@/lib/adverse/notice";
 import { db } from "@/lib/db";
 import { noticeDeliveries, noticeVersions } from "@/lib/db/schema";
 import { currentEmailBrand } from "@/lib/email-brand";
-import { brandedEmailHtml } from "@/lib/email-layout";
+import { brandedEmailHtml, logoAttachments } from "@/lib/email-layout";
 import { notRemoved } from "@/lib/management/not-removed";
 export async function POST(request: NextRequest) {
   const denied = await guard(request);
@@ -63,10 +63,12 @@ export async function POST(request: NextRequest) {
           .where(eq(noticeDeliveries.versionId, id));
       },
       send: async () => {
+        const brand = await currentEmailBrand();
         const response = await fetch("https://api.resend.com/emails", {
           body: JSON.stringify({
+            attachments: logoAttachments(brand),
             from: process.env.FROM_EMAIL,
-            html: brandedEmailHtml(await currentEmailBrand(), version.html),
+            html: brandedEmailHtml(brand, version.html, { inlineLogo: true }),
             subject: version.subject,
             text: version.plainText,
             to: [version.notice.applicantEmail],

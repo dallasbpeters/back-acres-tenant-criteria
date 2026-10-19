@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { currentEmailBrand } from "@/lib/email-brand";
-import { brandedEmailHtml } from "@/lib/email-layout";
+import { brandedEmailHtml, logoAttachments } from "@/lib/email-layout";
 import { POLICY } from "@/lib/policy";
 import { canAcceptAcknowledgments } from "@/lib/ready";
 import {
@@ -137,9 +137,12 @@ export async function POST(request: NextRequest) {
   const bcc = ownerRecipients.filter((address) => address !== applicantEmail);
   const brand = await currentEmailBrand();
   const outbound = {
+    attachments: logoAttachments(brand),
     bcc,
     from: process.env.FROM_EMAIL,
-    html: brandedEmailHtml(brand, receiptHtml(receipt, brand.name)),
+    html: brandedEmailHtml(brand, receiptHtml(receipt, brand.name), {
+      inlineLogo: true,
+    }),
     subject: `Tenant criteria acknowledgment received — ${POLICY.street}`,
     text: receiptText(receipt),
     to: [applicantEmail],

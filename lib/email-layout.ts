@@ -44,14 +44,43 @@ export function textEmailHtml(text: string) {
     .join("");
 }
 
+const logoContentId = "brand-logo";
+
+/**
+ * Embeds the logo in the message itself (Resend `content_id`). Many inboxes,
+ * including Proton Mail, block images loaded from other sites but show
+ * embedded ones. Resend fetches the PNG from `path` when sending.
+ */
+export function logoAttachments(brand: EmailBrand) {
+  return brand.logoUrl
+    ? [
+        {
+          content_id: logoContentId,
+          content_type: "image/png",
+          filename: "logo.png",
+          path: brand.logoUrl,
+        },
+      ]
+    : [];
+}
+
 /**
  * Wraps an email body in the saved app branding. Email clients do not render
- * SVG, so the logo is always the PNG the branding upload produced.
+ * SVG, so the logo is always the PNG the branding upload produced. Pass
+ * `inlineLogo` when the message also sends `logoAttachments(brand)`; the
+ * Resend batch endpoint cannot, so batch emails link the image instead.
  */
-export function brandedEmailHtml(brand: EmailBrand, body: string) {
+export function brandedEmailHtml(
+  brand: EmailBrand,
+  body: string,
+  { inlineLogo = false }: { inlineLogo?: boolean } = {}
+) {
   const name = escapeHtml(brand.name);
+  const source = inlineLogo
+    ? `cid:${logoContentId}`
+    : escapeHtml(brand.logoUrl ?? "");
   const logo = brand.logoUrl
-    ? `<img src="${escapeHtml(brand.logoUrl)}" alt="${name} logo" height="48" style="display:block;height:48px;width:auto;max-width:240px;border:0;margin:0 0 10px">`
+    ? `<img src="${source}" alt="${name} logo" height="48" style="display:block;height:48px;width:auto;max-width:240px;border:0;margin:0 0 10px">`
     : "";
   return `<div style="background:#f6f4ee;padding:24px 12px;font-family:Georgia,serif;color:#1c2931">
   <div style="max-width:680px;margin:auto;background:#ffffff;border:1px solid #d4dadd">

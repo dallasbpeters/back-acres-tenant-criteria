@@ -3,6 +3,7 @@ import {
   defaultEmailBrand,
   type EmailBrand,
   emailButtonHtml,
+  logoAttachments,
   textEmailHtml,
 } from "@/lib/email-layout";
 import { digest } from "./signing-model";
@@ -29,6 +30,7 @@ export async function sendLeaseMail(
   }
   return await transport("https://api.resend.com/emails", {
     body: JSON.stringify({
+      attachments: logoAttachments(brand),
       from: process.env.FROM_EMAIL,
       html: brandedEmailHtml(
         brand,
@@ -36,7 +38,8 @@ export async function sendLeaseMail(
           (message.action
             ? emailButtonHtml(brand, message.action.label, message.action.url)
             : "") +
-          (message.htmlAfter ? textEmailHtml(message.htmlAfter) : "")
+          (message.htmlAfter ? textEmailHtml(message.htmlAfter) : ""),
+        { inlineLogo: true }
       ),
       subject: message.subject,
       text: message.text,
