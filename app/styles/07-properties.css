@@ -32,6 +32,7 @@
   min-inline-size: 0;
 }
 .photo-edit-item img {
+  --bg-current: var(--bg);
   display: block;
   inline-size: 100%;
   block-size: auto;
@@ -105,6 +106,7 @@
   grid-template-columns: 2fr 1fr;
 }
 .listing-photo-grid .listing-photo-tile {
+  --bg-current: var(--bg);
   position: relative;
   display: block;
   min-inline-size: 0;
@@ -126,6 +128,7 @@
   filter: brightness(0.88);
 }
 .listing-photo-more {
+  --bg-current: var(--surface);
   position: absolute;
   inset-block-end: 0;
   inset-inline: 0;
@@ -143,6 +146,7 @@
   color: var(--muted);
 }
 .listing-photo-overlay {
+  --bg-current: rgb(0 0 0 / 0.75);
   position: fixed;
   inset: 0;
   z-index: 120;
@@ -153,6 +157,7 @@
   background: rgb(0 0 0 / 0.75);
 }
 .listing-photo-modal {
+  --bg-current: var(--surface);
   inline-size: min(100%, 76rem);
   max-block-size: calc(100dvh - 2rem);
   overflow: auto;
@@ -184,6 +189,7 @@
   margin: 0;
 }
 .listing-photo-stage {
+  --bg-current: var(--bg);
   display: grid;
   place-items: center;
   block-size: min(55dvh, 38rem);
@@ -222,6 +228,7 @@
   overflow-x: auto;
 }
 .listing-photo-filmstrip .listing-photo-thumb {
+  --bg-current: var(--bg);
   flex: 0 0 5rem;
   padding: 2px;
   background: var(--bg);
@@ -343,6 +350,7 @@
   cursor: grabbing;
 }
 .photo-drag-hint {
+  --bg-current: var(--paper);
   position: absolute;
   inset-block-end: 0.4rem;
   inset-inline-start: 0.4rem;
@@ -354,6 +362,7 @@
   background: var(--paper);
 }
 .photo-manager .photo-remove {
+  --bg-current: var(--paper);
   position: absolute;
   inset-block-start: 0.4rem;
   inset-inline-end: 0.4rem;
@@ -470,6 +479,7 @@
   color: var(--muted);
 }
 .property-section-nav {
+  --bg-current: var(--surface);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -501,6 +511,7 @@
   min-inline-size: 0;
 }
 .property-overview-grid {
+  --bg-current: var(--border);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
@@ -508,6 +519,7 @@
   border: 1px solid var(--border);
 }
 .property-overview-grid > div {
+  --bg-current: var(--bg);
   display: grid;
   gap: 0.75rem;
   align-content: start;
@@ -687,6 +699,7 @@
   border: 1px solid var(--border);
 }
 .amenity-option:has(:checked) {
+  --bg-current: var(--tint);
   background: var(--tint);
 }
 .amenity-option input {

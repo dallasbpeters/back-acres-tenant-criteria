@@ -28,8 +28,10 @@
   --button-bg: transparent;
   --border-color: var(--border);
 }
+/* contrast-color() only where the state paints a background behind the text. */
 a:not(.submit-button):not(.ui-button):active {
-  color: var(--actions);
+  --bg-current: var(--tint);
+  color: contrast-color(var(--tint));
   background: var(--tint);
 }
 .small-note {
@@ -52,6 +54,7 @@ a:not(.submit-button):not(.ui-button):active {
   font-weight: 600;
 }
 .field input {
+  --bg-current: var(--paper);
   inline-size: 100%;
   min-inline-size: 0;
   min-block-size: 3rem;
@@ -68,6 +71,7 @@ a:not(.submit-button):not(.ui-button):active {
   color: var(--muted);
 }
 .field input:disabled {
+  --bg-current: var(--tint);
   color: var(--muted);
   cursor: not-allowed;
   background: var(--tint);
@@ -98,9 +102,11 @@ a:not(.submit-button):not(.ui-button):active {
   cursor: not-allowed;
 }
 .check-row:has(input:enabled):active {
+  --bg-current: var(--tint);
   background: var(--tint);
 }
 .submit-button {
+  --bg-current: var(--actions);
   display: flex;
   gap: var(--space-lg);
   align-items: center;
@@ -124,15 +130,18 @@ a:not(.submit-button):not(.ui-button):active {
   font-size: 1.25em;
 }
 .submit-button:disabled {
+  --bg-current: var(--tint);
   color: var(--muted);
   cursor: not-allowed;
   background: var(--tint);
   border-color: var(--border);
 }
 .submit-button:enabled:active {
+  --bg-current: color-mix(in oklch, var(--actions), var(--ink) 22%);
   background: color-mix(in oklch, var(--actions), var(--ink) 22%);
 }
 .form-error {
+  --bg-current: color-mix(in oklch, var(--danger) 6%, var(--paper));
   padding: var(--space-md);
   font-size: var(--text-label);
   color: var(--danger);
@@ -140,11 +149,14 @@ a:not(.submit-button):not(.ui-button):active {
   border: 1px solid var(--border);
 }
 @media (hover: hover) and (pointer: fine) {
+  /* Links paint no hover background: contrast with the background behind them. */
   a:not(.submit-button):not(.ui-button):hover {
-    color: contrast-color(var(--actions));
+    color: contrast-color(var(--bg-current));
     text-decoration: underline;
   }
   .submit-button:enabled:hover {
+    --bg-current: color-mix(in oklch, var(--actions), var(--ink) 12%);
+    color: contrast-color(color-mix(in oklch, var(--actions), var(--ink) 12%));
     background: color-mix(in oklch, var(--actions), var(--ink) 12%);
   }
 }
@@ -162,6 +174,7 @@ a:not(.submit-button):not(.ui-button):active {
   font: inherit;
 }
 .app-select .app-select-trigger {
+  --bg-current: var(--paper);
   display: flex;
   gap: 0.75rem;
   align-items: center;
@@ -207,6 +220,7 @@ fieldset:disabled .app-select {
   border-color: var(--border);
 }
 .app-select-popover {
+  --bg-current: var(--paper);
   z-index: 100;
   inline-size: max(var(--trigger-width), 17rem);
   max-inline-size: calc(100vw - 1.5rem);
@@ -252,6 +266,7 @@ fieldset:disabled .app-select {
   opacity: 1;
 }
 .app-select-option[data-focused] {
+  --bg-current: var(--tint);
   background: var(--tint);
 }
 .app-select-option[data-disabled] {
@@ -259,6 +274,7 @@ fieldset:disabled .app-select {
   opacity: 0.5;
 }
 .theme-control {
+  --bg-current: var(--paper);
   display: inline-flex;
   gap: 0.45rem;
   align-items: center;
@@ -280,6 +296,7 @@ fieldset:disabled .app-select {
   border-color: var(--border);
 }
 .theme-popover {
+  --bg-current: var(--paper);
   z-index: 110;
   min-inline-size: 12rem;
   padding: 0.3rem;
@@ -300,6 +317,7 @@ fieldset:disabled .app-select {
   outline: none;
 }
 .theme-option[data-focused] {
+  --bg-current: var(--tint);
   background: var(--tint);
 }
 .theme-option[aria-checked="true"] {
@@ -343,7 +361,8 @@ textarea::placeholder {
   :is(button, .ui-button, .submit-button):not(:disabled):not(
     [aria-disabled="true"]
   ):is(:hover, [data-hovered]) {
-    color: var(--button-hover-ink, var(--button-ink, var(--ink)));
+    --bg-current: var(--button-hover, var(--control-hover));
+    color: contrast-color(var(--button-hover, var(--control-hover)));
     background: var(--button-hover, var(--control-hover));
     border-color: var(--border);
   }
@@ -351,10 +370,12 @@ textarea::placeholder {
 :is(button, .ui-button, .submit-button):not(:disabled):not(
   [aria-disabled="true"]
 ):is(:active, [data-pressed]) {
+  --bg-current: var(--button-active, var(--control-active));
   color: var(--button-ink, var(--ink));
   background: var(--button-active, var(--control-active));
 }
 :is(button, .ui-button, .submit-button)[aria-pressed="true"] {
+  --bg-current: var(--tint);
   color: var(--accent);
   background: var(--tint);
   border-color: var(--border);
@@ -371,6 +392,7 @@ textarea::placeholder {
   [aria-disabled="true"],
   [data-disabled]
 ) {
+  --bg-current: var(--bg);
   color: var(--muted);
   cursor: not-allowed;
   background: var(--bg);
@@ -378,6 +400,7 @@ textarea::placeholder {
   opacity: 1;
 }
 :is(.app-select-option, .theme-option)[data-focused] {
+  --bg-current: var(--control-hover);
   background: var(--control-hover);
 }
 :is(.app-select-option, .theme-option)[data-focus-visible] {
@@ -407,6 +430,7 @@ input[type="file"]::file-selector-button {
 }
 @media (hover: hover) and (pointer: fine) {
   input[type="file"]:enabled:hover::file-selector-button {
+    color: contrast-color(var(--control-hover));
     background: var(--control-hover);
   }
 }
@@ -446,6 +470,7 @@ button,
   line-height: 1;
 }
 .overflow-menu-popover {
+  --bg-current: var(--surface);
   min-inline-size: 12rem;
   background: var(--surface);
   border: 1px solid var(--border-dark);
@@ -465,6 +490,7 @@ button,
   outline: 0;
 }
 .overflow-menu-item[data-focused] {
+  --bg-current: var(--tint);
   background: var(--tint);
 }
 .overflow-menu-item--danger {

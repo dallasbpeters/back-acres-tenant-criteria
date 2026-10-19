@@ -73,6 +73,7 @@
   margin: 0;
 }
 .admin-message {
+  --bg-current: var(--tint);
   padding: 1rem;
   margin-block-end: 1rem;
   background: var(--tint);
@@ -136,6 +137,7 @@
 }
 .management-main .field textarea,
 .management-main .field select {
+  --bg-current: var(--paper);
   inline-size: 100%;
   min-inline-size: 0;
   padding: 0.8rem;
@@ -181,10 +183,12 @@
 }
 /* Compact owner workspace, shared across operations and correspondence. */
 .owner-app {
+  --bg-current: var(--surface);
   min-block-size: calc(100dvh - 5rem);
   background: var(--surface);
 }
 .owner-navbar {
+  --bg-current: var(--paper);
   display: flex;
   gap: 1rem;
   align-items: center;
@@ -226,6 +230,7 @@
   inline-size: 100%;
 }
 .owner-sidebar {
+  --bg-current: var(--bg);
   padding: 1.75rem 0;
   background: var(--bg);
   border-inline-end: 1px solid var(--border);
@@ -253,10 +258,13 @@
   border-inline-start: 2px solid transparent;
 }
 .owner-sidebar a:hover {
+  --bg-current: var(--tint);
+  color: contrast-color(var(--tint));
   background: var(--tint);
 }
 
 .owner-sidebar a[aria-current="page"] {
+  --bg-current: var(--tint);
   font-weight: 650;
   color: contrast-color(var(--tint));
   background: var(--tint);
@@ -479,6 +487,7 @@ button.remove-record-button,
   cursor: pointer;
 }
 .remove-overlay {
+  --bg-current: rgb(20 30 24 / 42%);
   position: fixed;
   inset: 0;
   z-index: 100;
@@ -489,6 +498,7 @@ button.remove-record-button,
   background: rgb(20 30 24 / 42%);
 }
 .remove-modal {
+  --bg-current: var(--paper, #fff);
   width: min(100%, 36rem);
   max-height: calc(100dvh - 2.5rem);
   padding: clamp(1.25rem, 4vw, 2rem);

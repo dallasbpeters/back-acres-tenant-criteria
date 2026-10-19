@@ -84,6 +84,7 @@
   padding-block: 2rem;
 }
 .lease-editor-bar {
+  --bg-current: var(--bg);
   position: sticky;
   top: 0;
   z-index: 5;
@@ -91,7 +92,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: center;
-  padding-block: 0.75rem;
+  padding: 0.75rem;
   margin-block-end: 1.5rem;
   background: var(--bg);
   border-block-end: 1px solid var(--border);

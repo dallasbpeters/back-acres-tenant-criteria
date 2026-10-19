@@ -1,6 +1,9 @@
 /* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
 /* Design tokens: brand colors, type, spacing; light and dark. */
 :root {
+  /* The background behind the current element. Every rule that paints a
+     background also sets this, so text can use contrast-color() against it. */
+  --bg-current: var(--bg);
   color-scheme: light;
   /* Brand defaults; keep in sync with defaultBrandColors in lib/brand-colors.ts.
      Saved branding overrides these from the root layout. */

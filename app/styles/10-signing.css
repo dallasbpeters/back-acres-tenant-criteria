@@ -4,6 +4,7 @@
   margin-block-start: 1rem;
 }
 .signing-panel {
+  --bg-current: var(--paper);
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
@@ -48,6 +49,7 @@
   max-inline-size: 28rem;
 }
 .lease-signing-document {
+  --bg-current: var(--surface);
   max-block-size: 36rem;
   padding: clamp(1rem, 3vw, 2rem);
   overflow: auto;
@@ -67,6 +69,7 @@
   border: 1px solid var(--border);
 }
 .signature-canvas {
+  --bg-current: #fff;
   display: block;
   inline-size: 100%;
   block-size: clamp(8rem, 24vw, 15rem);
@@ -95,6 +98,7 @@
   }
 }
 .typed-signature {
+  --bg-current: #fff;
   display: block;
   padding: 1rem;
   font:

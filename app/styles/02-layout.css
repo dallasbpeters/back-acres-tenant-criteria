@@ -7,6 +7,7 @@
   container: layout / inline-size;
 }
 .skip-link {
+  --bg-current: var(--paper);
   position: absolute;
   inset-block-start: 0.5rem;
   inset-inline-start: var(--gutter);
@@ -52,6 +53,7 @@
   }
 }
 .site-policy-links {
+  --bg-current: var(--bg);
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 2rem;

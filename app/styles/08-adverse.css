@@ -32,6 +32,7 @@
 }
 .notice-fields .field select,
 .notice-fields textarea {
+  --bg-current: var(--paper);
   inline-size: 100%;
   min-block-size: 3rem;
   padding: 0.75rem;
@@ -65,6 +66,7 @@
   border-block-start: 1px solid var(--border);
 }
 .notice-preview {
+  --bg-current: var(--surface);
   padding: clamp(1rem, 4vw, 3rem);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -153,6 +155,7 @@
   border-collapse: collapse;
 }
 .notice-table th {
+  --bg-current: var(--bg);
   padding: 0.8rem;
   font-size: 0.72rem;
   font-weight: 600;
@@ -175,6 +178,7 @@
   color: var(--muted);
 }
 .notice-table td .notice-status {
+  --bg-current: var(--tint);
   display: inline-block;
   padding: 0.2rem 0.45rem;
   margin: 0;
@@ -273,6 +277,7 @@
   line-height: 1.5;
 }
 .admin-shell .version-item[aria-current="true"] {
+  --bg-current: var(--tint);
   background: var(--tint);
   border: 1px solid var(--border);
 }
@@ -337,6 +342,7 @@
   display: none;
 }
 .notice-template-panel {
+  --bg-current: var(--bg);
   margin-block-end: 1.5rem;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -393,6 +399,7 @@
   font-weight: 400;
 }
 .notice-template-content .field textarea {
+  --bg-current: var(--paper);
   inline-size: 100%;
   min-block-size: 5rem;
   padding: 0.75rem;

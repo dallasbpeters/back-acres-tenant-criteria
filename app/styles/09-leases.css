@@ -118,6 +118,7 @@
   margin-block: 1.25rem;
 }
 .lease-document {
+  --bg-current: var(--surface);
   display: grid;
   gap: 1rem;
   max-inline-size: 75ch;
@@ -152,6 +153,7 @@
   padding-block: 1rem;
 }
 .lease-wording-tools {
+  --bg-current: var(--bg);
   display: flex;
   gap: 1rem;
   align-items: flex-end;
@@ -178,6 +180,7 @@
   margin-block-end: 0.5rem;
 }
 .lease-detail-chip {
+  --bg-current: var(--tint);
   display: inline;
   padding: 0.1rem 0.25rem;
   font-family: var(--font-interface);
@@ -299,10 +302,12 @@
   margin-block: 1rem;
 }
 .lease-rich-editor {
+  --bg-current: var(--paper);
   background: var(--paper);
   border: 1px solid var(--border);
 }
 .lease-rich-editor .editor-tools {
+  --bg-current: var(--paper);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -312,6 +317,7 @@
   min-block-size: 2.75rem;
 }
 .lease-rich-editor .editor-tools [aria-pressed="true"] {
+  --bg-current: var(--tint);
   color: var(--accent);
   background: var(--tint);
 }
@@ -401,6 +407,7 @@
   margin-block: 0.75rem;
 }
 .lease-pdf-preview {
+  --bg-current: var(--paper);
   min-inline-size: 0;
   margin-block: 1.25rem;
   background: var(--paper);
@@ -447,6 +454,7 @@
   white-space: nowrap;
 }
 .lease-pdf-canvas {
+  --bg-current: var(--bg);
   display: grid;
   justify-items: center;
   min-block-size: 12rem;
@@ -461,6 +469,7 @@
   inline-size: 100%;
 }
 .lease-pdf-canvas .react-pdf__Page {
+  --bg-current: #fff;
   max-inline-size: 100%;
   color: #202b23;
   background: #fff;

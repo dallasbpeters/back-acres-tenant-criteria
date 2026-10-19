@@ -9,6 +9,7 @@ html {
   scroll-padding-block-start: 2rem;
 }
 body {
+  --bg-current: var(--paper);
   min-block-size: 100svh;
   margin: 0;
   font-family: var(--font-interface);
@@ -46,6 +47,7 @@ a {
 }
 button {
   --border-color: transparent;
+  --bg-current: var(--button-bg, var(--paper));
   min-block-size: 2.75rem;
   padding: 0.65rem 1rem;
   font: 600 0.9rem / 1.4 var(--font-interface);
@@ -89,6 +91,7 @@ h2 {
   letter-spacing: -0.015em;
 }
 footer {
+  --bg-current: var(--bg);
   font-size: var(--text-label);
   color: var(--muted);
   background: var(--bg);
