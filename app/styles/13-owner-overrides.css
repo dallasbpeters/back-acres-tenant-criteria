@@ -1,0 +1,64 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Owner typography overrides; loads after areas on purpose. */
+/* Composed document typography with a quieter, consistent control hierarchy. */
+.owner-main h1 {
+  font-size: 2rem;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+.owner-main h2 {
+  font-size: 1.5625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+.owner-main h3 {
+  font-family: var(--font-document);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.owner-main h4 {
+  font: 600 1rem / 1.45 var(--font-interface);
+  letter-spacing: -0.01em;
+}
+.owner-main p {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.owner-main .field {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.owner-main .eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.09em;
+}
+@media (max-width: 640px) {
+  .owner-main h1 {
+    font-size: 1.75rem;
+  }
+}
+/* Notice navigation, revision history and editing actions have distinct rows. */
+.owner-main .admin-shell {
+  inline-size: 100%;
+  max-inline-size: 88rem;
+}
+.owner-main .admin-workspace {
+  grid-template-columns: 13.5rem minmax(0, 1fr);
+  gap: 2rem;
+}
+@media (max-width: 1050px) {
+  .owner-main .admin-workspace {
+    grid-template-columns: 11.5rem minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+}
+@media (max-width: 900px) {
+  .owner-main .admin-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

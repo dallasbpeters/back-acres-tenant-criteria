@@ -1,0 +1,522 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Lease workspace: list, guided questions, editor, PDF viewer. */
+/* Guided lease preparation. */
+.lease-workspace {
+  min-inline-size: 0;
+}
+.lease-workspace > .section-heading-row {
+  align-items: flex-start;
+}
+.lease-workspace .section-heading-row p {
+  max-inline-size: 65ch;
+}
+.lease-progress {
+  display: flex;
+  padding: 0;
+  margin: 1.5rem 0;
+  list-style: none;
+  border-block-end: 1px solid var(--border);
+}
+.lease-progress li {
+  flex: 1;
+  min-inline-size: 0;
+}
+.lease-progress button {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  inline-size: 100%;
+  padding: 0.75rem 0.5rem;
+  color: var(--muted);
+  text-align: start;
+  background: transparent;
+  border: 0;
+  border-block-end: 2px solid transparent;
+}
+.lease-progress button span {
+  font-variant-numeric: tabular-nums;
+}
+.lease-progress [aria-current="step"] button {
+  font-weight: 650;
+  color: var(--accent);
+  border-block-end-color: var(--border);
+}
+.lease-progress button:disabled {
+  cursor: default;
+}
+.lease-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 3rem;
+  align-items: start;
+}
+.lease-questions {
+  min-inline-size: 0;
+}
+.lease-step-heading {
+  scroll-margin-block-start: 1.5rem;
+}
+.lease-step-heading:focus {
+  outline: 0;
+}
+.lease-form .lease-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.lease-wide {
+  grid-column: 1 / -1;
+}
+.lease-wide textarea {
+  min-block-size: 5rem;
+}
+.lease-step-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-block-start: 1.25rem;
+  border-block-start: 1px solid var(--border);
+}
+.lease-summary {
+  position: sticky;
+  top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+  padding-inline-start: 1.5rem;
+  border-inline-start: 1px solid var(--border);
+}
+.lease-summary .eyebrow {
+  font-size: 0.7rem;
+}
+.lease-summary dl {
+  display: grid;
+  gap: 1rem;
+}
+.lease-summary dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.lease-summary dd {
+  font-size: 0.9rem;
+  white-space: pre-line;
+}
+.lease-summary .small-note {
+  color: var(--muted);
+}
+.lease-review-note {
+  margin-block: 1rem;
+  color: var(--muted);
+}
+.lease-review-checks {
+  padding: 0.75rem 0;
+  border-block: 1px solid var(--border);
+}
+.lease-review-checks p {
+  max-inline-size: 70ch;
+  margin-block: 0.75rem;
+}
+.lease-review-actions {
+  flex-wrap: wrap;
+  margin-block: 1.25rem;
+}
+.lease-document {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 75ch;
+  padding: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.owner-main .lease-document p {
+  font-family: var(--font-document);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.lease-document-heading {
+  font-weight: 650;
+}
+.lease-saved {
+  padding-block-start: 1.5rem;
+  margin-block-start: 2.5rem;
+  border-block-start: 1px solid var(--border);
+}
+.lease-saved-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.lease-wording-panel {
+  display: grid;
+  gap: 1.25rem;
+  max-inline-size: 70rem;
+  padding-block: 1rem;
+}
+.lease-wording-tools {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.lease-wording-tools .app-select {
+  max-inline-size: 22rem;
+}
+.lease-wording-editor > .small-note {
+  margin-block: 0.65rem;
+}
+.lease-wording-content {
+  min-block-size: 18rem;
+  max-block-size: 34rem;
+  padding: 1.25rem;
+  overflow: auto;
+  font-family: var(--font-document);
+  white-space: pre-wrap;
+  border: 1px solid var(--border);
+}
+.lease-wording-content p {
+  margin-block-end: 0.5rem;
+}
+.lease-detail-chip {
+  display: inline;
+  padding: 0.1rem 0.25rem;
+  font-family: var(--font-interface);
+  font-size: 0.8em;
+  color: var(--accent);
+  white-space: normal;
+  background: var(--tint);
+  border: 1px solid var(--border);
+}
+@media (max-width: 1050px) {
+  .lease-flow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+  .lease-summary {
+    position: static;
+    grid-row: 1;
+    padding: 0 0 1rem;
+    border-block-end: 1px solid var(--border);
+    border-inline-start: 0;
+  }
+  .lease-summary dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .lease-progress {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .lease-progress button {
+    font-size: 0.8rem;
+  }
+  .lease-form .lease-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lease-summary dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+  .lease-summary dl div {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+  .lease-summary dd {
+    text-align: end;
+  }
+  .lease-document {
+    padding: 1rem;
+  }
+  .lease-wording-tools,
+  .lease-saved-row {
+    flex-wrap: wrap;
+  }
+}
+@media print {
+  .lease-progress,
+  .lease-summary,
+  .lease-saved,
+  .lease-review-actions,
+  .lease-review-note,
+  .lease-review-checks {
+    display: none;
+  }
+  .lease-flow {
+    display: block;
+  }
+  .lease-document {
+    max-inline-size: none;
+    padding: 0;
+    border: 0;
+  }
+}
+.lease-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding-block: 0.5rem;
+  font-size: 0.85rem;
+}
+/* Lease disclosures are reusable statements; only exceptions need typing. */
+.lease-disclosures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+}
+.lease-disclosures > p,
+.lease-disclosures > .check-row,
+.lease-disclosures > .management-actions,
+.lease-disclosure-wide {
+  grid-column: 1 / -1;
+}
+@media (max-width: 800px) {
+  .lease-disclosures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.lease-disclosure-card {
+  padding: 1.25rem 0;
+  border-block-start: 1px solid var(--border);
+}
+.lease-disclosure-card h4 {
+  font-size: 1rem;
+}
+.lease-disclosure-card .section-heading-row {
+  margin-bottom: 0.8rem;
+}
+.disclosure-wording {
+  margin-top: 0.75rem;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.lease-attachment-options {
+  display: grid;
+  gap: 0.65rem;
+  margin-block: 1rem;
+}
+.lease-rich-editor {
+  background: var(--paper);
+  border: 1px solid var(--border);
+}
+.lease-rich-editor .editor-tools {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+}
+.lease-rich-editor .editor-tools button {
+  min-block-size: 2.75rem;
+}
+.lease-rich-editor .editor-tools [aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--tint);
+}
+.lease-rich-content {
+  min-height: 28rem;
+  max-height: 65vh;
+  padding: clamp(1rem, 3vw, 2rem);
+  overflow: auto;
+  font-family: var(--font-document);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  outline-offset: 2px;
+}
+.lease-rich-compact {
+  min-height: 7rem;
+  max-height: 18rem;
+  padding: 1rem;
+}
+.lease-rich-content p {
+  margin-block: 0.4rem;
+}
+.lease-rich-content ul,
+.lease-rich-content ol,
+.lease-document ul,
+.lease-document ol {
+  padding-inline-start: 1.5rem;
+}
+.lease-rich-content h2,
+.lease-rich-content h3 {
+  margin-block: 1rem 0.5rem;
+}
+@media print {
+  .lease-rich-editor .editor-tools {
+    display: none;
+  }
+  .lease-rich-content {
+    max-height: none;
+    overflow: visible;
+  }
+}
+.lease-disclosure-card .section-heading-row button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.owner-main .lease-rich-content,
+.owner-main .lease-document {
+  font-family: var(--font-document);
+  font-size: 1.0625rem;
+  font-optical-sizing: auto;
+  line-height: 1.7;
+}
+.owner-main .lease-rich-content :is(p, li),
+.owner-main .lease-document :is(p, li) {
+  max-inline-size: 72ch;
+  font: inherit;
+}
+.owner-main .lease-rich-content > :is(p, h2, h3, ul, ol) {
+  max-inline-size: 72ch;
+  margin-inline: auto;
+}
+.owner-main .lease-rich-content :is(h2, h3),
+.owner-main .lease-document :is(h2, h3) {
+  margin-block: 1.5rem 0.5rem;
+  font-family: var(--font-document);
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+.lease-document > div {
+  display: grid;
+  gap: 0.875rem;
+}
+.owner-main .lease-saved {
+  padding-block: 0 1.5rem;
+  margin-block: 0 2rem;
+  border-block-start: 0;
+  border-block-end: 1px solid var(--border);
+}
+.owner-main .lease-saved .record {
+  padding-block: 1.5rem;
+}
+.lease-saved-row p {
+  margin-block-start: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.lease-delivery-actions {
+  margin-block: 0.75rem;
+}
+.lease-pdf-preview {
+  min-inline-size: 0;
+  margin-block: 1.25rem;
+  background: var(--paper);
+  border: 1px solid var(--border);
+}
+.lease-pdf-heading {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem;
+}
+.owner-main .lease-pdf-heading p {
+  max-inline-size: 65ch;
+  margin-block-start: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.lease-pdf-heading button {
+  flex-shrink: 0;
+}
+.lease-pdf-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-block: 1px solid var(--border);
+}
+.lease-pdf-toolbar button,
+.lease-pdf-toolbar a {
+  font-size: 0.8125rem;
+}
+.lease-pdf-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+.lease-pdf-pagination span {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lease-pdf-canvas {
+  display: grid;
+  justify-items: center;
+  min-block-size: 12rem;
+  max-block-size: 75vh;
+  padding: 1.25rem;
+  overflow: auto;
+  background: var(--bg);
+}
+.lease-pdf-canvas .react-pdf__Document {
+  display: grid;
+  justify-items: center;
+  inline-size: 100%;
+}
+.lease-pdf-canvas .react-pdf__Page {
+  max-inline-size: 100%;
+  color: #202b23;
+  background: #fff;
+}
+.lease-pdf-canvas canvas {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto !important;
+}
+.lease-pdf-preview > [role="alert"] {
+  padding: 1rem;
+}
+:root[data-theme="dark"] .owner-main :is(.lease-rich-content, .lease-document) {
+  line-height: 1.75;
+}
+@media (max-width: 640px) {
+  .lease-pdf-heading {
+    flex-wrap: wrap;
+    padding: 1rem;
+  }
+  .lease-pdf-toolbar {
+    padding: 0.75rem;
+  }
+  .lease-pdf-canvas {
+    padding: 0.5rem;
+  }
+  .lease-pdf-pagination {
+    gap: 0.5rem;
+  }
+  .lease-pdf-pagination button {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+.lease-pdf-zoom {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.lease-pdf-zoom span {
+  min-inline-size: 3rem;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.lease-pdf-zoom button[aria-label] {
+  min-inline-size: 2.75rem;
+}
+.lease-pdf-canvas {
+  display: block;
+}
+.lease-pdf-canvas .react-pdf__Document {
+  inline-size: max-content;
+  min-inline-size: 100%;
+}
+.lease-pdf-canvas .react-pdf__Page,
+.lease-pdf-canvas canvas {
+  max-inline-size: none;
+}

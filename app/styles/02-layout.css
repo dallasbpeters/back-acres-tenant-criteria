@@ -1,0 +1,97 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Page frame: widths, masthead, skip link, site footer links. */
+.layout-width {
+  max-inline-size: 72rem;
+  padding-inline: var(--gutter);
+  margin-inline: auto;
+  container: layout / inline-size;
+}
+.skip-link {
+  position: absolute;
+  inset-block-start: 0.5rem;
+  inset-inline-start: var(--gutter);
+  z-index: 2;
+  padding: 0.75rem;
+  background: var(--paper);
+}
+.skip-link:not(:focus) {
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: clip;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+/* A letterhead, followed by the document's identifying details. */
+.masthead {
+  border-block-end: 1px solid var(--border);
+}
+.masthead-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  align-items: center;
+  justify-content: space-between;
+  min-block-size: 6rem;
+  padding-block: var(--space-lg);
+}
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md) var(--space-lg);
+  justify-content: space-between;
+  padding-block: var(--space-lg);
+}
+@media print {
+  .layout-width {
+    max-inline-size: none;
+    padding-inline: 0;
+  }
+  .masthead-inner {
+    min-block-size: 0;
+    padding-block: 0 12pt;
+  }
+}
+.site-policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  justify-content: center;
+  padding: 1.5rem var(--gutter);
+  font-size: var(--text-label);
+  background: var(--bg);
+  border-block-start: 1px solid var(--border);
+}
+.site-policy-links a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+}
+@media print {
+  .site-policy-links {
+    display: none;
+  }
+}
+.nav-divider {
+  margin: 0.8rem 0.75rem;
+  border-block-start: 1px solid var(--border);
+}
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+.masthead-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+/* Property pages: compact facts, editorial description grid, clear application. */
+.app-icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}

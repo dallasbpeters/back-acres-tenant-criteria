@@ -1,0 +1,192 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Tenant portal: auth, tenancy, leases, insurance, access. */
+/* Tenant account views share the application's theme, controls, and document typography. */
+.tenant-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding-block: 1rem;
+  margin-block-end: 1.5rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-auth {
+  display: grid;
+  justify-items: center;
+  padding-block: 2rem;
+}
+.tenant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+}
+.tenant-grid > *,
+.tenant-table-wrap {
+  min-inline-size: 0;
+}
+.tenant-table-wrap {
+  overflow-x: auto;
+}
+.tenant-table-wrap table {
+  inline-size: 100%;
+  font-family: var(--font-interface);
+  font-size: 0.9rem;
+  border-collapse: collapse;
+}
+.tenant-table-wrap th,
+.tenant-table-wrap td {
+  padding: 0.75rem;
+  text-align: start;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-table-wrap th {
+  font-weight: 650;
+}
+.tenant-form {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 56rem;
+  padding-block: 1rem;
+}
+.tenant-form label:not(.check-label) {
+  display: grid;
+  gap: 0.5rem;
+}
+.tenant-form fieldset {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+}
+.tenant-form .ui-button {
+  justify-self: start;
+}
+.tenant-tenancy {
+  padding-block: 1.5rem;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-access-list,
+.tenant-request-list {
+  padding: 0;
+  list-style: none;
+}
+.tenant-access-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-request-list > li {
+  padding-block: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-request-list span {
+  display: block;
+  font-size: 0.85rem;
+}
+.tenant-grid details {
+  padding-block: 1rem;
+}
+@media (max-width: 800px) {
+  .tenant-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+/* Keep app-wide hover/pressed rules consistent with Clerk's primary action color. */
+.cl-formButtonPrimary {
+  --button-ink: var(--on-action);
+  --button-hover-ink: var(--on-action);
+  --button-hover: var(--actions);
+  --button-active: var(--actions);
+}
+/* Tenant portal lease list. */
+.tenant-leases {
+  padding-block-end: 1.5rem;
+  margin-block-end: 1.5rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-lease-list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.tenant-lease-list li {
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-lease-list li:first-child {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+.tenant-lease-list .small-note {
+  margin-block: 0.25rem;
+}
+.tenant-lease-title {
+  margin: 0;
+  font-weight: 600;
+}
+/* Tenant portal renters insurance. */
+.tenant-insurance-list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  list-style: none;
+}
+.tenant-insurance-list li + li {
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-insurance-list .small-note {
+  margin-block: 0.25rem;
+}
+.tenant-insurance-form {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+.tenant-insurance-form .fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1rem;
+  inline-size: 100%;
+}
+.tenant-insurance-form > .field {
+  inline-size: 100%;
+}
+.tenant-insurance-form .small-note {
+  margin: 0;
+}
+/* Owner renters insurance review. */
+.insurance-review {
+  padding-block-start: 1.5rem;
+  margin-block-start: 2rem;
+  border-block-start: 1px solid var(--border);
+}
+.insurance-review-list {
+  display: grid;
+  gap: 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+.insurance-review-list li {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.insurance-review-list li + li {
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--border);
+}
+.insurance-review-list .field {
+  inline-size: min(100%, 36rem);
+}
+.insurance-review-list .small-note {
+  margin: 0;
+}

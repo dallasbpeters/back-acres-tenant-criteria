@@ -1,0 +1,13 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Shared rich-text editor toolbar (notices and leases). */
+.editor-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-block-end: 1px solid var(--border);
+}
+.editor-tools button {
+  --button-bg: transparent;
+  font-size: 0.8rem;
+}

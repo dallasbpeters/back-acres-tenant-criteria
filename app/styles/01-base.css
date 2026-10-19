@@ -1,0 +1,112 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Element defaults: box model, typography, links, focus. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  scroll-padding-block-start: 2rem;
+}
+body {
+  min-block-size: 100svh;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: var(--text-body);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+}
+p,
+h1,
+h2,
+h3,
+dl,
+dd {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+a {
+  color: inherit;
+  text-underline-offset: 0.2em;
+}
+button,
+input {
+  font: inherit;
+}
+button,
+input,
+a {
+  touch-action: manipulation;
+}
+button {
+  --border-color: transparent;
+  min-block-size: 2.75rem;
+  padding: 0.65rem 1rem;
+  font: 600 0.9rem / 1.4 var(--font-interface);
+  color: var(--button-ink, var(--ink));
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  background: var(--button-bg, var(--paper));
+  border: none;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--border-color);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+:focus-visible {
+  outline: 3px solid var(--border);
+  outline-offset: 4px;
+}
+h1 {
+  max-inline-size: 24ch;
+  font-family: var(--font-document);
+  font-size: var(--text-title);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+h1 span {
+  display: block;
+  margin-block-start: 0.15em;
+  font-size: 0.8em;
+  line-height: 1.25;
+  color: var(--accent);
+}
+h2 {
+  font-family: var(--font-document);
+  font-size: var(--text-heading);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+footer {
+  font-size: var(--text-label);
+  color: var(--muted);
+  background: var(--bg);
+  border-block-start: 1px solid var(--border);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+@media print {
+  body {
+    font-size: 10pt;
+  }
+  h1 {
+    font-size: 26pt;
+  }
+  h2 {
+    font-size: 17pt;
+  }
+}

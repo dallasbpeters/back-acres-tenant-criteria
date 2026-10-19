@@ -42,9 +42,24 @@ export async function sendClerkInvitation({
     to: email,
   });
   if (!response.ok) {
+    console.error(
+      "Tenant invitation email rejected by Resend",
+      response.status,
+      invitation.id
+    );
     await revokeClerkInvitation(invitation.id);
     throw new Error("The invitation email was not accepted.");
   }
+  // Clerk does not email (notify: false); match this id in the Resend log.
+  const { id: resendId } = (await response
+    .clone()
+    .json()
+    .catch(() => ({}))) as { id?: string };
+  console.info(
+    "Tenant invitation email accepted by Resend",
+    resendId ?? "unknown-id",
+    invitation.id
+  );
   return invitation.id;
 }
 

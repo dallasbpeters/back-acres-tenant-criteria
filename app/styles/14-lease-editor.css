@@ -1,0 +1,198 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Lease list and focused editor; refines owner overrides. */
+/* Lease workspace: list of saved leases and the focused editor. */
+.lease-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.lease-list-header h2,
+.lease-list-header p {
+  margin: 0;
+}
+.lease-list-header p {
+  margin-block-start: 0.35rem;
+  color: var(--muted);
+}
+.lease-tabs,
+.lease-side-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-block: 1.25rem 0;
+  border-block-end: 1px solid var(--border);
+}
+.lease-tabs .ui-button,
+.lease-side-tabs .ui-button,
+.lease-document-modes .ui-button {
+  min-block-size: 2.5rem;
+  margin-block-end: -1px;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
+}
+.lease-tabs .ui-button[aria-pressed="true"],
+.lease-side-tabs .ui-button[aria-pressed="true"],
+.lease-document-modes .ui-button[aria-pressed="true"] {
+  font-weight: 700;
+  color: contrast-color(var(--tint));
+  border-block-end-color: var(--primary);
+}
+.lease-saved .lease-record {
+  gap: 0;
+  padding-block: 1.25rem;
+}
+.lease-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.lease-row-heading {
+  min-inline-size: 0;
+}
+.lease-row-heading h4 {
+  margin: 0;
+}
+.lease-row-heading p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.lease-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.lease-versions {
+  margin-block-start: 0.75rem;
+  font-size: 0.85rem;
+}
+.lease-versions summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.lease-saved .lease-history-row {
+  display: block;
+  padding-block: 0.75rem;
+  border-block-start: 1px solid var(--border);
+}
+.lease-empty {
+  padding-block: 2rem;
+}
+.lease-editor-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding-block: 0.75rem;
+  margin-block-end: 1.5rem;
+  background: var(--bg);
+  border-block-end: 1px solid var(--border);
+}
+.lease-editor-title h2 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-subheading);
+  white-space: nowrap;
+}
+.lease-editor-title p {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.lease-save-state.is-unsaved {
+  font-weight: 700;
+  color: var(--ink);
+}
+.lease-save-state.is-unsaved::before {
+  display: inline-block;
+  inline-size: 0.45rem;
+  block-size: 0.45rem;
+  margin-inline-end: 0.35rem;
+  vertical-align: 0.1em;
+  content: "";
+  background: var(--warning);
+  border-radius: 50%;
+}
+.lease-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+.lease-editor .lease-progress {
+  margin-block-start: 0;
+}
+.lease-document-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: 2rem;
+  align-items: start;
+}
+.lease-document-column {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+.lease-document-modes {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-block-end: 1px solid var(--border);
+}
+.lease-side-panel {
+  position: sticky;
+  top: 5.5rem;
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+  max-block-size: calc(100vh - 7rem);
+  overflow-y: auto;
+}
+.lease-side-panel .lease-side-tabs {
+  margin: 0;
+}
+.lease-side-body {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+.lease-side-body.lease-summary {
+  position: static;
+  padding: 0;
+  border: 0;
+}
+.lease-side-body h3,
+.lease-side-body h4 {
+  margin: 0;
+}
+@media (max-width: 960px) {
+  .lease-document-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lease-side-panel {
+    position: static;
+    max-block-size: none;
+  }
+  .lease-editor-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .lease-editor-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+.lease-editor .lease-step-heading {
+  scroll-margin-block-start: 7rem;
+}

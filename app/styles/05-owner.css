@@ -1,0 +1,550 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Owner workspace frame: navbar, sidebar, records, removal. */
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.section-heading {
+  display: flex;
+  gap: var(--space-md);
+  align-items: baseline;
+  margin-block-end: var(--space-lg);
+}
+@media print {
+  .section-heading {
+    margin-block-end: 10pt;
+    break-after: avoid;
+  }
+}
+/* Private correspondence workspace. */
+.admin-shell {
+  max-inline-size: 90rem;
+  padding: var(--gutter);
+  margin-inline: auto;
+}
+.admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-block: 1rem 2rem;
+  border-block-end: 1px solid var(--border);
+}
+.admin-header .eyebrow {
+  margin-block: 1rem 0.5rem;
+}
+.admin-shell h1 {
+  max-inline-size: none;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+.admin-shell h2 {
+  margin-block-end: 1rem;
+  font-size: 1.5rem;
+}
+.admin-shell h3 {
+  font-size: 1rem;
+}
+.admin-shell button {
+  min-block-size: 2.75rem;
+  padding: 0.6rem 1rem;
+}
+.admin-login {
+  display: grid;
+  gap: 1.5rem;
+  max-inline-size: 36rem;
+  padding-block-start: 5rem;
+}
+.admin-workspace {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  gap: 3rem;
+  margin-block-start: 2rem;
+}
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-block-end: 1.5rem;
+}
+.admin-actions h2 {
+  inline-size: 100%;
+  margin: 0;
+}
+.admin-message {
+  padding: 1rem;
+  margin-block-end: 1rem;
+  background: var(--tint);
+}
+@media (max-width: 800px) {
+  .admin-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+}
+@media print {
+  .admin-shell,
+  .admin-workspace {
+    display: block;
+    padding: 0;
+    margin: 0;
+  }
+}
+/* Property operations use the same restrained document layout. */
+.management-main {
+  display: grid;
+  gap: 1.5rem;
+  min-block-size: 80vh;
+  padding-block: 2.5rem 4rem;
+}
+.management-nav,
+.management-tabs,
+.management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+}
+.management-tabs {
+  padding-block-end: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+.management-tabs button,
+.management-actions button {
+  padding: 0.65rem 1rem;
+}
+.management-section,
+.management-form {
+  display: grid;
+  gap: 1.25rem;
+  padding-block: 1.5rem;
+  border-block-start: 1px solid var(--border);
+}
+.management-form fieldset {
+  display: grid;
+  gap: 1.5rem;
+  min-inline-size: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.management-form legend {
+  margin-block-end: 1rem;
+  font-family: var(--font-document);
+  font-size: 1.5rem;
+}
+.management-main .field textarea,
+.management-main .field select {
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: 0.8rem;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+.management-main textarea {
+  resize: vertical;
+}
+.record summary {
+  padding-block: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.record dl {
+  display: grid;
+  gap: 0.5rem;
+}
+.record a {
+  overflow-wrap: anywhere;
+}
+.management-main [role="alert"] {
+  color: var(--danger);
+}
+.management-main .submit-button {
+  max-inline-size: 34rem;
+  text-decoration: none;
+}
+.management-empty {
+  padding-block: 2rem;
+  color: var(--muted);
+}
+@media print {
+  .management-nav,
+  .management-tabs,
+  .management-actions {
+    display: none;
+  }
+}
+/* Compact owner workspace, shared across operations and correspondence. */
+.owner-app {
+  min-block-size: calc(100dvh - 5rem);
+  background: var(--surface);
+}
+.owner-navbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  min-block-size: 4.25rem;
+  padding: 0.6rem clamp(1rem, 3vw, 2.5rem);
+  background: var(--paper);
+  border-block-end: 1px solid var(--border);
+}
+.owner-brand {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+.owner-brand small {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.owner-navbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.owner-navbar button {
+  min-block-size: 2.75rem;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+}
+.owner-layout {
+  display: grid;
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+  inline-size: 100%;
+}
+.owner-sidebar {
+  padding: 1.75rem 0;
+  background: var(--bg);
+  border-inline-end: 1px solid var(--border);
+}
+.owner-sidebar .nav-label {
+  padding: 0.25rem 1.25rem;
+  margin-block-end: 0.65rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.owner-sidebar nav {
+  display: grid;
+  gap: 0.3rem;
+}
+.owner-sidebar a {
+  display: block;
+  min-block-size: 2.75rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.88rem;
+  text-decoration: none;
+  border-inline-start: 2px solid transparent;
+}
+.owner-sidebar a:hover {
+  background: var(--tint);
+}
+.owner-sidebar a[aria-current="page"] {
+  font-weight: 650;
+  color: contrast-color(var(--tint));
+  background: var(--tint);
+  border-inline-start-color: var(--border);
+}
+.owner-main.management-main {
+  gap: 1.5rem;
+  align-content: start;
+  min-inline-size: 0;
+  padding: 1.75rem clamp(1rem, 3vw, 2.5rem) 3rem;
+}
+.owner-page-heading {
+  padding-block-end: 1.25rem;
+  border-block-end: 1px solid var(--border);
+}
+.owner-page-heading .eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.owner-main h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.owner-main h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  line-height: 1.3;
+}
+.owner-main h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+.owner-main h4 {
+  margin: 0;
+  font: 600 0.95rem var(--font-interface);
+}
+.owner-main p,
+.owner-main label {
+  font-size: 0.9rem;
+}
+.owner-main .small-note {
+  font-size: 0.8rem;
+}
+.owner-main .fields {
+  gap: 1rem;
+}
+.owner-main .field {
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+.owner-main .field input,
+.owner-main .field select,
+.owner-main .field textarea {
+  min-block-size: 2.6rem;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.9rem;
+}
+.owner-main .management-form {
+  gap: 1rem;
+  padding: 1.25rem 0;
+}
+.owner-main .management-form fieldset {
+  gap: 1.25rem;
+}
+.owner-main .management-actions {
+  gap: 0.5rem 1rem;
+}
+.owner-main button,
+.owner-main .submit-button {
+  min-block-size: 2.75rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.owner-main .submit-button {
+  justify-self: start;
+  inline-size: auto;
+  max-inline-size: 100%;
+}
+.section-heading-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: 1.1rem;
+}
+.section-heading-row p {
+  margin-block-start: 0.35rem;
+  color: var(--muted);
+}
+.owner-main .record {
+  gap: 0.5rem;
+  padding: 1.25rem 0;
+}
+.owner-main .record .management-actions {
+  margin-block-start: 0.5rem;
+}
+.owner-main [role="status"] {
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+.owner-main .admin-shell {
+  min-inline-size: 0;
+  max-inline-size: none;
+  padding: 0;
+  margin: 0;
+}
+.owner-main .admin-login {
+  padding-block: 1rem;
+}
+.owner-main .admin-workspace {
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+  gap: 1.5rem;
+  margin-block-start: 0;
+}
+.owner-signed-out {
+  grid-template-columns: 1fr;
+  max-inline-size: 55rem;
+}
+@media (max-width: 900px) {
+  .owner-layout {
+    grid-template-columns: 10.5rem minmax(0, 1fr);
+  }
+  .owner-main .admin-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .owner-navbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding: 0.75rem 1rem;
+  }
+  .owner-navbar nav {
+    gap: 1rem;
+  }
+  .owner-layout {
+    display: block;
+  }
+  .owner-sidebar {
+    padding: 0.6rem;
+    border-block-end: 1px solid var(--border);
+    border-inline-end: 0;
+  }
+  .owner-sidebar .nav-label,
+  .nav-divider {
+    display: none;
+  }
+  .owner-sidebar nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+  }
+  .owner-sidebar a {
+    min-block-size: 2.5rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.78rem;
+  }
+  .owner-main.management-main {
+    padding: 1.25rem 1rem 2rem;
+  }
+  .owner-main h1 {
+    font-size: 1.65rem;
+  }
+  .section-heading-row {
+    align-items: flex-start;
+  }
+}
+@media print {
+  .owner-navbar,
+  .owner-sidebar,
+  .owner-page-heading {
+    display: none;
+  }
+  .owner-layout {
+    display: block;
+  }
+  .owner-main.management-main {
+    padding: 0;
+  }
+}
+.owner-app {
+  display: flex;
+  flex-direction: column;
+}
+.owner-layout {
+  flex: 1;
+  inline-size: 100%;
+}
+.owner-sidebar nav {
+  position: sticky;
+  top: 1rem;
+}
+@media (max-width: 640px) {
+  .owner-sidebar nav {
+    position: static;
+  }
+}
+.owner-main.management-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* Reversible removal uses the same document-like controls throughout the workspace. */
+button.remove-record-button,
+.owner-main button.remove-record-button {
+  --button-ink: var(--danger);
+  min-block-size: 2.5rem;
+
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+.remove-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  overflow-y: auto;
+  background: rgb(20 30 24 / 42%);
+}
+.remove-modal {
+  width: min(100%, 36rem);
+  max-height: calc(100dvh - 2.5rem);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  overflow-y: auto;
+  background: var(--paper, #fff);
+  border: 1px solid var(--border);
+}
+.remove-modal [role="dialog"] {
+  outline: none;
+}
+.remove-modal h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.6rem;
+}
+.remove-item-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.remove-modal p {
+  margin-block: 0.8rem;
+}
+.remove-modal button {
+  min-block-size: 2.75rem;
+}
+.remove-modal .management-actions {
+  margin-top: 1.5rem;
+}
+.removed-item {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.removed-item h3 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .removed-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+@media print {
+  .remove-overlay,
+  .remove-record-button {
+    display: none;
+  }
+}
+.theme-check {
+  inline-size: 1rem;
+}
+@media (max-width: 640px) {
+  .owner-navbar nav {
+    gap: 0.5rem;
+  }
+  .owner-navbar nav > a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    font-size: 0.8125rem;
+  }
+}
+.owner-navbar nav a {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}

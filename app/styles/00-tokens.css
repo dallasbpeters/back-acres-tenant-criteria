@@ -1,0 +1,76 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: Component, responsive, and theme overrides intentionally retain the authored cascade order. Reordering selectors across these boundaries changes the visual contract. */
+/* Design tokens: brand colors, type, spacing; light and dark. */
+:root {
+  color-scheme: light;
+  /* Brand defaults; keep in sync with defaultBrandColors in lib/brand-colors.ts.
+     Saved branding overrides these from the root layout. */
+  --primary: #103e35;
+  --ink: #0e1005;
+  --secondary: #9da328;
+  --actions: #166de7;
+  --surface: #fffefa;
+  --paper: var(--surface);
+  --bg: color-mix(in oklch, var(--primary) 4%, var(--surface));
+  --muted: color-mix(in oklch, var(--ink) 70%, var(--surface));
+  --accent: #18a887;
+  --on-action: #fffefa;
+  /* One neutral color for every visible border and keyboard outline. */
+  --border: #e6e5df;
+  --border-dark: #646e51;
+  --tint: color-mix(in oklch, var(--accent) 82%, var(--paper));
+  --danger: #ff7141;
+  --warning: #f0b03e;
+  --font-document: "Source Serif 4 Variable", Georgia, serif;
+  --font-interface: "Public Sans Variable", sans-serif;
+  --text-label: 0.8rem;
+  --text-body: 1.125rem;
+  --text-subheading: 1.25rem;
+  --text-heading: clamp(1.5625rem, 1.354rem + 1.04vw, 2rem);
+  --text-title: clamp(2.441rem, 1.996rem + 2.226vw, 3.375rem);
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --section-space: clamp(3rem, 2.524rem + 2.38vw, 4rem);
+  --gutter: clamp(1.25rem, 0.655rem + 2.976vw, 2.5rem);
+  --layout-gap: clamp(2rem, 1.048rem + 4.762vw, 4rem);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  scrollbar-gutter: stable;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+  -webkit-text-size-adjust: 100%;
+}
+:root {
+  --control-hover: color-mix(in oklch, var(--primary) 2%, var(--paper));
+  --control-active: color-mix(in oklch, var(--ink) 16%, var(--paper));
+  --on-accent: var(--paper);
+}
+:root[data-theme="dark"] {
+  --on-accent: var(--bg);
+}
+@media print {
+  :root {
+    --paper: oklch(99.8% 0.002 155);
+    --ink: oklch(22% 0.008 155);
+    --muted: oklch(35% 0.008 155);
+  }
+}
+/* Theme tokens apply to native controls, editors, and portalled menus/dialogs. */
+:root[data-theme="dark"] {
+  --primary: #9bcbb1;
+  --ink: #fffefa;
+  --secondary: #b8be57;
+  --actions: #166de7;
+  --surface: #0e1005;
+  --paper: var(--surface);
+  --bg: var(--surface);
+  --muted: color-mix(in oklch, var(--ink) 70%, var(--surface));
+  --accent: #9bcbb1;
+  --on-action: #fffefa;
+  --border: #3a3a3a;
+  --border-dark: #646e51;
+  --danger: oklch(77% 0.12 30);
+  --warning: oklch(82% 0.09 75);
+  color-scheme: dark;
+}
