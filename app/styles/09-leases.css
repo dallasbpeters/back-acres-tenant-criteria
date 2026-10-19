@@ -10,8 +10,10 @@
 .lease-workspace .section-heading-row p {
   max-inline-size: 65ch;
 }
+/* Guided lease steps: one connected row on a shared rule, no boxes. */
 .lease-progress {
   display: flex;
+  gap: 0;
   padding: 0;
   margin: 1.5rem 0;
   list-style: none;
@@ -21,28 +23,49 @@
   flex: 1;
   min-inline-size: 0;
 }
-.lease-progress button {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
+.lease-progress .ui-button {
+  /* The page background, so the shared hover rule keeps it and picks
+     contrast-color() text against it. */
+  --button-bg: transparent;
+  --button-hover: var(--bg-current);
+  gap: 0.6rem;
+
+  justify-content: flex-start;
   inline-size: 100%;
-  padding: 0.75rem 0.5rem;
+  min-block-size: 3rem;
+  padding: 0.75rem 0.25rem;
+  margin-block-end: -1px;
+  font-weight: 600;
   color: var(--muted);
   text-align: start;
-  background: transparent;
   border: 0;
   border-block-end: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
-.lease-progress button span {
+.lease-progress .ui-button span {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border-dark);
+  border-radius: 50%;
 }
-.lease-progress [aria-current="step"] button {
-  font-weight: 650;
-  color: var(--accent);
-  border-block-end-color: var(--border);
+.lease-progress [aria-current="step"] .ui-button {
+  color: var(--ink);
+  border-block-end-color: var(--primary);
 }
-.lease-progress button:disabled {
+.lease-progress [aria-current="step"] .ui-button span {
+  color: contrast-color(var(--primary));
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.lease-progress .ui-button:disabled {
   cursor: default;
+  opacity: 0.6;
 }
 .lease-flow {
   display: grid;
@@ -207,12 +230,16 @@
   }
 }
 @media (max-width: 640px) {
-  .lease-progress {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .lease-progress .ui-button {
+    gap: 0.4rem;
+    padding-inline: 0.15rem;
+    font-size: 0.75rem;
+    line-height: 1.25;
   }
-  .lease-progress button {
-    font-size: 0.8rem;
+  .lease-progress .ui-button span {
+    inline-size: 1.35rem;
+    block-size: 1.35rem;
+    font-size: 0.7rem;
   }
   .lease-form .lease-fields {
     grid-template-columns: minmax(0, 1fr);
