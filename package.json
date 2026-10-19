@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "node scripts/copy-pdf-assets.cjs && next build",
     "check": "ultracite check --error-on-warnings",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
