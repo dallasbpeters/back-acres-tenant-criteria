@@ -218,3 +218,28 @@
 .signing-panel--embedded .signer-fields {
   grid-template-columns: minmax(0, 1fr);
 }
+/* The lease PDF shown inline for signing, pages stacked for reading. */
+.signer-pdf {
+  display: grid;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+.signer-pdf-pages {
+  --bg-current: var(--tint);
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  max-block-size: 75vh;
+  padding: 1rem;
+  overflow: auto;
+  background: color-mix(in oklch, var(--ink) 6%, var(--surface));
+  border: 1px solid var(--border);
+}
+.signer-pdf-pages .react-pdf__Document {
+  display: grid;
+  gap: 1rem;
+}
+.signer-pdf-page {
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--border);
+}

@@ -189,3 +189,180 @@
 .insurance-review-list .small-note {
   margin: 0;
 }
+/* Tenant portal frame: smaller page title and a tab bar. */
+.management-main:has(> .tenant-navigation) > h1 {
+  margin-block-end: 0.5rem;
+  font-size: var(--text-heading);
+}
+.tenant-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 0;
+  margin-block: 0 2rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.tenant-tab {
+  display: inline-block;
+  padding-block: 0.85rem;
+  margin-block-end: -1px;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  border-block-end: 2px solid transparent;
+}
+.tenant-tab[aria-current="page"] {
+  color: var(--ink);
+  border-block-end-color: var(--primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tenant-tab:hover {
+    text-decoration: none;
+    border-block-end-color: var(--border-dark);
+  }
+  .tenant-tab[aria-current="page"]:hover {
+    border-block-end-color: var(--primary);
+  }
+}
+/* Property header, then form panel beside the request history. */
+.tenant-property-header {
+  margin-block-end: 1.5rem;
+}
+.tenant-property-header h2 {
+  margin: 0;
+  font-size: var(--text-heading);
+}
+.tenant-property-header p {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.tenant-maintenance-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
+  gap: 2rem;
+  align-items: start;
+}
+.tenant-panel {
+  --bg-current: var(--paper);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: var(--paper);
+  border: 1px solid var(--border);
+}
+.tenant-panel h3,
+.tenant-aside h3 {
+  margin: 0 0 1rem;
+  font-size: var(--text-subheading);
+}
+.tenant-panel .tenant-form {
+  max-inline-size: none;
+  padding-block: 0;
+}
+.tenant-form .field textarea {
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: 0.75rem 0.875rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--ink);
+  resize: vertical;
+  background: var(--paper);
+  border: 1px solid var(--border-dark);
+}
+.tenant-form .field input {
+  border: 1px solid var(--border-dark);
+}
+.tenant-form .check-row {
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.tenant-form .check-row .small-note {
+  margin: 0;
+  font-weight: 400;
+}
+.tenant-notice {
+  --bg-current: color-mix(in oklch, var(--warning) 10%, var(--paper));
+  padding: 0.75rem 1rem;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: color-mix(in oklch, var(--warning) 10%, var(--paper));
+  border-inline-start: 3px solid var(--warning);
+}
+.tenant-aside {
+  display: grid;
+  gap: 1rem;
+}
+.tenant-empty-state {
+  padding: 1.25rem;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  color: var(--muted);
+  border: 1px dashed var(--border-dark);
+}
+.tenant-contact {
+  padding-block-start: 1rem;
+  margin: 0;
+  font-family: var(--font-interface);
+  border-block-start: 1px solid var(--border);
+}
+.tenant-contact dt {
+  font-size: var(--text-label);
+  color: var(--muted);
+}
+.tenant-contact dd {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+}
+@media (max-width: 800px) {
+  .tenant-maintenance-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tenant-tabs {
+    gap: 0.25rem 1rem;
+  }
+}
+.tenant-navigation + .tenant-tenancy,
+.tenant-navigation + section > .tenant-tenancy:first-child {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+.tenant-form label.check-row {
+  display: flex;
+  align-items: flex-start;
+}
+.tenant-aside {
+  padding-block-start: clamp(1.25rem, 3vw, 2rem);
+}
+@media (max-width: 800px) {
+  .tenant-navigation {
+    flex-wrap: nowrap;
+    gap: 0.75rem;
+  }
+  .tenant-tabs {
+    flex-wrap: nowrap;
+    min-inline-size: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tenant-tab {
+    white-space: nowrap;
+  }
+}

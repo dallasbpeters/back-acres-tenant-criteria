@@ -109,10 +109,6 @@ a:not(.submit-button):not(.ui-button):active {
   color: var(--muted);
   cursor: not-allowed;
 }
-.check-row:has(input:enabled):active {
-  --bg-current: var(--tint);
-  background: var(--tint);
-}
 .submit-button {
   --bg-current: var(--actions);
   display: flex;

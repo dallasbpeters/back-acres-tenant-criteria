@@ -46,10 +46,15 @@ export default async function TenantMaintenance() {
               className="tenant-tenancy"
               key={access.id}
             >
-              <h2>{name}</h2>
-              <p>{property?.data.address}</p>
-              <div className="tenant-grid">
-                <section aria-label={`New request for ${name}`}>
+              <header className="tenant-property-header">
+                <h2>{name}</h2>
+                <p>{property?.data.address}</p>
+              </header>
+              <div className="tenant-maintenance-grid">
+                <section
+                  aria-label={`New request for ${name}`}
+                  className="tenant-panel"
+                >
                   <h3>New maintenance request</h3>
                   <TenantRequestForm
                     contact={property?.data.contact}
@@ -59,13 +64,17 @@ export default async function TenantMaintenance() {
                     phone={access.phone}
                   />
                 </section>
-                <section aria-label={`${name} request history`}>
+                <aside
+                  aria-label={`${name} request history`}
+                  className="tenant-aside"
+                >
                   <h3>Your requests</h3>
                   <MaintenanceRequestList requests={requests} />
-                  <p className="small-note">
-                    Property contact: {property?.data.contact}
-                  </p>
-                </section>
+                  <dl className="tenant-contact">
+                    <dt>Property contact</dt>
+                    <dd>{property?.data.contact ?? "Back Acres Rentals"}</dd>
+                  </dl>
+                </aside>
               </div>
             </section>
           );

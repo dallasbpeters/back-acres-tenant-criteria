@@ -11,7 +11,11 @@ export function MaintenanceRequestList({
   requests: TenantRequest[];
 }) {
   if (!requests.length) {
-    return <p>No maintenance requests submitted through this account yet.</p>;
+    return (
+      <p className="tenant-empty-state">
+        No requests yet. Requests you submit appear here with their status.
+      </p>
+    );
   }
   return (
     <ul className="tenant-request-list">

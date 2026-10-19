@@ -6,6 +6,10 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
+const SignerPdfViewer = dynamic(
+  () => import("./signer-pdf-viewer").then((m) => m.SignerPdfViewer),
+  { loading: () => <p role="status">Loading the lease PDF…</p>, ssr: false }
+);
 const LeaseSignaturePad = dynamic(
   () => import("./lease-signature-pad").then((m) => m.LeaseSignaturePad),
   { loading: () => <p>Loading signature pad…</p>, ssr: false }
@@ -38,6 +42,33 @@ export function LeaseSigner({ token }: { token: string }) {
     [message, setMessage] = useState(""),
     [withdrawn, setWithdrawn] = useState(false);
   const endpoint = `/api/lease-signing/${token}`;
+  // Keep the verified session for this tab only, so a reload does not ask for
+  // a new code. It ends with the tab or when the server session expires.
+  const storageKey = `lease-signing-session:${token}`;
+  const remember = useCallback(
+    (session: string) => {
+      try {
+        if (session) {
+          sessionStorage.setItem(storageKey, session);
+        } else {
+          sessionStorage.removeItem(storageKey);
+        }
+      } catch {
+        // Storage can be unavailable (private mode); signing still works.
+      }
+    },
+    [storageKey]
+  );
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) {
+        setKey(saved);
+      }
+    } catch {
+      // Storage unavailable: the signer verifies by code as before.
+    }
+  }, [storageKey]);
   const contact = record?.contact || record?.brandName || "Back Acres Rentals";
   const load = useCallback(
     async (session = key) => {
@@ -46,12 +77,18 @@ export function LeaseSigner({ token }: { token: string }) {
           headers: session ? { Authorization: `Bearer ${session}` } : {},
         }),
         data = await r.json();
+      if (r.status === 401 && session) {
+        // The saved session expired: forget it and show the code step.
+        remember("");
+        setKey("");
+        return;
+      }
       if (!r.ok) {
         throw new Error(data.error);
       }
       setRecord(data);
     },
-    [endpoint, key]
+    [endpoint, key, remember]
   );
 
   useEffect(() => {
@@ -73,6 +110,7 @@ export function LeaseSigner({ token }: { token: string }) {
         data = await r.json();
       if (!r.ok) {
         if (r.status === 401) {
+          remember("");
           setKey("");
           setDownloaded(false);
           setSignature("");
@@ -83,6 +121,7 @@ export function LeaseSigner({ token }: { token: string }) {
       }
       const { action } = body as { action: string };
       if (action === "verify") {
+        remember(data.session);
         setKey(data.session);
         setCode("");
         await load(data.session);
@@ -112,6 +151,7 @@ export function LeaseSigner({ token }: { token: string }) {
       if (!r.ok) {
         const data = await r.json();
         if (r.status === 401) {
+          remember("");
           setKey("");
           setDownloaded(false);
           setSignature("");
@@ -163,11 +203,14 @@ export function LeaseSigner({ token }: { token: string }) {
       return (
         <>
           <p>
-            Review the full lease below and download the PDF before signing. It
-            includes the precise document this signature will be attached to.
-            Use a browser and PDF reader that let you save or print a copy.
+            Read the lease below. It is the exact PDF your signature will be
+            attached to. You can also download a copy to save or print.
           </p>
-          <pre className="lease-signing-document">{record.body}</pre>
+          <SignerPdfViewer
+            authorization={key}
+            endpoint={endpoint}
+            onViewed={() => setDownloaded(true)}
+          />
           <form
             onSubmit={(e) => {
               if (!record) {
@@ -200,7 +243,7 @@ export function LeaseSigner({ token }: { token: string }) {
             />
             {!downloaded && (
               <p className="small-note">
-                Download the lease PDF above to enable signing.
+                The lease PDF must finish loading above before you can sign.
               </p>
             )}
             <label className="check-row">

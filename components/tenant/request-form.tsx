@@ -62,15 +62,15 @@ export function TenantRequestForm({
   }
   return (
     <form className="tenant-form" onSubmit={submit}>
-      <label>
+      <label className="field">
         Subject
         <input maxLength={200} name="subject" required />
       </label>
-      <label>
+      <label className="field">
         What needs repair?
         <textarea maxLength={5000} name="description" required rows={4} />
       </label>
-      <label>
+      <label className="field">
         Contact phone
         <input
           defaultValue={phone}
@@ -80,17 +80,21 @@ export function TenantRequestForm({
           type="tel"
         />
       </label>
-      <label>
+      <label className="field">
         Entry instructions
         <textarea maxLength={2000} name="accessNotes" rows={2} />
       </label>
-      <label className="check-label">
+      <label className="check-row">
         <input name="urgent" type="checkbox" />
-        Urgent repair
+        <span>
+          Urgent repair
+          <span className="small-note"> — water, heat, power, or security</span>
+        </span>
       </label>
-      <p className="small-note">
-        This portal is not monitored continuously. For immediate danger, call
-        911. For urgent property damage, contact {contact} directly as well.
+      <p className="tenant-notice">
+        <strong>Emergency?</strong> This portal is not monitored around the
+        clock. For immediate danger, call 911. For urgent property damage, also
+        contact {contact} directly.
       </p>
       <Button disabled={pending} type="submit" variant="primary">
         {pending ? "Submitting…" : "Submit maintenance request"}
