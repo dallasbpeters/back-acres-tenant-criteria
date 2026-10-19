@@ -95,6 +95,7 @@ button {
   cursor: pointer;
   user-select: none;
   background: var(--button-bg, var(--paper));
+  border: none;
   border-radius: 3px;
   box-shadow: 0 0 0 1px solid var(--border-color);
   transition:
