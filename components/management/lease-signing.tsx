@@ -2,7 +2,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import posthog from "posthog-js";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   type OverflowAction,
@@ -22,6 +22,11 @@ interface Signer {
   name: string;
   role: "tenant" | "landlord";
   signedAt?: string | null;
+}
+interface Renter {
+  email: string;
+  name: string;
+  source: "account" | "invited";
 }
 interface Packet {
   createdAt: string;
@@ -62,6 +67,8 @@ export function LeaseSigning({
     [preview, setPreview] = useState(false),
     [loaded, setLoaded] = useState(false),
     [packets, setPackets] = useState<Packet[]>([]),
+    [renters, setRenters] = useState<Renter[]>([]),
+    [accounts, setAccounts] = useState<Record<string, boolean>>({}),
     [signers, setSigners] = useState<Signer[]>([
       {
         email: tenantEmail,
@@ -100,6 +107,38 @@ export function LeaseSigning({
       load().catch((e) => setError(e.message));
     }
   }, [embedded, draftId]);
+  // Renters connected to this lease's property, for choosing signers.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    fetch(`/api/admin/renters?draftId=${draftId}`)
+      .then((r) => (r.ok ? r.json() : { renters: [] }))
+      .then((data) => setRenters(data.renters ?? []))
+      .catch(() => setRenters([]));
+  }, [open, draftId]);
+  // Whether a tenant portal account owns this email (the lease only shows
+  // in a portal account that has the signer's email).
+  const checkAccount = useCallback(
+    async (email: string) => {
+      const normalized = email.trim().toLowerCase();
+      if (!normalized.includes("@") || normalized in accounts) {
+        return;
+      }
+      try {
+        const r = await fetch(
+          `/api/admin/renters?email=${encodeURIComponent(normalized)}`
+        );
+        const data = await r.json();
+        if (r.ok && data.valid) {
+          setAccounts((v) => ({ ...v, [normalized]: !!data.hasAccount }));
+        }
+      } catch {
+        // The check is advisory; sending still works without it.
+      }
+    },
+    [accounts]
+  );
   async function post(body: unknown) {
     const r = await fetch("/api/admin/lease-signing", {
         body: JSON.stringify(body),
@@ -338,6 +377,42 @@ export function LeaseSigning({
                     {s.role === "landlord" ? "Landlord" : "Tenant"} · Signer{" "}
                     {i + 1}
                   </legend>
+                  {s.role === "tenant" && renters.length > 0 ? (
+                    <AppSelect
+                      label="Choose a connected renter"
+                      onValueChange={(email) => {
+                        const renter = renters.find((r) => r.email === email);
+                        if (!renter) {
+                          return;
+                        }
+                        setSigners((v) =>
+                          v.map((x, j) =>
+                            j === i
+                              ? { ...x, email: renter.email, name: renter.name }
+                              : x
+                          )
+                        );
+                        checkAccount(renter.email);
+                      }}
+                      value={
+                        renters.some(
+                          (r) => r.email === s.email.trim().toLowerCase()
+                        )
+                          ? s.email.trim().toLowerCase()
+                          : ""
+                      }
+                    >
+                      <option value="">Type a signer below, or choose…</option>
+                      {renters.map((renter) => (
+                        <option key={renter.email} value={renter.email}>
+                          {renter.name} · {renter.email} ·{" "}
+                          {renter.source === "account"
+                            ? "portal account"
+                            : "invited"}
+                        </option>
+                      ))}
+                    </AppSelect>
+                  ) : null}
                   <label className="field">
                     Full legal name
                     <input
@@ -356,6 +431,11 @@ export function LeaseSigning({
                   <label className="field">
                     Email address
                     <input
+                      onBlur={(e) => {
+                        if (s.role === "tenant") {
+                          checkAccount(e.target.value);
+                        }
+                      }}
                       onChange={(e) =>
                         setSigners((v) =>
                           v.map((x, j) =>
@@ -368,6 +448,23 @@ export function LeaseSigning({
                       value={s.email}
                     />
                   </label>
+                  {s.role === "tenant" &&
+                    accounts[s.email.trim().toLowerCase()] === false && (
+                      <p className="signer-warning" role="status">
+                        No tenant portal account uses this email. The lease
+                        email will include a portal invitation for it. If this
+                        renter already has a portal account with a different
+                        email, use that email so the lease appears in their
+                        portal.
+                      </p>
+                    )}
+                  {s.role === "tenant" &&
+                    accounts[s.email.trim().toLowerCase()] === true && (
+                      <p className="small-note">
+                        Matches a tenant portal account. The lease will appear
+                        in that portal.
+                      </p>
+                    )}
                   <AppSelect
                     label="Signing as"
                     onValueChange={(value) =>

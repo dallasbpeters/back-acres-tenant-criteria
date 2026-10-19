@@ -243,3 +243,18 @@
   background: #fff;
   box-shadow: 0 0 0 1px var(--border);
 }
+.signer-warning {
+  --bg-current: color-mix(in oklch, var(--warning) 12%, var(--paper));
+  grid-column: 1 / -1;
+  padding: 0.65rem 0.85rem;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  background: color-mix(in oklch, var(--warning) 12%, var(--paper));
+  border-inline-start: 3px solid var(--warning);
+}
+.signer-fields > .small-note {
+  grid-column: 1 / -1;
+  margin: 0;
+}
