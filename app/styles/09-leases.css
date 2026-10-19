@@ -63,6 +63,27 @@
   background: var(--primary);
   border-color: var(--primary);
 }
+/* Beat the shared button states: steps never paint a box or a ring. */
+.lease-progress .ui-button,
+.lease-progress
+  .ui-button:not(:disabled):is(
+    :hover,
+    [data-hovered],
+    [data-pressed],
+    :active
+  ) {
+  background: transparent;
+  box-shadow: none;
+}
+.lease-progress .ui-button:not(:disabled):is(:hover, [data-hovered]) {
+  color: contrast-color(var(--bg-current));
+  border-block-end-color: var(--border-dark);
+}
+.lease-progress
+  [aria-current="step"]
+  .ui-button:not(:disabled):is(:hover, [data-hovered]) {
+  border-block-end-color: var(--primary);
+}
 .lease-progress .ui-button:disabled {
   cursor: default;
   opacity: 0.6;
@@ -208,7 +229,7 @@
   padding: 0.1rem 0.25rem;
   font-family: var(--font-interface);
   font-size: 0.8em;
-  color: var(--accent);
+  color: contrast-color(var(--tint));
   white-space: normal;
   background: var(--tint);
   border: 1px solid var(--border);
