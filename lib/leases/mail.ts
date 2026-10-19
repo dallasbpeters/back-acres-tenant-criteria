@@ -3,6 +3,7 @@ import {
   defaultEmailBrand,
   type EmailBrand,
   emailButtonHtml,
+  emailLinkHtml,
   logoAttachments,
   textEmailHtml,
 } from "@/lib/email-layout";
@@ -17,6 +18,8 @@ export async function sendLeaseMail(
     brand?: EmailBrand;
     /** HTML text after the button. */
     htmlAfter?: string;
+    /** A second, quieter link with a short lead-in, after `htmlAfter`. */
+    secondary?: { label: string; lead: string; url: string };
     /** HTML text before the button, when it differs from `text`. */
     htmlText?: string;
     subject: string;
@@ -38,7 +41,15 @@ export async function sendLeaseMail(
           (message.action
             ? emailButtonHtml(brand, message.action.label, message.action.url)
             : "") +
-          (message.htmlAfter ? textEmailHtml(message.htmlAfter) : ""),
+          (message.htmlAfter ? textEmailHtml(message.htmlAfter) : "") +
+          (message.secondary
+            ? textEmailHtml(message.secondary.lead) +
+              emailLinkHtml(
+                brand,
+                message.secondary.label,
+                message.secondary.url
+              )
+            : ""),
         { inlineLogo: true }
       ),
       subject: message.subject,

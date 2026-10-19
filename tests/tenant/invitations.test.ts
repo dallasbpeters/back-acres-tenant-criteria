@@ -12,7 +12,10 @@ import {
 import { POST as ownerCommand } from "../../app/api/admin/tenants/route";
 import { db } from "../../lib/db";
 import { tenantAccess, tenantInvitations } from "../../lib/db/schema";
-import { claimTenantInvitations } from "../../lib/tenant/invitations";
+import {
+  claimTenantInvitations,
+  preparePortalForLeaseTenant,
+} from "../../lib/tenant/invitations";
 import {
   invoice,
   id as invoiceId,
@@ -25,6 +28,7 @@ import {
 
 const clerk = vi.hoisted(() => ({
   invite: vi.fn(),
+  list: vi.fn(),
   mail: vi.fn(),
   revoke: vi.fn(),
   users: vi.fn(),
@@ -39,6 +43,7 @@ vi.mock("@clerk/nextjs/server", () => ({
   createClerkClient: vi.fn(() => ({
     invitations: {
       createInvitation: clerk.invite,
+      getInvitationList: clerk.list,
       revokeInvitation: clerk.revoke,
     },
     users: { getUserList: clerk.users },
@@ -59,6 +64,13 @@ beforeEach(async () => {
   });
   clerk.mail.mockResolvedValue(new Response("{}", { status: 200 }));
   clerk.revoke.mockResolvedValue({});
+  clerk.list.mockResolvedValue({
+    data: [
+      { emailAddress: "new.tenant@example.invalid", id: "inv_1" },
+      { emailAddress: "new.tenant@example.invalid", id: "inv_2" },
+      { emailAddress: "someone.else@example.invalid", id: "inv_other" },
+    ],
+  });
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture");
   vi.stubEnv("CLERK_SECRET_KEY", "sk_test_fixture");
   // invoice() also creates the fixture property.
@@ -177,13 +189,19 @@ describe("tenant invitations", () => {
       request("/api/admin/tenants", { action: "resendInvite", id: row.id })
     );
     expect(resend.status).toBe(200);
-    expect(clerk.revoke).toHaveBeenCalledWith("inv_1");
+    // Earlier invitation emails keep working after a resend.
+    expect(clerk.revoke).not.toHaveBeenCalled();
     expect((await pending())[0].clerkInvitationId).toBe("inv_2");
     const cancel = await ownerCommand(
       request("/api/admin/tenants", { action: "cancelInvite", id: row.id })
     );
     expect(cancel.status).toBe(200);
     expect((await pending())[0].status).toBe("canceled");
+    // Canceling revokes every link sent to that email, and only those.
+    expect(clerk.revoke.mock.calls.map(([id]) => id).sort()).toEqual([
+      "inv_1",
+      "inv_2",
+    ]);
     expect(
       await claimTenantInvitations("user_new", ["new.tenant@example.invalid"])
     ).toBe(0);
@@ -194,5 +212,68 @@ describe("tenant invitations", () => {
         )
       ).status
     ).toBe(404);
+  });
+  it("sets up portal access for a lease tenant without an account", async () => {
+    const url = await preparePortalForLeaseTenant({
+      actor: "owner@example.invalid",
+      email: "New.Tenant@example.invalid",
+      name: "New Tenant",
+      propertyId,
+    });
+    expect(url).toBe("https://clerk.example.invalid/accept?ticket=1");
+    expect(clerk.mail).not.toHaveBeenCalled();
+    const [row] = await pending();
+    expect(row).toMatchObject({
+      email: "new.tenant@example.invalid",
+      invoiceIds: [],
+      propertyId,
+      status: "pending",
+    });
+    await preparePortalForLeaseTenant({
+      actor: "owner@example.invalid",
+      email: "new.tenant@example.invalid",
+      name: "New Tenant",
+      propertyId,
+    });
+    const rows = await pending();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].clerkInvitationId).toBe("inv_2");
+  });
+  it("grants a verified lease tenant access without replacing shared records", async () => {
+    clerk.users.mockResolvedValue({
+      data: [
+        {
+          emailAddresses: [
+            {
+              emailAddress: "new.tenant@example.invalid",
+              verification: { status: "verified" },
+            },
+          ],
+          id: "user_new",
+        },
+      ],
+    });
+    expect(
+      await preparePortalForLeaseTenant({
+        actor: "owner@example.invalid",
+        email: "new.tenant@example.invalid",
+        name: "New Tenant",
+        propertyId,
+      })
+    ).toBeNull();
+    const [access] = await db().select().from(tenantAccess);
+    expect(access).toMatchObject({ clerkUserId: "user_new", invoiceIds: [] });
+    await db()
+      .update(tenantAccess)
+      .set({ invoiceIds: [invoiceId] });
+    await preparePortalForLeaseTenant({
+      actor: "owner@example.invalid",
+      email: "new.tenant@example.invalid",
+      name: "New Tenant",
+      propertyId,
+    });
+    const [after] = await db().select().from(tenantAccess);
+    expect(after.invoiceIds).toEqual([invoiceId]);
+    expect(clerk.invite).not.toHaveBeenCalled();
   });
 });

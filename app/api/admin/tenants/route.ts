@@ -20,7 +20,7 @@ import { tenantClerkClient } from "@/lib/tenant/client";
 import { tenantAuthReady } from "@/lib/tenant/config";
 import { grantTenantAccess } from "@/lib/tenant/grants";
 import {
-  revokeClerkInvitation,
+  revokeClerkInvitationsFor,
   sendClerkInvitation,
 } from "@/lib/tenant/invitations";
 import { tenantAssignmentSchema, verifiedAccountId } from "@/lib/tenant/model";
@@ -104,7 +104,6 @@ async function updateInvitation(
   if (!invitation) {
     return reply({ error: "Invitation not found." }, 404);
   }
-  await revokeClerkInvitation(invitation.clerkInvitationId);
   let { clerkInvitationId } = invitation;
   if (command.action === "resendInvite") {
     const [property] = await d
@@ -125,6 +124,22 @@ async function updateInvitation(
         : { status: "canceled" }
     )
     .where(eq(tenantInvitations.id, invitation.id));
+  if (command.action === "cancelInvite") {
+    // Clerk links belong to the email, not the property: revoke them only
+    // when no other property still has a pending grant for this email.
+    const [other] = await d
+      .select({ id: tenantInvitations.id })
+      .from(tenantInvitations)
+      .where(
+        and(
+          eq(tenantInvitations.email, invitation.email),
+          eq(tenantInvitations.status, "pending")
+        )
+      );
+    if (!other) {
+      await revokeClerkInvitationsFor(invitation.email);
+    }
+  }
   return reply({ ok: true });
 }
 

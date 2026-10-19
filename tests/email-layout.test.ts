@@ -63,7 +63,9 @@ test("lease email sends branded HTML alongside the plain text", async () => {
     );
     assert.equal(body.text, "Sign: https://example.invalid/sign/abc");
     assert.ok(String(body.html).includes("Saved &lt;Brand&gt;"));
-    assert.ok(String(body.html).includes("/api/branding/logo?v=fixture"));
+    assert.ok(
+      JSON.stringify(body.attachments).includes("/api/branding/logo?v=fixture")
+    );
     assert.equal("brand" in body, false);
   } finally {
     if (previousKey === undefined) {
@@ -119,6 +121,43 @@ test("call-to-action emails show a brand-colored button and the plain link", asy
     assert.ok(
       String(body.text).includes("https://example.invalid/accept?t=1&x=2")
     );
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.RESEND_API_KEY;
+    } else {
+      process.env.RESEND_API_KEY = previousKey;
+    }
+    if (previousFrom === undefined) {
+      delete process.env.FROM_EMAIL;
+    } else {
+      process.env.FROM_EMAIL = previousFrom;
+    }
+  }
+});
+
+test("single emails embed the logo so blocked remote images still show it", async () => {
+  const previousKey = process.env.RESEND_API_KEY,
+    previousFrom = process.env.FROM_EMAIL;
+  process.env.RESEND_API_KEY = "test-fixture-only";
+  process.env.FROM_EMAIL = "owner@example.invalid";
+  try {
+    let body: Record<string, unknown> = {};
+    await sendLeaseMail(
+      { brand, subject: "Logo", text: "Hello", to: "tenant@example.invalid" },
+      (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return Promise.resolve(new Response('{"id":"test"}', { status: 200 }));
+      }
+    );
+    assert.ok(String(body.html).includes('src="cid:brand-logo"'));
+    assert.deepEqual(body.attachments, [
+      {
+        content_id: "brand-logo",
+        content_type: "image/png",
+        filename: "logo.png",
+        path: brand.logoUrl,
+      },
+    ]);
   } finally {
     if (previousKey === undefined) {
       delete process.env.RESEND_API_KEY;

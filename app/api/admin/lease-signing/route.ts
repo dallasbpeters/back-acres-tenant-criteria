@@ -3,8 +3,10 @@ const pattern1 = /\{\{[^}]+\}\}/;
 import { randomBytes, randomUUID } from "node:crypto";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { guard, readBody, reply } from "@/lib/adverse/auth";
+import { authOptions } from "@/lib/adverse/google-auth";
 import { db } from "@/lib/db";
 import {
   brandVersions,
@@ -25,6 +27,7 @@ import { digest, packetInput, signingText } from "@/lib/leases/signing-model";
 import { activePacket, completePacket } from "@/lib/leases/signing-store";
 import { notRemoved } from "@/lib/management/not-removed";
 import { siteUrl } from "@/lib/management/security";
+import { preparePortalForLeaseTenant } from "@/lib/tenant/invitations";
 
 function cleanDocument(node: LeaseNode): LeaseNode {
   return {
@@ -242,19 +245,53 @@ export async function POST(request: NextRequest) {
       return reply({ error: "This signer has already signed." }, 409);
     }
     const contact = await leaseContact(packet.id, packet.brandName);
+    // Tenants also get portal access to this property; a new account needs a
+    // Clerk invitation link. Portal setup must never block the lease email.
+    let portalUrl: string | null = null;
+    if (signer.role === "tenant") {
+      try {
+        const [draft] = await d
+          .select({ propertyId: leaseDrafts.propertyId })
+          .from(leaseDrafts)
+          .where(eq(leaseDrafts.id, packet.draftId));
+        if (draft) {
+          portalUrl = await preparePortalForLeaseTenant({
+            actor:
+              (await getServerSession(authOptions))?.user?.email ?? "owner",
+            email: signer.email,
+            name: signer.name,
+            propertyId: draft.propertyId,
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Tenant portal invitation for lease failed",
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    }
     const expires = packet.expiresAt.toLocaleDateString("en-US", {
       dateStyle: "long",
       timeZone: "America/Chicago",
     });
     const intro = `Hello ${signer.name},\n\nYour lease is ready. Review the complete lease, download a copy, and sign securely.`;
     const details = `The request expires ${expires}. A separate verification code will be sent to this email address before signing. Do not forward this private link.\n\nYou may request a paper copy or signing alternative by contacting ${contact}.`;
+    const portalLead =
+      "After signing, create your tenant portal account with this email address to keep a copy of your lease and see payments and maintenance requests.";
     const response = await sendLeaseMail({
       action: { label: "Review and sign the lease", url },
       brand: await currentEmailBrand(packet.brandName),
       htmlAfter: details,
       htmlText: intro,
+      secondary: portalUrl
+        ? {
+            label: "Create your tenant portal account",
+            lead: portalLead,
+            url: portalUrl,
+          }
+        : undefined,
       subject: `${packet.brandName}: review and sign your lease`,
-      text: `${intro}\n\nReview and sign the lease:\n${url}\n\n${details}`,
+      text: `${intro}\n\nReview and sign the lease:\n${url}\n\n${details}${portalUrl ? `\n\n${portalLead}\n${portalUrl}` : ""}`,
       to: signer.email,
     });
     if (!response.ok) {
@@ -268,13 +305,33 @@ export async function POST(request: NextRequest) {
       .set({ invitedAt: sql`now()` })
       .where(eq(leaseSigners.id, signer.id));
     return reply({ ok: true });
-  } catch {
+  } catch (error) {
+    const reason = error as {
+      cause?: { code?: string };
+      code?: string;
+    } | null;
+    const code = reason?.code ?? reason?.cause?.code;
+    console.error(
+      "Lease signing request failed",
+      code ?? "",
+      error instanceof Error ? error.message : String(error)
+    );
+    // 23505: a unique index allows one pending packet per lease family.
+    if (code === "23505") {
+      return reply(
+        {
+          error:
+            "This lease or an earlier version already has an open signing request. Cancel it first: open that version's signing panel and choose Cancel signing request.",
+        },
+        409
+      );
+    }
     return reply(
       {
         error:
-          "Could not complete this request. A pending signing packet may exist for this lease or an earlier version; cancel it before replacing it.",
+          "Could not complete this request. Nothing was sent. Try again; if it keeps failing, the error is logged for review.",
       },
-      409
+      503
     );
   }
 }

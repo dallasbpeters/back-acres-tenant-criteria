@@ -30,6 +30,11 @@ export function emailButtonHtml(brand: EmailBrand, label: string, url: string) {
 <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:12px;line-height:1.5;color:#5b6670">Button not working? Copy this link into your browser:<br><a href="${href}" style="color:#5b6670;word-break:break-all">${href}</a></p>`;
 }
 
+/** A secondary text link, quieter than the main button. */
+export function emailLinkHtml(brand: EmailBrand, label: string, url: string) {
+  return `<p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:15px;font-weight:700"><a href="${escapeHtml(url)}" style="color:${brand.color};text-decoration:underline">${escapeHtml(label)}</a></p>`;
+}
+
 /** Converts a plain-text email body to escaped HTML with clickable links. */
 export function textEmailHtml(text: string) {
   return text
