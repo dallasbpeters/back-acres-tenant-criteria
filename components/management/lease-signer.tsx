@@ -23,7 +23,7 @@ export interface SignerRecord {
   contact?: string;
   declinedAt?: string;
   documentHash?: string;
-  email: string;
+  email: string | null;
   finalHash?: string;
   name: string;
   role?: string;
@@ -329,7 +329,8 @@ export function LeaseSigner({ token }: { token: string }) {
           <>
             <h2>{record.brandName} · Residential lease</h2>
             <p>
-              Signer: <strong>{record.name}</strong> · {record.email}
+              Signer: <strong>{record.name}</strong>
+              {record.email ? ` · ${record.email}` : ""}
             </p>
             {resolveResult2()}
             <details className="signing-audit-details">

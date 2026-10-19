@@ -64,7 +64,8 @@ export const leaseSigners = pgTable("lease_signers", {
     .defaultNow()
     .notNull(),
   declinedAt: timestamp("declined_at", { withTimezone: true }),
-  email: text("email").notNull(),
+  /** Null for a signer reached by phone; then the owner texts the link. */
+  email: text("email"),
   evidence: text("evidence"),
   evidenceHash: text("evidence_hash"),
   id: uuid("id").primaryKey(),
@@ -75,6 +76,8 @@ export const leaseSigners = pgTable("lease_signers", {
     .notNull()
     .references(() => leasePackets.id),
   pdfViewedAt: timestamp("pdf_viewed_at", { withTimezone: true }),
+  /** Mobile number in +1XXXXXXXXXX form, for texting the signing link. */
+  phone: text("phone"),
   role: text("role").notNull(),
   sessionExpiresAt: timestamp("session_expires_at", { withTimezone: true }),
   sessionHash: text("session_hash"),

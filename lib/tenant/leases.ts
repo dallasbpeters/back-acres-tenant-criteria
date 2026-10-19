@@ -30,6 +30,20 @@ export function verifiedEmails(
     .map((address) => address.emailAddress.trim().toLowerCase());
 }
 
+/** Verified phone numbers, in the +1XXXXXXXXXX form signers are stored in. */
+export function verifiedPhones(
+  user: {
+    phoneNumbers?: {
+      phoneNumber: string;
+      verification: { status: string } | null;
+    }[];
+  } | null
+) {
+  return (user?.phoneNumbers ?? [])
+    .filter((number) => number.verification?.status === "verified")
+    .map((number) => number.phoneNumber.replace(/[^\d+]/g, ""));
+}
+
 /**
  * Lease packets for one owner-assigned property where the tenant is a signer.
  * Both conditions are required: property access comes from the owner's

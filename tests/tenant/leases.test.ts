@@ -27,8 +27,16 @@ import {
   tenantAccess,
 } from "../../lib/db/schema";
 import { digest } from "../../lib/leases/signing-model";
-import { claimLeaseSigner } from "../../lib/tenant/lease-claims";
-import { tenantLeases, verifiedEmails } from "../../lib/tenant/leases";
+import {
+  claimLeaseSigner,
+  claimLeaseSignersByEmail,
+  claimLeaseSignersByPhone,
+} from "../../lib/tenant/lease-claims";
+import {
+  tenantLeases,
+  verifiedEmails,
+  verifiedPhones,
+} from "../../lib/tenant/leases";
 import { pg, property, propertyId, reset, start } from "../stripe/harness";
 
 const clerk = vi.hoisted(() => ({
@@ -385,5 +393,52 @@ describe("claiming a lease from the signing page", () => {
   it("refuses an unknown code", async () => {
     expect(await claimLeaseSigner("user_new", "c".repeat(64))).toBe(false);
     expect(await claimLeaseSigner("user_new", "not-a-code")).toBe(false);
+  });
+});
+
+describe("attaching leases by mobile number", () => {
+  it("attaches a phone-only signer to the account with that verified number", async () => {
+    await lease([{ email: "placeholder@example.invalid" }]);
+    await db().update(leaseSigners).set({ email: null, phone: "+18065550123" });
+    expect(verifiedPhones(null)).toEqual([]);
+    expect(
+      verifiedPhones({
+        phoneNumbers: [
+          { phoneNumber: "+18065550123", verification: { status: "verified" } },
+          {
+            phoneNumber: "+18065550999",
+            verification: { status: "unverified" },
+          },
+        ],
+      })
+    ).toEqual(["+18065550123"]);
+    expect(await claimLeaseSignersByPhone("user_phone", ["+18065550999"])).toBe(
+      0
+    );
+    expect(await claimLeaseSignersByPhone("user_phone", ["+18065550123"])).toBe(
+      1
+    );
+    const [access] = await db().select().from(tenantAccess);
+    expect(access).toMatchObject({ clerkUserId: "user_phone", propertyId });
+    expect(await tenantLeases(propertyId, [], "user_phone")).toHaveLength(1);
+    // Already claimed: another account with the number gets nothing.
+    expect(await claimLeaseSignersByPhone("user_other", ["+18065550123"])).toBe(
+      0
+    );
+  });
+});
+
+describe("keeping email-matched leases after an email change", () => {
+  it("records the account on signers it matches by verified email", async () => {
+    await lease([{ email: "relay@privaterelay.example.invalid" }]);
+    expect(
+      await claimLeaseSignersByEmail("user_relay", [
+        "relay@privaterelay.example.invalid",
+      ])
+    ).toBe(1);
+    // After the email changes, the lease still matches by account.
+    expect(
+      await tenantLeases(propertyId, ["new@example.invalid"], "user_relay")
+    ).toHaveLength(1);
   });
 });

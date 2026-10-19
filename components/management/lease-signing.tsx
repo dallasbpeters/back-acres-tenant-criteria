@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/overflow-menu";
 import { AppSelect } from "@/components/ui/select";
 import { CopySigningLink } from "./copy-signing-link";
+import { TenantContactExtras } from "./tenant-contact-extras";
 
 const LeasePdfPreview = dynamic(
   () => import("./lease-pdf-preview").then((m) => m.LeasePdfPreview),
@@ -17,10 +18,12 @@ const LeasePdfPreview = dynamic(
 );
 interface Signer {
   declinedAt?: string | null;
-  email: string;
+  /** Empty or null for a tenant reached by phone. */
+  email: string | null;
   id?: string;
   invitedAt?: string | null;
   name: string;
+  phone?: string | null;
   role: "tenant" | "landlord";
   signedAt?: string | null;
 }
@@ -28,6 +31,11 @@ interface Renter {
   email: string;
   name: string;
   source: "account" | "invited";
+}
+/** The renter picker's value: the signer's email when it is a listed renter. */
+function pickedRenter(renters: Renter[], email: string | null) {
+  const normalized = (email ?? "").trim().toLowerCase();
+  return renters.some((r) => r.email === normalized) ? normalized : "";
 }
 interface Packet {
   createdAt: string;
@@ -156,9 +164,10 @@ export function LeaseSigning({
       data: {
         draftId,
         reviewed,
-        signers: signers.map(({ name, email, role }) => ({
-          email,
+        signers: signers.map(({ name, email, phone, role }) => ({
+          email: email ?? "",
           name,
+          phone: phone ?? "",
           role,
         })),
       },
@@ -273,6 +282,7 @@ export function LeaseSigning({
           email: signer.email,
           id: crypto.randomUUID(),
           name: signer.name,
+          phone: signer.phone,
           role: signer.role,
         }))
       );
@@ -309,7 +319,7 @@ export function LeaseSigning({
     expired = !!active && new Date(active.expiresAt).getTime() < Date.now(),
     unsent =
       active?.signers.filter(
-        (s) => !(s.signedAt || s.declinedAt || s.invitedAt)
+        (s) => s.email && !(s.signedAt || s.declinedAt || s.invitedAt)
       ) ?? [],
     signed = active?.signers.filter((s) => s.signedAt).length ?? 0;
 
@@ -362,7 +372,7 @@ export function LeaseSigning({
                     <div>
                       <strong>{s.name}</strong>
                       <p>
-                        {s.email} · {s.role}
+                        {s.email || s.phone} · {s.role}
                       </p>
                       <p className="signing-recipient-state">
                         {resolveResult2()}
@@ -390,20 +400,23 @@ export function LeaseSigning({
                         </Button>
                       ) : (
                         <div className="signer-actions">
-                          <Button
-                            disabled={busy}
-                            onClick={() => {
-                              send([s]);
-                            }}
-                            type="button"
-                          >
-                            {s.invitedAt
-                              ? "Resend signing email"
-                              : "Send signing email"}
-                          </Button>
+                          {!!s.email && (
+                            <Button
+                              disabled={busy}
+                              onClick={() => {
+                                send([s]);
+                              }}
+                              type="button"
+                            >
+                              {s.invitedAt
+                                ? "Resend signing email"
+                                : "Send signing email"}
+                            </Button>
+                          )}
                           <CopySigningLink
                             disabled={busy}
                             name={s.name}
+                            phone={s.phone ?? null}
                             signerId={s.id ?? ""}
                           />
                         </div>
@@ -460,9 +473,10 @@ export function LeaseSigning({
             }}
           >
             <p className="signing-intro">
-              Add each adult tenant and the landlord. We’ll email everyone a
-              private link to review the PDF, verify their email, and sign.
-              Links are valid for 30 days.
+              Add each adult tenant and the landlord. You sign first as
+              landlord. Then each tenant gets a private link to review the PDF
+              and sign: by email, or by a text you send from Messages if you
+              only have their mobile number. Links are valid for 30 days.
             </p>
             <fieldset className="signing-recipients" disabled={busy}>
               <legend className="visually-hidden">Lease recipients</legend>
@@ -489,13 +503,7 @@ export function LeaseSigning({
                         );
                         checkAccount(renter.email);
                       }}
-                      value={
-                        renters.some(
-                          (r) => r.email === s.email.trim().toLowerCase()
-                        )
-                          ? s.email.trim().toLowerCase()
-                          : ""
-                      }
+                      value={pickedRenter(renters, s.email)}
                     >
                       <option value="">Type a signer below, or choose…</option>
                       {renters.map((renter) => (
@@ -538,28 +546,22 @@ export function LeaseSigning({
                           )
                         )
                       }
-                      required
+                      required={s.role === "landlord" || !s.phone}
                       type="email"
-                      value={s.email}
+                      value={s.email ?? ""}
                     />
                   </label>
-                  {s.role === "tenant" &&
-                    accounts[s.email.trim().toLowerCase()] === false && (
-                      <p className="signer-warning" role="status">
-                        No tenant portal account uses this email. The lease
-                        email will include a portal invitation for it. If this
-                        renter already has a portal account with a different
-                        email, use that email so the lease appears in their
-                        portal.
-                      </p>
-                    )}
-                  {s.role === "tenant" &&
-                    accounts[s.email.trim().toLowerCase()] === true && (
-                      <p className="small-note">
-                        Matches a tenant portal account. The lease will appear
-                        in that portal.
-                      </p>
-                    )}
+                  {s.role === "tenant" && (
+                    <TenantContactExtras
+                      account={accounts[(s.email ?? "").trim().toLowerCase()]}
+                      onPhone={(phone) =>
+                        setSigners((v) =>
+                          v.map((x, j) => (j === i ? { ...x, phone } : x))
+                        )
+                      }
+                      phone={s.phone ?? ""}
+                    />
+                  )}
                   <AppSelect
                     label="Signing as"
                     onValueChange={(value) =>

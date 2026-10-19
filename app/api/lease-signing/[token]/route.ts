@@ -71,7 +71,9 @@ export async function GET(
       return reply({
         brandName: packet.brandName,
         contact,
-        email: signer.email.replace(pattern3, "$1•••$2"),
+        email: signer.email
+          ? signer.email.replace(pattern3, "$1•••$2")
+          : `•••${(signer.phone ?? "").slice(-4)}`,
         name: signer.name,
         verified: false,
       });
@@ -268,7 +270,7 @@ export async function POST(
       consent: SIGNING_CONSENT,
       consentVersion: SIGNING_CONSENT_VERSION,
       documentHash: packet.documentHash,
-      email: signer.email,
+      email: signer.email ?? signer.phone ?? "",
       ip,
       name: signer.name,
       packetId: packet.id,
@@ -303,15 +305,16 @@ export async function POST(
     // receive a lease the landlord already signed.
     const invited =
       signer.role === "landlord"
-        ? await inviteRemainingSigners(packet.id, signer.email).catch(
-            (error) => {
-              console.error(
-                "Tenant signing emails after landlord signature failed",
-                error instanceof Error ? error.message : String(error)
-              );
-              return [];
-            }
-          )
+        ? await inviteRemainingSigners(
+            packet.id,
+            signer.email ?? "landlord"
+          ).catch((error) => {
+            console.error(
+              "Tenant signing emails after landlord signature failed",
+              error instanceof Error ? error.message : String(error)
+            );
+            return [];
+          })
         : [];
     await sendSigningNotices(packet.id, signer.id).catch((error) =>
       console.error(

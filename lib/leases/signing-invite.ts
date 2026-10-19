@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { reply } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
 import { leaseDrafts, leaseSigners } from "@/lib/db/schema";
@@ -31,6 +31,13 @@ export async function inviteSigner(signerId: string, actor: string) {
   ) {
     return {
       error: "This signing request is no longer active.",
+      status: 409,
+    } as const;
+  }
+  const { email } = signer;
+  if (!email) {
+    return {
+      error: `${signer.name} has no email. Use Text signing link.`,
       status: 409,
     } as const;
   }
@@ -68,7 +75,7 @@ export async function inviteSigner(signerId: string, actor: string) {
       if (draft) {
         portalUrl = await preparePortalForLeaseTenant({
           actor,
-          email: signer.email,
+          email,
           name: signer.name,
           propertyId: draft.propertyId,
         });
@@ -102,7 +109,7 @@ export async function inviteSigner(signerId: string, actor: string) {
       : undefined,
     subject: `${packet.brandName}: review and sign your lease`,
     text: `${intro}\n\nReview and sign the lease:\n${url}\n\n${details}${portalUrl ? `\n\n${portalLead}\n${portalUrl}` : ""}`,
-    to: signer.email,
+    to: email,
   });
   if (!response.ok) {
     return {
@@ -130,7 +137,9 @@ export async function inviteRemainingSigners(packetId: string, actor: string) {
         eq(leaseSigners.packetId, packetId),
         isNull(leaseSigners.signedAt),
         isNull(leaseSigners.declinedAt),
-        isNull(leaseSigners.invitedAt)
+        isNull(leaseSigners.invitedAt),
+        // Phone-only signers get their link by text from the owner.
+        isNotNull(leaseSigners.email)
       )
     );
   const results: { id: string; ok: boolean }[] = [];

@@ -15,7 +15,7 @@ import {
 /** Ends a new lease PDF with blank signature pages before it is frozen. */
 export async function withSignaturePages(
   bytes: Uint8Array,
-  signers: { email: string; name: string; role: string }[]
+  signers: { email: string | null; name: string; role: string }[]
 ) {
   const pdf = await PDFDocument.load(bytes);
   drawSignaturePages(pdf, signers, await leaseFonts(pdf));
@@ -130,7 +130,7 @@ export async function signaturePdf(
     }
     y -= 15;
     line(`${signer.role.toUpperCase()}: ${signer.name}`, 10, bold);
-    line(signer.email);
+    line(signer.email ?? signer.phone ?? "");
     if (!signer.signedAt) {
       line(
         signer.declinedAt ? "Declined electronic signing" : "Awaiting signature"

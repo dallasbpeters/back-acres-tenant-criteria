@@ -14,10 +14,12 @@ const ink = rgb(0.12, 0.12, 0.12);
 const muted = rgb(0.4, 0.4, 0.4);
 
 interface SignerLike {
-  email: string;
+  email: string | null;
   name: string;
+  phone?: string | null;
   role: string;
 }
+const contact = (s: SignerLike) => (s.email ?? s.phone ?? "").toLowerCase();
 
 /** Tenants first, then the landlord, so every render places people the same. */
 export function signatureOrder<T extends SignerLike>(signers: T[]) {
@@ -25,7 +27,7 @@ export function signatureOrder<T extends SignerLike>(signers: T[]) {
   return [...signers].sort(
     (a, b) =>
       rank(a.role) - rank(b.role) ||
-      a.email.toLowerCase().localeCompare(b.email.toLowerCase()) ||
+      contact(a).localeCompare(contact(b)) ||
       a.name.localeCompare(b.name)
   );
 }

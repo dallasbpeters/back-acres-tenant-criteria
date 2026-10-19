@@ -148,6 +148,13 @@
       "when": 1792385729343,
       "tag": "0020_lease_signer_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792386786806,
+      "tag": "0021_lease_signer_phone",
+      "breakpoints": true
     }
   ]
 }

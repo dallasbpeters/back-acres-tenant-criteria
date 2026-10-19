@@ -12,10 +12,13 @@ const selectAll = (e: { currentTarget: HTMLInputElement }) =>
 export function CopySigningLink({
   disabled,
   name,
+  phone,
   signerId,
 }: {
   disabled?: boolean;
   name: string;
+  /** When set, offers to open Messages with the link filled in. */
+  phone?: string | null;
   signerId: string;
 }) {
   const [url, setUrl] = useState(""),
@@ -45,7 +48,11 @@ export function CopySigningLink({
       setUrl(data.url);
       try {
         await navigator.clipboard.writeText(data.url);
-        setNote(`Copied. Text this private link to ${name}.`);
+        setNote(
+          phone
+            ? `Copied. Open Messages below, or paste it in a text to ${name}.`
+            : `Copied. Text this private link to ${name}.`
+        );
       } catch {
         setNote(`Copy this private link and text it to ${name}.`);
       }
@@ -54,12 +61,26 @@ export function CopySigningLink({
     } finally {
       setBusy(false);
     }
-  }, [name, signerId]);
+  }, [name, phone, signerId]);
+  let label = phone ? "Text signing link" : "Copy signing link";
+  if (busy) {
+    label = "Making link…";
+  }
   return (
     <div className="copy-signing-link">
       <Button disabled={disabled || busy} onPress={copy}>
-        {busy ? "Making link…" : "Copy signing link"}
+        {label}
       </Button>
+      {!!(url && phone) && (
+        <a
+          className="ui-button ui-button--primary"
+          href={`sms:${phone}?&body=${encodeURIComponent(
+            `Hi ${name}, here is your private link to review and sign your lease: ${url}`
+          )}`}
+        >
+          Open Messages to {phone}
+        </a>
+      )}
       {!!url && (
         <input
           aria-label={`Signing link for ${name}`}

@@ -21,8 +21,16 @@ import { paymentMode } from "@/lib/management/stripe";
 import { assignments, tenantIdentity } from "@/lib/tenant/access";
 import { tenantAuthReady } from "@/lib/tenant/config";
 import { claimTenantInvitations } from "@/lib/tenant/invitations";
-import { claimLeaseSigner } from "@/lib/tenant/lease-claims";
-import { tenantLeases, verifiedEmails } from "@/lib/tenant/leases";
+import {
+  claimLeaseSigner,
+  claimLeaseSignersByEmail,
+  claimLeaseSignersByPhone,
+} from "@/lib/tenant/lease-claims";
+import {
+  tenantLeases,
+  verifiedEmails,
+  verifiedPhones,
+} from "@/lib/tenant/leases";
 import { tenantMaintenanceRequests } from "@/lib/tenant/maintenance";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tenant portal | Back Acres" };
@@ -61,6 +69,10 @@ export default async function TenantPortal({
     const emails = verifiedEmails(user);
     // Owner invitations wait for this verified email; apply them first.
     await claimTenantInvitations(userId, emails);
+    // Leases sent to this account's verified mobile number attach here.
+    await claimLeaseSignersByPhone(userId, verifiedPhones(user));
+    // Keep email-matched leases here even if the account email changes.
+    await claimLeaseSignersByEmail(userId, emails);
     const accessRows = await assignments(userId);
     content = accessRows.length ? (
       await Promise.all(

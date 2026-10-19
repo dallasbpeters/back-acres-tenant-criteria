@@ -31,22 +31,27 @@ const linkFor = (role: string, c: Context) =>
 
 /** Everyone gets the signed PDF once the last signature lands. */
 function completionMails(signers: Signer[], finalPdf: string, c: Context) {
-  return signers.map((person): Mail => {
+  return signers.flatMap((person): Mail[] => {
+    if (!person.email) {
+      return [];
+    }
     const where =
       person.role === "tenant"
         ? "You can also download it from your tenant portal."
         : "It is also in the owner workspace under Leases.";
     const body = `Hello ${person.name},\n\nEveryone has signed the lease. The signed lease is attached. ${where}`;
     const link = linkFor(person.role, c);
-    return {
-      action: link,
-      attachments: [{ content: finalPdf, filename: "signed-lease.pdf" }],
-      brand: c.brand,
-      htmlText: body,
-      subject: `${c.brandName}: your lease is fully signed`,
-      text: `${body}\n\n${link.url}`,
-      to: person.email,
-    };
+    return [
+      {
+        action: link,
+        attachments: [{ content: finalPdf, filename: "signed-lease.pdf" }],
+        brand: c.brand,
+        htmlText: body,
+        subject: `${c.brandName}: your lease is fully signed`,
+        text: `${body}\n\n${link.url}`,
+        to: person.email,
+      },
+    ];
   });
 }
 
@@ -55,21 +60,23 @@ function progressMails(signer: Signer, signers: Signer[], c: Context) {
   const waiting = signers.filter((s) => !s.signedAt);
   const receipt = `Hello ${signer.name},\n\nYour signature on the lease was recorded on ${when(signer.signedAt as Date)} (Central). We are waiting for ${names(waiting)} to sign. We will email you the signed lease when everyone has signed.`;
   const link = linkFor(signer.role, c);
-  const mails: Mail[] = [
-    {
-      action: link,
-      brand: c.brand,
-      htmlText: receipt,
-      subject: `${c.brandName}: you signed your lease`,
-      text: `${receipt}\n\n${link.url}`,
-      to: signer.email,
-    },
-  ];
+  const mails: Mail[] = signer.email
+    ? [
+        {
+          action: link,
+          brand: c.brand,
+          htmlText: receipt,
+          subject: `${c.brandName}: you signed your lease`,
+          text: `${receipt}\n\n${link.url}`,
+          to: signer.email,
+        },
+      ]
+    : [];
   if (signer.role === "landlord") {
     return mails;
   }
   for (const landlord of signers.filter(
-    (s) => s.role === "landlord" && s.id !== signer.id
+    (s) => s.role === "landlord" && s.id !== signer.id && s.email
   )) {
     const note = `Hello ${landlord.name},\n\n${signer.name} signed the lease. Still waiting for ${names(waiting)}.`;
     mails.push({
@@ -78,7 +85,7 @@ function progressMails(signer: Signer, signers: Signer[], c: Context) {
       htmlText: note,
       subject: `${c.brandName}: ${signer.name} signed the lease`,
       text: `${note}\n\n${c.owner}`,
-      to: landlord.email,
+      to: landlord.email as string,
     });
   }
   return mails;

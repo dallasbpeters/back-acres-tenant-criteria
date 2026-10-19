@@ -42,8 +42,10 @@ export function SigningConfirmation({
           {completed ? "Your lease is fully signed" : "You signed the lease"}
         </h2>
         <p>
-          Signed {when(record.signedAt)} (Central). A confirmation was emailed
-          to {record.email}.
+          Signed {when(record.signedAt)} (Central).
+          {record.email
+            ? ` A confirmation was emailed to ${record.email}.`
+            : ""}
         </p>
       </div>
       <ol className="signing-progress">

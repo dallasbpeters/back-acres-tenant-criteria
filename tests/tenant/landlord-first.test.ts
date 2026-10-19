@@ -225,4 +225,64 @@ describe("landlord signs first", () => {
       "signed-lease.pdf"
     );
   });
+  it("handles a tenant with only a mobile number", async () => {
+    const created = await owner({
+      action: "create",
+      data: {
+        draftId,
+        reviewed: true,
+        signers: [
+          {
+            email: "",
+            name: "Tenant A",
+            phone: "(806) 555-0123",
+            role: "tenant",
+          },
+          { email: "owner@example.invalid", name: "Owner B", role: "landlord" },
+        ],
+      },
+    });
+    expect(created.status).toBe(201);
+    const { id: packetId } = await created.json();
+    const [tenant] = await db()
+      .select()
+      .from(leaseSigners)
+      .where(eq(leaseSigners.role, "tenant"));
+    expect(tenant).toMatchObject({ email: null, phone: "+18065550123" });
+
+    const opening = await owner({ action: "signAsOwner", packetId });
+    const [, , , landlordToken] = ((await opening.json()).url as string).split(
+      "/"
+    );
+    const landlord = await signWith(landlordToken, "Owner B");
+    // No email to send: the owner texts the tenant's link instead.
+    expect(landlord.signed).toMatchObject({ invited: 0, ok: true });
+    expect(mail.some((m) => m.to[0] !== "owner@example.invalid")).toBe(false);
+    expect(
+      (await owner({ action: "invite", signerId: tenant.id })).status
+    ).toBe(409);
+
+    const link = await owner({ action: "link", signerId: tenant.id });
+    expect(link.status).toBe(200);
+    const tenantToken =
+      ((await link.json()).url as string).split("/").at(-1) ?? "";
+    mail = [];
+    await signWith(tenantToken, "Tenant A");
+    // Only the landlord has an email for the signed copy.
+    expect(mail.map((m) => m.to[0])).toEqual(["owner@example.invalid"]);
+  });
+  it("needs an email or a valid mobile number for each tenant", async () => {
+    const response = await owner({
+      action: "create",
+      data: {
+        draftId,
+        reviewed: true,
+        signers: [
+          { email: "", name: "Tenant A", phone: "555", role: "tenant" },
+          { email: "owner@example.invalid", name: "Owner B", role: "landlord" },
+        ],
+      },
+    });
+    expect(response.status).toBe(400);
+  });
 });

@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
           id: leaseSigners.id,
           invitedAt: leaseSigners.invitedAt,
           name: leaseSigners.name,
+          phone: leaseSigners.phone,
           role: leaseSigners.role,
           signedAt: leaseSigners.signedAt,
         })
