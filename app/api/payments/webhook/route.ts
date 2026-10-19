@@ -7,7 +7,7 @@ import {
   handleBillingEvent,
 } from "@/lib/management/billing-events";
 import { reconcileCheckoutSession } from "@/lib/management/checkout-events";
-import { stripe } from "@/lib/management/stripe";
+import { stripe, stripeWebhookSecret } from "@/lib/management/stripe";
 import { requireValue } from "@/lib/required";
 export async function POST(request: NextRequest) {
   let event: Stripe.Event;
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       await request.text(),
       request.headers.get("stripe-signature") ?? "",
       requireValue(
-        process.env.STRIPE_WEBHOOK_SECRET,
+        stripeWebhookSecret(),
         "Expected process.env.STRIPE_WEBHOOK_SECRET"
       )
     );

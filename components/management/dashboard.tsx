@@ -101,6 +101,7 @@ interface Records {
   drafts: DraftRecord[];
   invoices: InvoiceRecord[];
   maintenance: MaintenanceRecord[];
+  paymentKeyKind?: string;
   paymentMode: string;
   paymentsReady: boolean;
   photos: PhotoRecord[];
@@ -324,7 +325,7 @@ export function Dashboard() {
                 </p>
                 <p>
                   {records.paymentsReady
-                    ? `Stripe ${records.paymentMode} mode is configured.`
+                    ? `Stripe ${records.paymentMode} mode is configured (the secret key starts with ${records.paymentKeyKind}).`
                     : "Stripe setup is pending. You can prepare requests; checkout remains unavailable."}{" "}
                   Use a rent schedule for monthly invoices, or a separate
                   request for a deposit, fee, or one-time rent charge. Avoid

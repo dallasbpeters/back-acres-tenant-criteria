@@ -1,5 +1,3 @@
-const pattern1 = /^(sk|rk)_live_/;
-
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, isNull, notExists } from "drizzle-orm";
 import type { NextRequest } from "next/server";
@@ -35,7 +33,12 @@ import {
 } from "@/lib/management/model";
 import { notRemoved } from "@/lib/management/not-removed";
 import { linkToken, siteUrl } from "@/lib/management/security";
-import { paymentMode, paymentReady, stripe } from "@/lib/management/stripe";
+import {
+  paymentMode,
+  paymentReady,
+  stripe,
+  stripeKeyKind,
+} from "@/lib/management/stripe";
 
 const uuid = z.string().uuid();
 const command = z.discriminatedUnion("action", [
@@ -205,9 +208,8 @@ export async function GET(request: NextRequest) {
         url: `${siteUrl()}/pay/${linkToken("payment", r.id)}`,
       })),
       maintenance: maintenanceRows,
-      paymentMode: pattern1.test(process.env.STRIPE_SECRET_KEY ?? "")
-        ? "live"
-        : "test",
+      paymentKeyKind: stripeKeyKind(),
+      paymentMode: paymentMode(),
       paymentsReady: paymentReady(),
       photos: photos.map(({ blobPath, ...photo }) => ({
         ...photo,
