@@ -76,3 +76,22 @@ export async function completePacket(id: string) {
     );
   return activePacket(id);
 }
+/**
+ * The PDF to hand out now: the final signed copy, a copy with the signatures
+ * recorded so far, or the untouched lease when nobody has signed yet.
+ */
+export async function currentLeasePdf(
+  packet: typeof leasePackets.$inferSelect
+) {
+  if (packet.finalPdf) {
+    return Buffer.from(packet.finalPdf, "base64");
+  }
+  const signers = await db()
+    .select()
+    .from(leaseSigners)
+    .where(eq(leaseSigners.packetId, packet.id));
+  if (!signers.some((s) => s.signedAt)) {
+    return Buffer.from(packet.basePdf, "base64");
+  }
+  return Buffer.from(await signaturePdf(packet, signers, false));
+}

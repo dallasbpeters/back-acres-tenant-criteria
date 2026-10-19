@@ -15,6 +15,8 @@ export async function sendLeaseMail(
   }: {
     /** Main link, shown as a button in the HTML version. */
     action?: { label: string; url: string };
+    /** Files to attach, as base64 content. */
+    attachments?: { content: string; filename: string }[];
     brand?: EmailBrand;
     /** HTML text after the button. */
     htmlAfter?: string;
@@ -33,7 +35,7 @@ export async function sendLeaseMail(
   }
   return await transport("https://api.resend.com/emails", {
     body: JSON.stringify({
-      attachments: logoAttachments(brand),
+      attachments: [...logoAttachments(brand), ...(message.attachments ?? [])],
       from: process.env.FROM_EMAIL,
       html: brandedEmailHtml(
         brand,

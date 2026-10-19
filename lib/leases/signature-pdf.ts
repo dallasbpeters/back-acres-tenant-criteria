@@ -5,7 +5,27 @@ const pattern1 = /\s+/;
 import { PDFDocument, type PDFFont } from "pdf-lib";
 import type { leasePackets, leaseSigners } from "@/lib/db/signing";
 import { leaseFonts } from "./pdf-fonts";
-/** Append recorded signatures without changing any page of the frozen lease. */
+import {
+  drawSignaturePages,
+  fillSignaturePages,
+  SIGNATURE_PAGE_KEYWORD,
+  signaturePageCount,
+} from "./signature-page";
+
+/** Ends a new lease PDF with blank signature pages before it is frozen. */
+export async function withSignaturePages(
+  bytes: Uint8Array,
+  signers: { email: string; name: string; role: string }[]
+) {
+  const pdf = await PDFDocument.load(bytes);
+  drawSignaturePages(pdf, signers, await leaseFonts(pdf));
+  pdf.setKeywords([SIGNATURE_PAGE_KEYWORD]);
+  return pdf.save();
+}
+/**
+ * Draws recorded signatures onto the lease's signature pages, then adds the
+ * audit record. Older leases without signature pages get them added first.
+ */
 export async function signaturePdf(
   packet: typeof leasePackets.$inferSelect,
   signers: (typeof leaseSigners.$inferSelect)[],
@@ -28,6 +48,16 @@ export async function signaturePdf(
   const fonts = await leaseFonts(pdf),
     font = fonts.label,
     bold = fonts.labelBold;
+  const hasPages = (pdf.getKeywords() ?? "").includes(SIGNATURE_PAGE_KEYWORD);
+  if (!hasPages) {
+    drawSignaturePages(pdf, signers, fonts);
+  }
+  await fillSignaturePages(
+    pdf,
+    pdf.getPageCount() - signaturePageCount(signers.length),
+    signers,
+    font
+  );
   let page = pdf.addPage([612, 792]),
     y = 740;
   const safe = (s: string) =>
@@ -91,7 +121,7 @@ export async function signaturePdf(
   line(`Original PDF SHA-256: ${packet.documentHash}`);
   line("Each signature is attached to this exact PDF. All times are UTC.");
   line(
-    "Email-code verification confirms mailbox access; it is not government ID verification."
+    "Opening the private emailed link, or the signer's verified portal account, confirms mailbox access; it is not government ID verification."
   );
   for (const signer of signers) {
     if (y < 220) {

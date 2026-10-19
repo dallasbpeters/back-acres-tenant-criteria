@@ -96,6 +96,7 @@
 .management-main {
   display: grid;
   gap: 1.5rem;
+  align-content: start;
   min-block-size: 80vh;
   padding-block: 2.5rem 4rem;
 }

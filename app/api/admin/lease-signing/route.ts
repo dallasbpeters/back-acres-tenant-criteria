@@ -1,7 +1,7 @@
 const pattern1 = /\{\{[^}]+\}\}/;
 
 import { randomBytes, randomUUID } from "node:crypto";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
@@ -14,20 +14,17 @@ import {
   leasePackets,
   leaseSigners,
 } from "@/lib/db/schema";
-import { currentEmailBrand } from "@/lib/email-brand";
-import { leaseContact } from "@/lib/leases/contact";
 import {
   documentText,
   type LeaseNode,
   textDocument,
 } from "@/lib/leases/document";
-import { sendLeaseMail } from "@/lib/leases/mail";
 import { leasePdf } from "@/lib/leases/pdf";
+import { withSignaturePages } from "@/lib/leases/signature-pdf";
+import { inviteSigner, openOwnerSigning } from "@/lib/leases/signing-invite";
 import { digest, packetInput, signingText } from "@/lib/leases/signing-model";
 import { activePacket, completePacket } from "@/lib/leases/signing-store";
 import { notRemoved } from "@/lib/management/not-removed";
-import { siteUrl } from "@/lib/management/security";
-import { preparePortalForLeaseTenant } from "@/lib/tenant/invitations";
 
 function cleanDocument(node: LeaseNode): LeaseNode {
   return {
@@ -106,6 +103,7 @@ const command = z.discriminatedUnion("action", [
   z.object({ action: z.literal("create"), data: packetInput }),
   z.object({ action: z.literal("invite"), signerId: z.uuid() }),
   z.object({ action: z.literal("void"), packetId: z.uuid() }),
+  z.object({ action: z.literal("signAsOwner"), packetId: z.uuid() }),
 ]);
 /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export async function POST(request: NextRequest) {
@@ -171,11 +169,14 @@ export async function POST(request: NextRequest) {
         document && documentText(document).trim() === body.trim()
           ? document
           : textDocument(body);
-      const pdf = await leasePdf(body, draft.id, pdfDocument, {
-        forSigning: true,
-        logoPng: brand?.logoPng ?? null,
-        name: brand?.name ?? "Back Acres Rental",
-      });
+      const pdf = await withSignaturePages(
+        await leasePdf(body, draft.id, pdfDocument, {
+          forSigning: true,
+          logoPng: brand?.logoPng ?? null,
+          name: brand?.name ?? "Back Acres Rental",
+        }),
+        c.data.signers
+      );
       const family = await d.execute(
         sql`with recursive ancestors as (select id,parent_id from lease_drafts where id=${draft.id} union all select l.id,l.parent_id from lease_drafts l join ancestors a on l.id=a.parent_id) select id from ancestors where parent_id is null limit 1`
       );
@@ -202,8 +203,8 @@ export async function POST(request: NextRequest) {
       return reply({ id }, 201);
     }
     if (c.action === "void") {
-      const packet = await activePacket(c.packetId);
-      if (!packet) {
+      const existing = await activePacket(c.packetId);
+      if (!existing) {
         return reply({ error: "Packet not found." }, 404);
       }
       const rows = await d
@@ -221,104 +222,16 @@ export async function POST(request: NextRequest) {
         ? reply({ ok: true })
         : reply({ error: "A fully signed lease cannot be voided here." }, 409);
     }
-    const [signer] = await d
-      .select()
-      .from(leaseSigners)
-      .where(eq(leaseSigners.id, c.signerId));
-    if (!signer) {
-      return reply({ error: "Signer not found." }, 404);
+    if (c.action === "signAsOwner") {
+      return await openOwnerSigning(c.packetId);
     }
-    const packet = await activePacket(signer.packetId);
-    if (
-      packet?.status !== "awaiting" ||
-      packet.expiresAt < new Date() ||
-      signer.declinedAt ||
-      signer.signedAt
-    ) {
-      return reply({ error: "This signing request is no longer active." }, 409);
-    }
-    if (!(process.env.RESEND_API_KEY && process.env.FROM_EMAIL)) {
-      return reply(
-        { error: "Configure Resend before sending signing links." },
-        503
-      );
-    }
-    const token = randomBytes(32).toString("hex"),
-      url = `${siteUrl()}/sign/lease/${token}`;
-    const updated = await d
-      .update(leaseSigners)
-      .set({
-        codeHash: null,
-        sessionHash: null,
-        tokenHash: digest(token),
-        verifiedAt: null,
-      })
-      .where(and(eq(leaseSigners.id, signer.id), isNull(leaseSigners.signedAt)))
-      .returning({ id: leaseSigners.id });
-    if (!updated.length) {
-      return reply({ error: "This signer has already signed." }, 409);
-    }
-    const contact = await leaseContact(packet.id, packet.brandName);
-    // Tenants also get portal access to this property; a new account needs a
-    // Clerk invitation link. Portal setup must never block the lease email.
-    let portalUrl: string | null = null;
-    if (signer.role === "tenant") {
-      try {
-        const [draft] = await d
-          .select({ propertyId: leaseDrafts.propertyId })
-          .from(leaseDrafts)
-          .where(eq(leaseDrafts.id, packet.draftId));
-        if (draft) {
-          portalUrl = await preparePortalForLeaseTenant({
-            actor:
-              (await getServerSession(authOptions))?.user?.email ?? "owner",
-            email: signer.email,
-            name: signer.name,
-            propertyId: draft.propertyId,
-          });
-        }
-      } catch (error) {
-        console.error(
-          "Tenant portal invitation for lease failed",
-          error instanceof Error ? error.message : String(error)
-        );
-      }
-    }
-    const expires = packet.expiresAt.toLocaleDateString("en-US", {
-      dateStyle: "long",
-      timeZone: "America/Chicago",
-    });
-    const intro = `Hello ${signer.name},\n\nYour lease is ready. Review the complete lease, download a copy, and sign securely.`;
-    const details = `The request expires ${expires}. This private link opens your lease for signing. Do not forward it. You can also sign from your tenant portal.\n\nYou may request a paper copy or signing alternative by contacting ${contact}.`;
-    const portalLead =
-      "After signing, create your tenant portal account with this email address to keep a copy of your lease and see payments and maintenance requests.";
-    const response = await sendLeaseMail({
-      action: { label: "Review and sign the lease", url },
-      brand: await currentEmailBrand(packet.brandName),
-      htmlAfter: details,
-      htmlText: intro,
-      secondary: portalUrl
-        ? {
-            label: "Create your tenant portal account",
-            lead: portalLead,
-            url: portalUrl,
-          }
-        : undefined,
-      subject: `${packet.brandName}: review and sign your lease`,
-      text: `${intro}\n\nReview and sign the lease:\n${url}\n\n${details}${portalUrl ? `\n\n${portalLead}\n${portalUrl}` : ""}`,
-      to: signer.email,
-    });
-    if (!response.ok) {
-      return reply(
-        { error: "Email was not accepted. Try sending a new link." },
-        502
-      );
-    }
-    await d
-      .update(leaseSigners)
-      .set({ invitedAt: sql`now()` })
-      .where(eq(leaseSigners.id, signer.id));
-    return reply({ ok: true });
+    const result = await inviteSigner(
+      c.signerId,
+      (await getServerSession(authOptions))?.user?.email ?? "owner"
+    );
+    return "error" in result
+      ? reply({ error: result.error }, result.status)
+      : reply({ ok: true });
   } catch (error) {
     const reason = error as {
       cause?: { code?: string };

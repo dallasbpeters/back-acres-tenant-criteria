@@ -149,6 +149,53 @@ export function LeaseSigning({
     }
     return data;
   }
+  async function createPacket() {
+    await post({
+      action: "create",
+      data: {
+        draftId,
+        reviewed,
+        signers: signers.map(({ name, email, role }) => ({
+          email,
+          name,
+          role,
+        })),
+      },
+    });
+    const records = await load();
+    return records.find((p) => p.status !== "voided");
+  }
+  async function emailSigners(people: Signer[]) {
+    const failed: string[] = [];
+    let accepted = 0;
+    for (const [index, signer] of people.entries()) {
+      setMessage(`Sending ${index + 1} of ${people.length}: ${signer.email}…`);
+      try {
+        /* biome-ignore lint/performance/noAwaitInLoops: Each step depends on the preceding provider/database state or output order; parallel execution would change recovery semantics. */ await post(
+          { action: "invite", signerId: signer.id }
+        );
+        accepted += 1;
+      } catch (e) {
+        failed.push(`${signer.email}: ${(e as Error).message}`);
+      }
+      if (index < people.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+    }
+    if (accepted) {
+      posthog.capture("lease_signing_invitations_sent", {
+        recipient_count: accepted,
+      });
+    }
+    setMessage(
+      `${accepted} signing email${accepted === 1 ? "" : "s"} accepted by the email provider. Each recipient receives their own private signing link.`
+    );
+    if (failed.length) {
+      setError(
+        `Some emails could not be sent. ${failed.join(" ")} Use Send unsent emails to retry the remaining recipients.`
+      );
+    }
+  }
   async function send(recipients?: Signer[]) {
     setBusy(true);
     setError("");
@@ -156,52 +203,16 @@ export function LeaseSigning({
     try {
       let people = recipients;
       if (!people) {
-        await post({
-          action: "create",
-          data: {
-            draftId,
-            reviewed,
-            signers: signers.map(({ name, email, role }) => ({
-              email,
-              name,
-              role,
-            })),
-          },
-        });
-        const records = await load();
-        people = records.find((p) => p.status !== "voided")?.signers ?? [];
-      }
-      const failed: string[] = [];
-      let accepted = 0;
-      for (const [index, signer] of people.entries()) {
-        setMessage(
-          `Sending ${index + 1} of ${people.length}: ${signer.email}…`
-        );
-        try {
-          /* biome-ignore lint/performance/noAwaitInLoops: Each step depends on the preceding provider/database state or output order; parallel execution would change recovery semantics. */ await post(
-            { action: "invite", signerId: signer.id }
-          );
-          accepted += 1;
-        } catch (e) {
-          failed.push(`${signer.email}: ${(e as Error).message}`);
-        }
-        if (index < people.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 600));
+        const created = await createPacket();
+        people = created?.signers ?? [];
+        // The landlord signs first. Tenants get their emails right after.
+        if (created && people.some((p) => p.role === "landlord")) {
+          setMessage("Opening the lease for your signature…");
+          await signAsLandlord(created.id);
+          return;
         }
       }
-      if (accepted) {
-        posthog.capture("lease_signing_invitations_sent", {
-          recipient_count: accepted,
-        });
-      }
-      setMessage(
-        `${accepted} signing email${accepted === 1 ? "" : "s"} accepted by the email provider. Each recipient receives their own private signing link.`
-      );
-      if (failed.length) {
-        setError(
-          `Some emails could not be sent. ${failed.join(" ")} Use Send unsent emails to retry the remaining recipients.`
-        );
-      }
+      await emailSigners(people);
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -212,6 +223,10 @@ export function LeaseSigning({
     } finally {
       setBusy(false);
     }
+  }
+  async function signAsLandlord(packetId: string) {
+    const result = await post({ action: "signAsOwner", packetId });
+    window.location.assign((result as { url: string }).url);
   }
   async function cancel(id: string) {
     if (
@@ -356,19 +371,35 @@ export function LeaseSigning({
                       !(s.signedAt || s.declinedAt) &&
                       active.status === "awaiting" &&
                       !expired
-                    ) && (
-                      <Button
-                        disabled={busy}
-                        onClick={() => {
-                          send([s]);
-                        }}
-                        type="button"
-                      >
-                        {s.invitedAt
-                          ? "Resend signing email"
-                          : "Send signing email"}
-                      </Button>
-                    )}
+                    ) &&
+                      (s.role === "landlord" ? (
+                        <Button
+                          disabled={busy}
+                          onClick={() => {
+                            setBusy(true);
+                            signAsLandlord(active.id).catch((e) => {
+                              setError((e as Error).message);
+                              setBusy(false);
+                            });
+                          }}
+                          type="button"
+                          variant="primary"
+                        >
+                          Sign as landlord
+                        </Button>
+                      ) : (
+                        <Button
+                          disabled={busy}
+                          onClick={() => {
+                            send([s]);
+                          }}
+                          type="button"
+                        >
+                          {s.invitedAt
+                            ? "Resend signing email"
+                            : "Send signing email"}
+                        </Button>
+                      ))}
                   </div>
                 );
               })}
@@ -577,6 +608,9 @@ export function LeaseSigning({
             </fieldset>
             <div className="signing-send-footer">
               <p>
+                {signers.some((s) => s.role === "landlord")
+                  ? "Next you sign as landlord. Right after, each tenant is emailed a lease you already signed. "
+                  : ""}
                 Sending locks this saved version and its branding. Later edits
                 will need a new signing request.
               </p>
@@ -585,7 +619,14 @@ export function LeaseSigning({
                 type="submit"
                 variant="primary"
               >
-                {busy ? "Sending lease…" : "Send lease for signature"}
+                {(() => {
+                  if (busy) {
+                    return "Preparing lease…";
+                  }
+                  return signers.some((s) => s.role === "landlord")
+                    ? "Sign as landlord and send"
+                    : "Send lease for signature";
+                })()}
               </Button>
             </div>
           </form>

@@ -241,7 +241,7 @@
   border-block-end: 2px solid transparent;
 }
 
-.tenant-tab:active {
+a:not(.submit-button):not(.ui-button).tenant-tab:active {
   background: transparent;
 }
 
@@ -271,6 +271,7 @@
 }
 /* Property header, then form panel beside the request history. */
 .tenant-property-header {
+  padding-block-end: 1.5rem;
   margin-block-end: 1.5rem;
 }
 .tenant-property-header h2 {

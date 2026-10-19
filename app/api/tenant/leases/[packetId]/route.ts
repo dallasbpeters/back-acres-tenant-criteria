@@ -1,7 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { reply } from "@/lib/adverse/auth";
-import { completePacket } from "@/lib/leases/signing-store";
+import { completePacket, currentLeasePdf } from "@/lib/leases/signing-store";
 import { assignments, tenantIdentity } from "@/lib/tenant/access";
 import { tenantLeases, verifiedEmails } from "@/lib/tenant/leases";
 
@@ -35,17 +35,14 @@ export async function GET(
       return reply({ error: "Not found." }, 404);
     }
     const signed = !!packet.finalPdf;
-    return new Response(
-      Buffer.from(packet.finalPdf ?? packet.basePdf, "base64"),
-      {
-        headers: {
-          "Cache-Control": "private, no-store",
-          "Content-Disposition": `attachment; filename="lease-${signed ? "signed" : "for-signature"}-${packetId}.pdf"`,
-          "Content-Type": "application/pdf",
-          "X-Content-Type-Options": "nosniff",
-        },
-      }
-    );
+    return new Response(new Uint8Array(await currentLeasePdf(packet)), {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": `attachment; filename="lease-${signed ? "signed" : "for-signature"}-${packetId}.pdf"`,
+        "Content-Type": "application/pdf",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   } catch {
     return reply({ error: "Could not load this lease." }, 503);
   }

@@ -5,6 +5,7 @@ const pattern1 = /filename="([^"]+)"/;
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SigningConfirmation } from "./signing-confirmation";
 
 const SignerPdfViewer = dynamic(
   () => import("./signer-pdf-viewer").then((m) => m.SignerPdfViewer),
@@ -14,7 +15,7 @@ const LeaseSignaturePad = dynamic(
   () => import("./lease-signature-pad").then((m) => m.LeaseSignaturePad),
   { loading: () => <p>Loading signature pad…</p>, ssr: false }
 );
-interface Record {
+export interface SignerRecord {
   body?: string;
   brandName: string;
   consent?: string;
@@ -25,12 +26,14 @@ interface Record {
   email: string;
   finalHash?: string;
   name: string;
+  role?: string;
   signedAt?: string;
+  signers?: { name: string; role: string; signedAt: string | null }[];
   status?: string;
   verified: boolean;
 }
 export function LeaseSigner({ token }: { token: string }) {
-  const [record, setRecord] = useState<Record | null>(null),
+  const [record, setRecord] = useState<SignerRecord | null>(null),
     [key, setKey] = useState(""),
     [name, setName] = useState(""),
     [signature, setSignature] = useState(""),
@@ -141,6 +144,7 @@ export function LeaseSigner({ token }: { token: string }) {
       } else {
         setSignature("");
         await load();
+        window.scrollTo({ behavior: "smooth", top: 0 });
       }
     } catch (e) {
       setError((e as Error).message);
@@ -188,17 +192,6 @@ export function LeaseSigner({ token }: { token: string }) {
     const resolveResult2 = () => {
       if (!record) {
         return null;
-      }
-      if (record.signedAt) {
-        return (
-          <p role="status">
-            Your signature was recorded at{" "}
-            {new Date(record.signedAt).toISOString()} (UTC).{" "}
-            {record.status === "completed"
-              ? "All required signatures are complete. Save your signed copy above."
-              : "Waiting for the other required signatures. Return here or open your tenant portal to download the completed copy."}
-          </p>
-        );
       }
       if (record.declinedAt) {
         return (
@@ -304,6 +297,16 @@ export function LeaseSigner({ token }: { token: string }) {
       );
     }
     if (record) {
+      if (record.verified && record.signedAt) {
+        return (
+          <SigningConfirmation
+            busy={busy}
+            contact={contact}
+            onDownload={download}
+            record={{ ...record, signedAt: record.signedAt }}
+          />
+        );
+      }
       if (record.verified) {
         return (
           <>
@@ -311,27 +314,14 @@ export function LeaseSigner({ token }: { token: string }) {
             <p>
               Signer: <strong>{record.name}</strong> · {record.email}
             </p>
-            <Button
-              disabled={busy}
-              onClick={() => {
-                download();
-              }}
-              type="submit"
-            >
-              {record.status === "completed"
-                ? "Download signed lease & audit record"
-                : "Download lease PDF"}
-            </Button>
-            <p className="document-fingerprint">
-              Original PDF SHA-256: {record.documentHash}
-            </p>
-            {!!record.finalHash && (
-              <p className="document-fingerprint">
-                Signed PDF SHA-256: {record.finalHash}
-              </p>
-            )}
-            <p className="small-note">Lease contact: {contact}</p>
             {resolveResult2()}
+            <details className="signing-audit-details">
+              <summary>Document audit details</summary>
+              <p className="document-fingerprint">
+                Original PDF SHA-256: {record.documentHash}
+              </p>
+            </details>
+            <p className="small-note">Lease contact: {contact}</p>
           </>
         );
       }

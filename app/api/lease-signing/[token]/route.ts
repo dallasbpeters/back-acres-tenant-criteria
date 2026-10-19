@@ -14,13 +14,20 @@ import { db } from "@/lib/db";
 import { leaseSigners } from "@/lib/db/schema";
 import { signaturePng } from "@/lib/leases/branding";
 import { leaseContact } from "@/lib/leases/contact";
+import { signatureOrder } from "@/lib/leases/signature-page";
+import { inviteRemainingSigners } from "@/lib/leases/signing-invite";
 import {
   digest,
   SIGNING_CONSENT,
   SIGNING_CONSENT_VERSION,
   signingEvidence,
 } from "@/lib/leases/signing-model";
-import { completePacket, tokenSigner } from "@/lib/leases/signing-store";
+import { sendSigningNotices } from "@/lib/leases/signing-notices";
+import {
+  completePacket,
+  currentLeasePdf,
+  tokenSigner,
+} from "@/lib/leases/signing-store";
 import { allowIntake } from "@/lib/management/security";
 
 const session = (r: NextRequest) =>
@@ -76,7 +83,7 @@ export async function GET(
         .set({ pdfViewedAt: sql`coalesce(${leaseSigners.pdfViewedAt},now())` })
         .where(eq(leaseSigners.id, signer.id));
       return new NextResponse(
-        Buffer.from(finalized.finalPdf ?? packet.basePdf, "base64"),
+        new Uint8Array(await currentLeasePdf(finalized)),
         {
           headers: {
             "Cache-Control": "private, no-store",
@@ -88,6 +95,14 @@ export async function GET(
         }
       );
     }
+    const everyone = await db()
+      .select({
+        name: leaseSigners.name,
+        role: leaseSigners.role,
+        signedAt: leaseSigners.signedAt,
+      })
+      .from(leaseSigners)
+      .where(eq(leaseSigners.packetId, packet.id));
     return reply({
       body: packet.body,
       brandName: packet.brandName,
@@ -100,7 +115,11 @@ export async function GET(
       expiresAt: packet.expiresAt,
       finalHash: finalized.finalHash,
       name: signer.name,
+      role: signer.role,
       signedAt: signer.signedAt,
+      signers: signatureOrder(everyone.map((s) => ({ ...s, email: "" }))).map(
+        ({ name, role, signedAt }) => ({ name, role, signedAt })
+      ),
       status: finalized.status,
       verified: true,
     });
@@ -263,7 +282,32 @@ export async function POST(
       );
     }
     await completePacket(packet.id);
-    return reply({ ok: true, signedAt: signedAt.toISOString() });
+    // The landlord signs first; tenants are emailed only after that, so they
+    // receive a lease the landlord already signed.
+    const invited =
+      signer.role === "landlord"
+        ? await inviteRemainingSigners(packet.id, signer.email).catch(
+            (error) => {
+              console.error(
+                "Tenant signing emails after landlord signature failed",
+                error instanceof Error ? error.message : String(error)
+              );
+              return [];
+            }
+          )
+        : [];
+    await sendSigningNotices(packet.id, signer.id).catch((error) =>
+      console.error(
+        "Lease signing notices failed",
+        error instanceof Error ? error.message : String(error)
+      )
+    );
+    return reply({
+      invited: invited.filter((row) => row.ok).length,
+      notInvited: invited.filter((row) => !row.ok).length,
+      ok: true,
+      signedAt: signedAt.toISOString(),
+    });
   } catch (e) {
     return reply(
       {

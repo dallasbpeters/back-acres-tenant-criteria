@@ -289,3 +289,49 @@
   padding-block-end: 0.75rem;
   border-block-end: 1px solid var(--border);
 }
+/* After signing: proof first, then who still signs, then actions. */
+.signing-confirmation {
+  display: grid;
+  gap: 1.25rem;
+}
+.signing-confirmation-head {
+  --bg-current: color-mix(in oklch, var(--primary) 8%, var(--paper));
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.25rem 1.5rem;
+  background: color-mix(in oklch, var(--primary) 8%, var(--paper));
+  border-inline-start: 3px solid var(--primary);
+}
+.signing-confirmation-head h2,
+.signing-confirmation-head p {
+  margin: 0;
+}
+.signing-progress {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  list-style: none;
+  border-block-start: 1px solid var(--border);
+}
+.signing-progress li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  justify-content: space-between;
+  padding-block: 0.75rem;
+  border-block-end: 1px solid var(--border);
+}
+.signing-progress-name {
+  font-weight: 600;
+}
+.signing-progress-name .small-note {
+  font-weight: 400;
+}
+.signing-progress li[data-signed="false"] .signing-progress-state {
+  color: var(--muted);
+}
+.signing-confirmation .management-actions {
+  align-items: center;
+}
