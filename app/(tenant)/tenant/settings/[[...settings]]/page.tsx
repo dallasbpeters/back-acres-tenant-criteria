@@ -15,10 +15,6 @@ export default async function TenantSettings() {
   return (
     <ManagementShell title="Account settings">
       <TenantNavigation />
-      <p>
-        Manage how you sign in: your phone number, email, password and security.
-        Your rental stays connected if you change any of them.
-      </p>
       {accessRows.map((access) => (
         <TenantContactForm
           id={access.id}
