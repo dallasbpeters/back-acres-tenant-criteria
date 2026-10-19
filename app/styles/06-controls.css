@@ -11,7 +11,7 @@
 }
 .ui-button--secondary {
   --button-bg: transparent;
-  --button-ink: var(--on-action);
+  --button-ink: var(--button-ink);
   --button-hover-ink: var(--on-action);
   --button-hover: color-mix(in oklch, var(--actions) 88%, #ffffff);
   --button-active: color-mix(in oklch, var(--actions) 78%, #ffffff);
