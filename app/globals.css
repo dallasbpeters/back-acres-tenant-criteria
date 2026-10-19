@@ -94,7 +94,7 @@ button {
   cursor: pointer;
   user-select: none;
   background: var(--button-bg, var(--paper));
-  border: 1px solid var(--border);
+
   border-radius: 3px;
   transition:
     background-color 140ms ease,
@@ -117,6 +117,7 @@ button {
   --button-hover-ink: var(--on-action);
   --button-hover: color-mix(in oklch, var(--actions) 88%, #ffffff);
   --button-active: color-mix(in oklch, var(--actions) 78%, #ffffff);
+  border: none;
 }
 .ui-button--danger,
 .remove-confirm-button {

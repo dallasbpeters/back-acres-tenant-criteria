@@ -25,8 +25,14 @@ import {
 
 const clerk = vi.hoisted(() => ({
   invite: vi.fn(),
+  mail: vi.fn(),
   revoke: vi.fn(),
   users: vi.fn(),
+}));
+vi.mock("@/lib/leases/mail", () => ({ sendLeaseMail: clerk.mail }));
+vi.mock("@/lib/email-brand", () => ({
+  currentEmailBrand: () =>
+    Promise.resolve({ logoUrl: null, name: "Saved Brand" }),
 }));
 vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn(() => Promise.resolve({ isAuthenticated: false, userId: null })),
@@ -46,8 +52,12 @@ beforeEach(async () => {
   let count = 0;
   clerk.invite.mockImplementation(() => {
     count += 1;
-    return Promise.resolve({ id: `inv_${count}` });
+    return Promise.resolve({
+      id: `inv_${count}`,
+      url: `https://clerk.example.invalid/accept?ticket=${count}`,
+    });
   });
+  clerk.mail.mockResolvedValue(new Response("{}", { status: 200 }));
   clerk.revoke.mockResolvedValue({});
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture");
   vi.stubEnv("CLERK_SECRET_KEY", "sk_test_fixture");
@@ -84,8 +94,18 @@ describe("tenant invitations", () => {
     expect(clerk.invite).toHaveBeenCalledWith(
       expect.objectContaining({
         emailAddress: "new.tenant@example.invalid",
-        notify: true,
+        notify: false,
         redirectUrl: "https://rental.example.invalid/sign-up",
+      })
+    );
+    expect(clerk.mail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        brand: { logoUrl: null, name: "Saved Brand" },
+        subject: "Saved Brand: your tenant portal invitation",
+        text: expect.stringContaining(
+          "https://clerk.example.invalid/accept?ticket=1"
+        ),
+        to: "new.tenant@example.invalid",
       })
     );
     const [row] = await pending();
@@ -106,6 +126,12 @@ describe("tenant invitations", () => {
     const response = await invite();
     expect(response.status).toBe(409);
     expect((await response.json()).error).toContain("turn on Email address");
+    expect(await pending()).toEqual([]);
+  });
+  it("revokes the Clerk invitation when our email is not accepted", async () => {
+    clerk.mail.mockResolvedValueOnce(new Response("{}", { status: 422 }));
+    expect((await invite()).status).toBe(503);
+    expect(clerk.revoke).toHaveBeenCalledWith("inv_1");
     expect(await pending()).toEqual([]);
   });
   it("updates one pending invitation when the owner invites again", async () => {

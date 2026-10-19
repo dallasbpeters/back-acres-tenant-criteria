@@ -105,10 +105,18 @@ async function updateInvitation(
     return reply({ error: "Invitation not found." }, 404);
   }
   await revokeClerkInvitation(invitation.clerkInvitationId);
-  const clerkInvitationId =
-    command.action === "resendInvite"
-      ? await sendClerkInvitation(invitation.email)
-      : invitation.clerkInvitationId;
+  let { clerkInvitationId } = invitation;
+  if (command.action === "resendInvite") {
+    const [property] = await d
+      .select({ data: properties.data })
+      .from(properties)
+      .where(eq(properties.id, invitation.propertyId));
+    clerkInvitationId = await sendClerkInvitation({
+      email: invitation.email,
+      name: invitation.name,
+      propertyName: property?.data.name ?? "your rental",
+    });
+  }
   await d
     .update(tenantInvitations)
     .set(
@@ -185,7 +193,11 @@ async function assignAccess(
   if (!clerkUserId) {
     // No verified account yet: email a Clerk invitation and keep the grant
     // pending until that email verifies and signs in.
-    const clerkInvitationId = await sendClerkInvitation(data.email);
+    const clerkInvitationId = await sendClerkInvitation({
+      email: data.email,
+      name: data.name,
+      propertyName: property.data.name,
+    });
     const [previous] = await d
       .select()
       .from(tenantInvitations)

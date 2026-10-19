@@ -41,9 +41,11 @@ import {
 
 const clerk = vi.hoisted(() => ({
   invite: vi.fn(),
+  mail: vi.fn(),
   userId: "user_tenant_a" as string | null,
   users: vi.fn(),
 }));
+vi.mock("@/lib/leases/mail", () => ({ sendLeaseMail: clerk.mail }));
 vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn(() =>
     Promise.resolve({
@@ -72,7 +74,11 @@ beforeEach(async () => {
   await reset();
   clerk.userId = "user_tenant_a";
   clerk.users.mockResolvedValue({ data: [verifiedUser] });
-  clerk.invite.mockResolvedValue({ id: "inv_fixture" });
+  clerk.invite.mockResolvedValue({
+    id: "inv_fixture",
+    url: "https://clerk.example.invalid/accept?ticket=fixture",
+  });
+  clerk.mail.mockResolvedValue(new Response("{}", { status: 200 }));
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture");
   vi.stubEnv("CLERK_SECRET_KEY", "sk_test_fixture");
 });

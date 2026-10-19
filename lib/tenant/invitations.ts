@@ -2,20 +2,49 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tenantInvitations } from "@/lib/db/schema";
+import { currentEmailBrand } from "@/lib/email-brand";
+import { sendLeaseMail } from "@/lib/leases/mail";
 import { notRemoved } from "@/lib/management/not-removed";
 import { siteUrl } from "@/lib/management/security";
 import { tenantClerkClient } from "./client";
 import { grantTenantAccess } from "./grants";
 
-/** Emails a Clerk sign-up invitation that returns the tenant to this site. */
-export async function sendClerkInvitation(email: string) {
+/**
+ * Creates a Clerk sign-up invitation and emails its link in the app's own
+ * branded email (Clerk's default email has no Back Acres branding). If our
+ * email is not accepted, the Clerk invitation is revoked so nothing dangles.
+ */
+export async function sendClerkInvitation({
+  email,
+  name,
+  propertyName,
+}: {
+  email: string;
+  name: string;
+  propertyName: string;
+}) {
   const client = await tenantClerkClient();
   const invitation = await client.invitations.createInvitation({
     emailAddress: email,
     ignoreExisting: true,
-    notify: true,
+    notify: false,
     redirectUrl: new URL("/sign-up", siteUrl()).toString(),
   });
+  if (!invitation.url) {
+    await revokeClerkInvitation(invitation.id);
+    throw new Error("Clerk did not return an invitation link.");
+  }
+  const brand = await currentEmailBrand();
+  const response = await sendLeaseMail({
+    brand,
+    subject: `${brand.name}: your tenant portal invitation`,
+    text: `Hello ${name},\n\n${brand.name} invited you to the tenant portal for ${propertyName}. Create your account with this email address to see your lease, payments, renters insurance, and maintenance requests:\n${invitation.url}\n\nThis invitation is for ${email}. If you did not expect it, you can ignore this email.`,
+    to: email,
+  });
+  if (!response.ok) {
+    await revokeClerkInvitation(invitation.id);
+    throw new Error("The invitation email was not accepted.");
+  }
   return invitation.id;
 }
 

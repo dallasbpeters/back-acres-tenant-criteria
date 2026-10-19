@@ -4,7 +4,7 @@ import { tenantAuthReady } from "@/lib/tenant/config";
 export const metadata = { title: "Tenant sign in | Back Acres" };
 export default function SignInPage() {
   return (
-    <ManagementShell title="Tenant sign in">
+    <ManagementShell title="">
       <div className="tenant-auth">
         {tenantAuthReady() ? (
           <SignIn
