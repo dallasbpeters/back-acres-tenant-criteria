@@ -4,8 +4,13 @@ const pattern1 = /\s+/;
 
 import { PDFDocument, type PDFFont } from "pdf-lib";
 import type { leasePackets, leaseSigners } from "@/lib/db/signing";
+import { findInitialBlanks } from "./find-initials";
 import { leaseFonts } from "./pdf-fonts";
-import { fillSignatures } from "./signature-page";
+import {
+  decodeInitialPositions,
+  fillSignatures,
+  signerInitials,
+} from "./signature-page";
 
 /**
  * Draws recorded signatures on each signer's line in the lease, then adds
@@ -33,7 +38,17 @@ export async function signaturePdf(
   const fonts = await leaseFonts(pdf),
     font = fonts.label,
     bold = fonts.labelBold;
-  await fillSignatures(pdf, signers, fonts);
+  // Leases frozen before blank positions were recorded: find the blanks in
+  // the PDF itself, but only when someone actually initialed.
+  const recorded = decodeInitialPositions(pdf.getKeywords() ?? "");
+  const blanks =
+    recorded ??
+    (signers.some((s) => signerInitials(s.evidence))
+      ? await findInitialBlanks(Buffer.from(packet.basePdf, "base64")).catch(
+          () => []
+        )
+      : []);
+  await fillSignatures(pdf, signers, fonts, blanks);
   let page = pdf.addPage([612, 792]),
     y = 740;
   const safe = (s: string) =>

@@ -3,7 +3,6 @@ import { z } from "zod";
 /** "Tenant initials: ______", "Landlord's initials ____" and similar. */
 const spotPattern =
   /\b(tenant|landlord|resident|owner)?(?:['’]s)?\s*initials?\s*:?\s*(_{3,})/gi;
-const sentenceStart = /[.!?\n]\s+(?=[^.!?\n]*$)/;
 const wordPattern = /[A-Za-z]+/g;
 const blankPattern = /_{3,}/;
 const lineBreak = /\n/;
@@ -30,9 +29,9 @@ export function initialSpots(body: string): InitialSpot[] {
   const spots: InitialSpot[] = [];
   for (const match of body.matchAll(spotPattern)) {
     const at = match.index ?? 0;
-    const before = body.slice(Math.max(0, at - 400), at);
-    const start = before.search(sentenceStart);
-    const lead = (start >= 0 ? before.slice(start + 1) : before).trim();
+    // The paragraph the blank is in, so the signer sees what they confirm.
+    const paragraph = body.slice(body.lastIndexOf("\n", at) + 1, at);
+    const lead = paragraph.slice(-260).trim();
     const after = body.slice(at + match[0].length).split(lineBreak)[0] ?? "";
     const excerpt = `${lead} ${match[0].replace(blankPattern, "____")}${after}`
       .replace(spaces, " ")

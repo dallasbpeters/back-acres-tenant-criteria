@@ -21,6 +21,7 @@ import {
   residentLinks,
   tenantAccess,
 } from "@/lib/db/schema";
+import { backfillLeaseDeposits } from "@/lib/leases/deposits";
 import { disclosureFields } from "@/lib/leases/disclosures";
 import { documentText, leaseDocumentSchema } from "@/lib/leases/document";
 import { leaseFields } from "@/lib/management/leases";
@@ -109,6 +110,13 @@ export async function GET(request: NextRequest) {
   }
   try {
     const d = db();
+    // Fully signed leases from before automatic deposits get theirs now.
+    await backfillLeaseDeposits().catch((error) =>
+      console.error(
+        "Lease deposit backfill failed",
+        error instanceof Error ? error.message : String(error)
+      )
+    );
     const removedGroups = d
       .selectDistinctOn([removedRecords.groupId])
       .from(removedRecords)

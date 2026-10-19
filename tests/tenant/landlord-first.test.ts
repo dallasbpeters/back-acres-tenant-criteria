@@ -26,6 +26,7 @@ import {
   leaseTemplates,
   tenantInvitations,
 } from "../../lib/db/schema";
+import { backfillLeaseDeposits } from "../../lib/leases/deposits";
 import { digest } from "../../lib/leases/signing-model";
 import {
   pg,
@@ -270,6 +271,10 @@ describe("landlord signs first", () => {
     ]);
     const [invitation] = await db().select().from(tenantInvitations);
     expect(invitation.invoiceIds).toEqual([deposits[0].id]);
+    // A lease signed before automatic deposits gets its deposit once.
+    await pg.exec("TRUNCATE rental_invoices CASCADE");
+    expect(await backfillLeaseDeposits()).toBe(1);
+    expect(await backfillLeaseDeposits()).toBe(0);
   });
   it("handles a tenant with only a mobile number", async () => {
     const created = await owner({

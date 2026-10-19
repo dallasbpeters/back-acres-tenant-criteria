@@ -147,11 +147,16 @@ export function encodeInitialPositions(blanks: InitialPosition[]) {
     )
     .join(";")}`;
 }
-function decodeInitialPositions(keywords: string): InitialPosition[] {
+export function decodeInitialPositions(
+  keywords: string
+): InitialPosition[] | null {
   const entry = keywords
     .split(" ")
     .find((word) => word.startsWith(INITIALS_PREFIX));
-  if (!entry || entry === INITIALS_PREFIX) {
+  if (!entry) {
+    return null;
+  }
+  if (entry === INITIALS_PREFIX) {
     return [];
   }
   return entry
@@ -169,7 +174,7 @@ function decodeInitialPositions(keywords: string): InitialPosition[] {
     });
 }
 /** The initials a signer adopted, from their signature evidence. */
-function signerInitials(evidence: string | null | undefined) {
+export function signerInitials(evidence: string | null | undefined) {
   try {
     const value = evidence ? JSON.parse(evidence).initials : null;
     return typeof value === "string" && value ? value : null;
@@ -187,9 +192,9 @@ function fillInitials(
     evidence?: string | null;
     signedAt: Date | null;
   })[],
-  font: PDFFont
+  font: PDFFont,
+  blanks: InitialPosition[]
 ) {
-  const blanks = decodeInitialPositions(pdf.getKeywords() ?? "");
   for (const blank of blanks) {
     const text = signatureOrder(signers)
       .filter((s) => s.signedAt && s.role === blank.role)
@@ -299,9 +304,16 @@ export async function fillSignatures(
     signaturePng: string | null;
     signedAt: Date | null;
   })[],
-  fonts: Fonts
+  fonts: Fonts,
+  /** Initials blanks; read from the PDF keywords when not given. */
+  initialBlanks?: InitialPosition[]
 ) {
-  fillInitials(pdf, signers, fonts.italic ?? fonts.label);
+  fillInitials(
+    pdf,
+    signers,
+    fonts.italic ?? fonts.label,
+    initialBlanks ?? decodeInitialPositions(pdf.getKeywords() ?? "") ?? []
+  );
   const ordered = signatureOrder(signers);
   for (const position of signaturePositions(pdf, signers, fonts)) {
     const signer = ordered[position.index];

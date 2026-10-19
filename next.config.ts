@@ -32,8 +32,14 @@ const nextConfig: NextConfig = {
     }));
   },
   outputFileTracingIncludes: {
-    "/api/**": ["./public/pdf-assets/fonts/*.woff"],
+    // pdfjs loads its worker by path, which file tracing cannot see.
+    "/api/**": [
+      "./public/pdf-assets/fonts/*.woff",
+      "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+    ],
   },
   reactStrictMode: true,
+  // pdfjs reads blank positions from frozen lease PDFs on the server.
+  serverExternalPackages: ["pdfjs-dist"],
 };
 export default nextConfig;

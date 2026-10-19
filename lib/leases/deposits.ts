@@ -151,3 +151,42 @@ export async function shareLeaseDeposits(
     }
   }
 }
+
+/**
+ * Creates deposit requests for fully signed leases that never got them,
+ * such as leases signed before this feature. A deposit the owner removed
+ * keeps its record, so it is not created again.
+ */
+export async function backfillLeaseDeposits() {
+  if (!paymentReady()) {
+    return 0;
+  }
+  const d = db();
+  const completed = await d
+    .select({ id: leasePackets.id })
+    .from(leasePackets)
+    .where(eq(leasePackets.status, "completed"));
+  if (!completed.length) {
+    return 0;
+  }
+  const ids = completed.flatMap((packet) =>
+    kinds.map((kind) => depositId(packet.id, kind.key))
+  );
+  const existing = new Set(
+    (
+      await d
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(inArray(invoices.id, ids))
+    ).map((row) => row.id)
+  );
+  let created = 0;
+  for (const packet of completed) {
+    if (kinds.some((kind) => existing.has(depositId(packet.id, kind.key)))) {
+      continue;
+    }
+    // biome-ignore lint/performance/noAwaitInLoops: Few leases; keep database load low.
+    created += (await createLeaseDeposits(packet.id)).length;
+  }
+  return created;
+}
