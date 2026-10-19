@@ -796,6 +796,16 @@
   .property-listing:only-child {
     grid-template-columns: minmax(0, 1fr);
   }
+  .property-listing:only-child .listing-gallery-footer {
+    grid-row: 2;
+  }
+  .property-listing:only-child .property-listing-info {
+    grid-row: 3;
+    grid-column: 1;
+  }
+  .property-listing:only-child .property-about {
+    grid-row: 4;
+  }
   .property-listing .listing-photo-grid {
     block-size: auto;
   }

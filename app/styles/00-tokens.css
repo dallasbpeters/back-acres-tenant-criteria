@@ -26,7 +26,7 @@
   --font-document: "Source Serif 4 Variable", Georgia, serif;
   --font-interface: "Public Sans Variable", sans-serif;
   --text-label: 0.8rem;
-  --text-body: 1.125rem;
+  --text-body: 1.025rem;
   --text-subheading: 1.25rem;
   --text-heading: clamp(1.5625rem, 1.354rem + 1.04vw, 2rem);
   --text-title: clamp(2.441rem, 1.996rem + 2.226vw, 3.375rem);
