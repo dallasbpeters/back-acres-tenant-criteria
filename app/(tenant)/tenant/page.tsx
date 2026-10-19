@@ -3,6 +3,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { ManagementShell } from "@/components/management/shell";
+import { TenantGettingStarted } from "@/components/tenant/getting-started";
 import { TenantInsurance } from "@/components/tenant/insurance";
 import { TenantLeaseList } from "@/components/tenant/leases";
 import { MaintenanceRequestList } from "@/components/tenant/maintenance-requests";
@@ -99,6 +100,12 @@ export default async function TenantPortal({
                     : ""}
                 </p>
               </header>
+              <TenantGettingStarted
+                insurance={insurance}
+                leases={leases}
+                payments={payments}
+                schedules={schedules}
+              />
               <section
                 aria-label={`${property?.data.name} leases`}
                 className="tenant-section"

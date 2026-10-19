@@ -690,3 +690,70 @@ a:not(.submit-button):not(.ui-button).tenant-tab:active {
   padding-block: 0.6rem;
   border-block-end: 1px solid var(--border);
 }
+/* Getting started checklist and other step lists. */
+.guide-steps {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.guide-step {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding-block: 0.85rem;
+  border-block-end: 1px solid var(--border);
+}
+.guide-step:last-child {
+  border-block-end: 0;
+}
+.guide-step-marker {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  font-family: var(--font-interface);
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--muted);
+  border: 1px solid var(--border-dark);
+  border-radius: 50%;
+}
+.guide-step[data-state="done"] .guide-step-marker {
+  --bg-current: var(--primary);
+  color: contrast-color(var(--primary));
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.guide-step[data-state="current"] .guide-step-marker {
+  color: var(--ink);
+  border: 2px solid var(--primary);
+}
+.guide-step-text {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: start;
+}
+.guide-step-title {
+  margin: 0;
+  font-family: var(--font-interface);
+  font-weight: 650;
+}
+.guide-step[data-state="done"] .guide-step-title {
+  color: var(--muted);
+}
+.guide-step-body {
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.guide-step-link {
+  font-family: var(--font-interface);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.guide-step[data-state="done"] .guide-step-link {
+  display: none;
+}

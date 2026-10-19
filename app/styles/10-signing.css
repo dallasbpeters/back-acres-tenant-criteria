@@ -419,3 +419,44 @@
   gap: 0.5rem 1rem;
   align-items: center;
 }
+/* Signing steps across the top of the signing page. */
+.signing-progress-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0 0 1rem;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.9rem;
+  list-style: none;
+  border-block-end: 1px solid var(--border);
+}
+.signing-progress-strip li {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  color: var(--muted);
+}
+.signing-progress-strip li span {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  border: 1px solid var(--border-dark);
+  border-radius: 50%;
+}
+.signing-progress-strip li[data-state="current"] {
+  font-weight: 650;
+  color: var(--ink);
+}
+.signing-progress-strip li[data-state="current"] span {
+  border: 2px solid var(--primary);
+}
+.signing-progress-strip li[data-state="done"] span {
+  --bg-current: var(--primary);
+  color: contrast-color(var(--primary));
+  background: var(--primary);
+  border-color: var(--primary);
+}

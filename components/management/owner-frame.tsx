@@ -155,6 +155,12 @@ export function OwnerFrame({
               >
                 Tenant access
               </a>
+              <a
+                aria-current={pathname === "/admin/guide" ? "page" : undefined}
+                href="/admin/guide"
+              >
+                How it works
+              </a>
               <div className="nav-divider" />
               <a
                 aria-current={

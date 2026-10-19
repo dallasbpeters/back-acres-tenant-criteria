@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { defaultInitials } from "@/lib/leases/initials";
 import { InitialsStep } from "./initials-step";
 import { SigningConfirmation } from "./signing-confirmation";
+import { SigningProgress } from "./signing-progress";
 
 const SignerPdfViewer = dynamic(
   () => import("./signer-pdf-viewer").then((m) => m.SignerPdfViewer),
@@ -344,18 +345,34 @@ export function LeaseSigner({ token }: { token: string }) {
     if (record) {
       if (record.verified && record.signedAt) {
         return (
-          <SigningConfirmation
-            busy={busy}
-            contact={contact}
-            onClaim={claim}
-            onDownload={download}
-            record={{ ...record, signedAt: record.signedAt }}
-          />
+          <>
+            <SigningProgress
+              hasInitials={spots.length > 0}
+              initialed
+              read
+              signed
+              tenant={record.role === "tenant"}
+            />
+            <SigningConfirmation
+              busy={busy}
+              contact={contact}
+              onClaim={claim}
+              onDownload={download}
+              record={{ ...record, signedAt: record.signedAt }}
+            />
+          </>
         );
       }
       if (record.verified) {
         return (
           <>
+            <SigningProgress
+              hasInitials={spots.length > 0}
+              initialed={initialsDone}
+              read={downloaded}
+              signed={false}
+              tenant={record.role === "tenant"}
+            />
             <h2>{record.brandName} · Residential lease</h2>
             <p>
               Signer: <strong>{record.name}</strong>
