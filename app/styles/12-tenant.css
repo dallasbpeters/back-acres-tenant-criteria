@@ -240,6 +240,10 @@
   border-block-end: 2px solid transparent;
 }
 
+.tenant-tab:hover {
+  text-decoration: none;
+}
+
 a:not(.submit-button):not(.ui-button).tenant-tab:active {
   background: transparent;
 }
