@@ -2849,7 +2849,7 @@ input[type="file"]:disabled::file-selector-button {
   color: var(--muted);
 }
 .lease-delivery-actions {
-  margin-block-start: 0.75rem;
+  margin-block: 0.75rem;
 }
 .signing-panel {
   gap: 1.25rem;
