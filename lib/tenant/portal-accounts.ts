@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { properties, tenantAccess } from "@/lib/db/schema";
+import { leaseSigners, properties, tenantAccess } from "@/lib/db/schema";
 import { notRemoved } from "@/lib/management/not-removed";
 import { tenantClerkClient } from "./client";
 import { grantTenantAccess } from "./grants";
@@ -78,6 +78,10 @@ export async function connectPortalAccount({
   if (!user) {
     return { error: "Portal account not found.", status: 404 } as const;
   }
+  // Claim leases first: their grants carry the name from the lease.
+  const leases =
+    (await claimLeaseSignersByPhone(clerkUserId, verifiedPhones(user))) +
+    (await claimLeaseSignersByEmail(clerkUserId, verifiedEmails(user)));
   const [active] = await db()
     .select({ id: tenantAccess.id })
     .from(tenantAccess)
@@ -89,19 +93,21 @@ export async function connectPortalAccount({
       )
     );
   if (!active) {
+    const [signer] = await db()
+      .select({ name: leaseSigners.name })
+      .from(leaseSigners)
+      .where(eq(leaseSigners.clerkUserId, clerkUserId))
+      .limit(1);
     await grantTenantAccess({
       actor,
       clerkUserId,
       grant: {
         invoiceIds: [],
-        name: display(user),
+        name: signer?.name ?? display(user),
         propertyId,
         scheduleIds: [],
       },
     });
   }
-  const leases =
-    (await claimLeaseSignersByPhone(clerkUserId, verifiedPhones(user))) +
-    (await claimLeaseSignersByEmail(clerkUserId, verifiedEmails(user)));
   return { leases, ok: true } as const;
 }

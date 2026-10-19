@@ -36,6 +36,11 @@ const input = z.discriminatedUnion("action", [
   z.object({ action: z.literal("resendInvite"), id: z.string().uuid() }),
   z.object({ action: z.literal("cancelInvite"), id: z.string().uuid() }),
   z.object({
+    action: z.literal("rename"),
+    id: z.string().uuid(),
+    name: z.string().trim().min(1).max(300),
+  }),
+  z.object({
     action: z.literal("connect"),
     clerkUserId: z.string().min(1).max(100),
     propertyId: z.string().uuid(),
@@ -76,7 +81,23 @@ export async function GET(request: NextRequest) {
   }
 }
 type Command = z.infer<typeof input>;
+const merge = (a: string[], b: string[]) => [...new Set([...a, ...b])];
 type Database = ReturnType<typeof db>;
+
+async function renameAccess(
+  d: Database,
+  command: Extract<Command, { action: "rename" }>
+) {
+  // Renaming only changes the app record, so it works without Clerk.
+  const [renamed] = await d
+    .update(tenantAccess)
+    .set({ name: command.name })
+    .where(eq(tenantAccess.id, command.id))
+    .returning({ id: tenantAccess.id });
+  return renamed
+    ? reply({ ok: true })
+    : reply({ error: "Tenant access not found." }, 404);
+}
 
 async function revokeAccess(
   d: Database,
@@ -248,7 +269,14 @@ async function assignAccess(
     if (previous) {
       await d
         .update(tenantInvitations)
-        .set({ ...grant, actor, clerkInvitationId })
+        .set({
+          ...grant,
+          actor,
+          clerkInvitationId,
+          // Inviting again keeps payments already shared with this invitation.
+          invoiceIds: merge(previous.invoiceIds, grant.invoiceIds),
+          scheduleIds: merge(previous.scheduleIds, grant.scheduleIds),
+        })
         .where(eq(tenantInvitations.id, previous.id));
     } else {
       await d.insert(tenantInvitations).values({
@@ -261,7 +289,27 @@ async function assignAccess(
     }
     return reply({ invited: true, ok: true });
   }
-  await grantTenantAccess({ actor, clerkUserId, grant });
+  // Connecting again keeps payments already shared with this account.
+  const [existing] = await d
+    .select()
+    .from(tenantAccess)
+    .where(
+      and(
+        eq(tenantAccess.clerkUserId, clerkUserId),
+        eq(tenantAccess.propertyId, data.propertyId)
+      )
+    );
+  await grantTenantAccess({
+    actor,
+    clerkUserId,
+    grant: existing
+      ? {
+          ...grant,
+          invoiceIds: merge(existing.invoiceIds, grant.invoiceIds),
+          scheduleIds: merge(existing.scheduleIds, grant.scheduleIds),
+        }
+      : grant,
+  });
   return reply({ ok: true });
 }
 
@@ -283,6 +331,9 @@ export async function POST(request: NextRequest) {
     const actor = (await getServerSession(authOptions))?.user?.email ?? "owner";
     if (command.action === "revoke") {
       return await revokeAccess(d, command, actor);
+    }
+    if (command.action === "rename") {
+      return await renameAccess(d, command);
     }
     if (command.action === "share") {
       // Sharing only changes app records, so it works without Clerk.

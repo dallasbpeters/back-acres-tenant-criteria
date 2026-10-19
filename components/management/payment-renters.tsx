@@ -48,12 +48,19 @@ export function PaymentRentersProvider({ children }: { children: ReactNode }) {
     setRenters([
       ...(
         data.assignments as (Omit<PaymentRenter, "email" | "type"> & {
+          clerkUserId: string;
           revokedAt: string | null;
         })[]
       )
         .filter((row) => !row.revokedAt)
         .map((row) => ({
-          email: "",
+          // The account's sign-in email, when it has one.
+          email:
+            (
+              data.accounts as
+                | { email: string | null; id: string }[]
+                | undefined
+            )?.find((account) => account.id === row.clerkUserId)?.email ?? "",
           id: row.id,
           invoiceIds: row.invoiceIds,
           name: row.name,
@@ -111,7 +118,7 @@ export function PaymentRentersProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function useRenters() {
+export function useRenters() {
   const value = useContext(Context);
   if (!value) {
     throw new Error("PaymentRentersProvider is missing.");

@@ -8,7 +8,7 @@ import { dollars } from "@/lib/management/model";
 import { terminalSchedules } from "@/lib/management/removal";
 import { requireValue } from "@/lib/required";
 import { Field, type PropertyRecord, PropertySelect } from "./dashboard";
-import { RenterSharing } from "./payment-renters";
+import { RenterSharing, useRenters } from "./payment-renters";
 import { RemoveButton } from "./remove-button";
 export interface RentScheduleRecord {
   collection: string;
@@ -39,7 +39,10 @@ export function BillingWorkspace({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [amount, setAmount] = useState(""),
-    [count, setCount] = useState("1");
+    [count, setCount] = useState("1"),
+    [renterKey, setRenterKey] = useState("");
+  const { renters, share } = useRenters();
+  const picked = renters.find((r) => `${r.type}-${r.id}` === renterKey);
   async function post(data: unknown) {
     setBusy(true);
     setError("");
@@ -94,6 +97,10 @@ export function BillingWorkspace({
             },
             id,
           });
+          if (ok && picked) {
+            // The new schedule shows in this renter's portal right away.
+            await share(picked, "schedule", id, true);
+          }
           if (ok) {
             posthog.capture("rent_payment_schedule_created", {
               collection: String(f.get("collection")),
@@ -102,6 +109,7 @@ export function BillingWorkspace({
             form.reset();
             setAmount("");
             setCount("1");
+            setRenterKey("");
           }
         }}
       >
@@ -119,9 +127,44 @@ export function BillingWorkspace({
                 Monthly invoice · tenant pays manually
               </option>
             </AppSelect>
-            <PropertySelect properties={properties} />
-            <Field label="Rent payer name" name="payerName" />
-            <Field label="Rent payer email" name="payerEmail" type="email" />
+            {renters.length > 0 && (
+              <AppSelect
+                label="Renter"
+                onValueChange={setRenterKey}
+                value={renterKey}
+              >
+                <option value="">
+                  Choose a renter, or type the payer below
+                </option>
+                {renters.map((renter) => (
+                  <option
+                    key={`${renter.type}-${renter.id}`}
+                    value={`${renter.type}-${renter.id}`}
+                  >
+                    {renter.name}
+                    {renter.type === "invitation" ? " (invited)" : ""}
+                  </option>
+                ))}
+              </AppSelect>
+            )}
+            <PropertySelect
+              defaultValue={picked?.propertyId}
+              key={`property-${renterKey}`}
+              properties={properties}
+            />
+            <Field
+              key={`name-${renterKey}`}
+              label="Rent payer name"
+              name="payerName"
+              value={picked?.name}
+            />
+            <Field
+              key={`email-${renterKey}`}
+              label="Rent payer email"
+              name="payerEmail"
+              type="email"
+              value={picked?.email || undefined}
+            />
             <label className="field">
               Monthly rent amount ($)
               <input

@@ -514,15 +514,7 @@ a:not(.submit-button):not(.ui-button).tenant-tab:active {
   font-family: var(--font-interface);
   font-size: 0.95rem;
 }
-.portal-account-connect {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: end;
-}
-.tenant-access-list .small-note {
-  margin: 0.25rem 0 0;
-}
+
 .tenant-not-connected {
   display: grid;
   gap: 0.75rem;
@@ -537,4 +529,147 @@ a:not(.submit-button):not(.ui-button).tenant-tab:active {
   gap: 0.5rem;
   padding-inline-start: 1.25rem;
   margin: 0;
+}
+
+/* Owner Tenant access: one row per person, actions on the same line. */
+.tenant-admin {
+  display: grid;
+  gap: 2rem;
+  max-inline-size: 64rem;
+}
+.tenant-admin h2 {
+  margin: 0 0 0.75rem;
+  font-size: var(--text-subheading);
+}
+.tenant-admin-intro {
+  max-inline-size: 44rem;
+  margin: 0;
+  color: var(--muted);
+}
+.tenant-admin-status:empty {
+  display: none;
+}
+.tenant-admin-status {
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+}
+.tenant-rows {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-row {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.2fr) minmax(10rem, 1fr) auto;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  padding-block: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+.tenant-row-who {
+  display: grid;
+  gap: 0.15rem;
+  min-inline-size: 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+.tenant-row-who .small-note {
+  margin: 0;
+}
+.tenant-row-access {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.tenant-access-chip {
+  --bg-current: color-mix(in oklch, var(--primary) 10%, var(--paper));
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  font-family: var(--font-interface);
+  font-size: 0.85rem;
+  background: color-mix(in oklch, var(--primary) 10%, var(--paper));
+  border: 1px solid color-mix(in oklch, var(--primary) 30%, var(--paper));
+}
+.tenant-access-chip[data-active="false"] {
+  --bg-current: var(--paper);
+  color: var(--muted);
+  background: var(--paper);
+  border-color: var(--border);
+  border-style: dashed;
+}
+.owner-main .tenant-access-chip .tenant-access-remove,
+.tenant-access-chip .tenant-access-remove {
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
+  padding: 0;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.tenant-access-chip .tenant-access-remove:hover {
+  color: var(--danger);
+  background: transparent;
+}
+.tenant-row-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+.tenant-row-select {
+  inline-size: 12rem;
+  margin: 0;
+}
+.tenant-row-confirm {
+  --bg-current: color-mix(in oklch, var(--danger) 8%, var(--paper));
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: color-mix(in oklch, var(--danger) 8%, var(--paper));
+  border-inline-start: 3px solid var(--danger);
+}
+.tenant-row-confirm p {
+  flex: 1 1 20rem;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+}
+.tenant-invite {
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-invite summary {
+  font-family: var(--font-interface);
+  font-weight: 600;
+  cursor: pointer;
+}
+.tenant-invite-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-block-start: 1rem;
+}
+@media (max-width: 760px) {
+  .tenant-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tenant-row-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
 }

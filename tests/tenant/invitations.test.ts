@@ -151,9 +151,10 @@ describe("tenant invitations", () => {
     await invite({ invoiceIds: [], name: "Renamed Tenant" });
     const rows = await pending();
     expect(rows).toHaveLength(1);
+    // Inviting again keeps the payments already shared.
     expect(rows[0]).toMatchObject({
       clerkInvitationId: "inv_2",
-      invoiceIds: [],
+      invoiceIds: [invoiceId],
       name: "Renamed Tenant",
     });
   });

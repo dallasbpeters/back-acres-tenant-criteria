@@ -535,13 +535,16 @@ export function Field({
   );
 }
 export function PropertySelect({
+  defaultValue,
   properties,
 }: {
+  defaultValue?: string;
   properties: PropertyRecord[];
 }) {
   return (
     <AppSelect
       aria-label="Property"
+      defaultValue={defaultValue}
       label={<>Property</>}
       name="propertyId"
       required
