@@ -19,7 +19,12 @@ import {
   POST as signingPost,
 } from "../../app/api/lease-signing/[token]/route";
 import { db } from "../../lib/db";
-import { leaseDrafts, leaseSigners, leaseTemplates } from "../../lib/db/schema";
+import {
+  leaseDrafts,
+  leaseSigners,
+  leaseTemplates,
+  tenantInvitations,
+} from "../../lib/db/schema";
 import { SIGNATURE_PAGE_KEYWORD } from "../../lib/leases/signature-page";
 import { digest } from "../../lib/leases/signing-model";
 import {
@@ -33,13 +38,26 @@ import {
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn(() => Promise.resolve({ isAuthenticated: false, userId: null })),
-  createClerkClient: vi.fn(() => ({})),
+  createClerkClient: vi.fn(() => ({
+    invitations: {
+      createInvitation: vi.fn(() =>
+        Promise.resolve({
+          id: "inv_fixture",
+          url: "https://clerk.example.invalid/accept?ticket=1",
+        })
+      ),
+      getInvitationList: vi.fn(() => Promise.resolve({ data: [] })),
+      revokeInvitation: vi.fn(() => Promise.resolve({})),
+    },
+    users: { getUserList: vi.fn(() => Promise.resolve({ data: [] })) },
+  })),
 }));
 
 const origin = "https://rental.example.invalid";
 const draftId = "66666666-6666-4666-8666-666666666666";
 const templateId = "55555555-5555-4555-8555-555555555555";
 let mail: {
+  text: string;
   attachments: { filename: string }[];
   subject: string;
   to: string[];
@@ -49,9 +67,11 @@ beforeAll(start);
 beforeEach(async () => {
   await reset();
   await pg.exec(
-    "TRUNCATE lease_signers, lease_packets, lease_drafts, lease_templates CASCADE"
+    "TRUNCATE lease_signers, lease_packets, lease_drafts, lease_templates, tenant_invitations CASCADE"
   );
   vi.stubEnv("RESEND_API_KEY", "re_fixture");
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture");
+  vi.stubEnv("CLERK_SECRET_KEY", "sk_test_fixture");
   vi.stubEnv("FROM_EMAIL", "Back Acres <leases@example.invalid>");
   mail = [];
   vi.stubGlobal(
@@ -163,6 +183,19 @@ describe("landlord signs first", () => {
 
     const invite = mail.find((m) => m.to[0] === "tenant@example.invalid");
     expect(invite?.subject).toContain("review and sign your lease");
+    // Sending the tenant's link also sets up their portal access.
+    expect(invite?.text).toContain(
+      "https://clerk.example.invalid/accept?ticket=1"
+    );
+    const invitations = await db().select().from(tenantInvitations);
+    expect(invitations).toMatchObject([
+      {
+        email: "tenant@example.invalid",
+        name: "Tenant A",
+        propertyId,
+        status: "pending",
+      },
+    ]);
     const receipt = mail.find((m) => m.to[0] === "owner@example.invalid");
     expect(receipt?.subject).toContain("you signed your lease");
 
