@@ -16,8 +16,8 @@ export default async function TenantSettings() {
     <ManagementShell title="Account settings">
       <TenantNavigation />
       <p>
-        Manage your sign-in email, password, connected accounts, and security.
-        Property access remains linked to your account when your email changes.
+        Manage how you sign in: your phone number, email, password and security.
+        Your rental stays connected if you change any of them.
       </p>
       {accessRows.map((access) => (
         <TenantContactForm

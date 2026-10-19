@@ -57,8 +57,7 @@ export function TenantLeaseList({
         </ul>
       ) : (
         <p className="tenant-empty-state">
-          No leases yet. A lease appears here after {contact} sends it to your
-          verified email address.
+          No leases yet. When {contact} sends you a lease, it appears here.
         </p>
       )}
     </>

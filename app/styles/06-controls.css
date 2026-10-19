@@ -90,7 +90,7 @@ a:not(.submit-button):not(.ui-button):active {
 .check-row {
   display: flex;
   gap: var(--space-md);
-  align-items: flex-start;
+  align-items: center;
   min-block-size: 2.75rem;
   font-size: var(--text-body);
   line-height: 1.6;
@@ -100,7 +100,6 @@ a:not(.submit-button):not(.ui-button):active {
   flex: none;
   inline-size: 1.25rem;
   block-size: 1.25rem;
-  margin-block: 0.25rem 0;
   margin-inline: 0;
   accent-color: var(--accent);
   cursor: inherit;

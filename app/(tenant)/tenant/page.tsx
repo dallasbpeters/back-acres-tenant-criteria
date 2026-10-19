@@ -7,6 +7,7 @@ import { TenantInsurance } from "@/components/tenant/insurance";
 import { TenantLeaseList } from "@/components/tenant/leases";
 import { MaintenanceRequestList } from "@/components/tenant/maintenance-requests";
 import { TenantNavigation } from "@/components/tenant/navigation";
+import { TenantNotConnected } from "@/components/tenant/not-connected";
 import { PaymentHistory } from "@/components/tenant/payments";
 import { db } from "@/lib/db";
 import {
@@ -27,6 +28,7 @@ import {
   claimLeaseSignersByPhone,
 } from "@/lib/tenant/lease-claims";
 import {
+  accountLabel,
   tenantLeases,
   verifiedEmails,
   verifiedPhones,
@@ -160,15 +162,7 @@ export default async function TenantPortal({
         })
       )
     ) : (
-      <section className="tenant-empty">
-        <h2>Your account is ready</h2>
-        <p>
-          Back Acres Rentals needs to connect your tenancy before you can view
-          payments or submit maintenance requests. Send Back Acres Rentals your
-          verified account email.
-        </p>
-        <a href="/tenant/settings">Manage account settings</a>
-      </section>
+      <TenantNotConnected signedInAs={accountLabel(user)} />
     );
   } catch {
     content = (

@@ -5,11 +5,13 @@ import type { ReactNode } from "react";
 import { ManagementShell } from "@/components/management/shell";
 import { MaintenanceRequestList } from "@/components/tenant/maintenance-requests";
 import { TenantNavigation } from "@/components/tenant/navigation";
+import { TenantNotConnected } from "@/components/tenant/not-connected";
 import { TenantRequestForm } from "@/components/tenant/request-form";
 import { db } from "@/lib/db";
 import { properties } from "@/lib/db/schema";
 import { assignments, tenantIdentity } from "@/lib/tenant/access";
 import { tenantAuthReady } from "@/lib/tenant/config";
+import { accountLabel } from "@/lib/tenant/leases";
 import { tenantMaintenanceRequests } from "@/lib/tenant/maintenance";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Maintenance | Back Acres tenant portal" };
@@ -81,14 +83,7 @@ export default async function TenantMaintenance() {
         })
       )
     ) : (
-      <section className="tenant-empty">
-        <h2>Your account is not connected yet</h2>
-        <p>
-          Back Acres Rentals needs to connect your tenancy before you can submit
-          maintenance requests. Send Back Acres Rentals your verified account
-          email.
-        </p>
-      </section>
+      <TenantNotConnected signedInAs={accountLabel(user)} />
     );
   } catch {
     content = (

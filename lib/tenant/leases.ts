@@ -30,6 +30,22 @@ export function verifiedEmails(
     .map((address) => address.emailAddress.trim().toLowerCase());
 }
 
+/** How the signed-in tenant identifies themself: phone, email or username. */
+export function accountLabel(
+  user: {
+    primaryEmailAddress?: { emailAddress: string } | null;
+    primaryPhoneNumber?: { phoneNumber: string } | null;
+    username?: string | null;
+  } | null
+) {
+  return (
+    user?.primaryPhoneNumber?.phoneNumber ??
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.username ??
+    ""
+  );
+}
+
 /** Verified phone numbers, in the +1XXXXXXXXXX form signers are stored in. */
 export function verifiedPhones(
   user: {
