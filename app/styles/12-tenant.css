@@ -242,7 +242,7 @@
 }
 
 .tenant-tab:active {
-  background-color: transparent;
+  background: transparent;
 }
 
 .tenant-tab {
@@ -398,4 +398,97 @@
   .tenant-tab {
     white-space: nowrap;
   }
+}
+/* Tenant overview: one rhythm for every section. Property title, then
+   sections that each open with a rule, a heading and a quiet note. */
+.tenant-welcome {
+  margin: 0 0 1.5rem;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.tenant-tenancy > .tenant-property-header {
+  margin-block-end: 0;
+}
+.tenant-section {
+  padding-block: 2rem;
+  margin: 0;
+  border-block-start: 1px solid var(--border);
+}
+.tenant-section:last-child {
+  padding-block-end: 0;
+}
+.tenant-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: 1.25rem;
+}
+.tenant-section-head h3 {
+  margin: 0;
+  font-size: var(--text-subheading);
+}
+.tenant-section-head .small-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+.tenant-section h4 {
+  margin: 1.75rem 0 0.75rem;
+  font-family: var(--font-interface);
+  font-size: var(--text-label);
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tenant-section .tenant-empty-state {
+  padding: 1rem 1.25rem;
+}
+.tenant-section > .small-note,
+.tenant-grid .small-note {
+  margin-block: 0.75rem 0;
+}
+/* A lease: text on the left, actions on the right; stacked on phones. */
+.tenant-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.tenant-row-text {
+  min-inline-size: 0;
+}
+.tenant-lease-actions {
+  margin-block-start: 0;
+}
+.tenant-lease-list .tenant-row-text .small-note {
+  margin-block-end: 0;
+}
+/* Insurance upload as its own panel below the list. */
+.tenant-section .tenant-insurance-form {
+  gap: 1.25rem;
+  margin-block-start: 1.5rem;
+}
+.tenant-section .tenant-insurance-form h4 {
+  margin: 0;
+}
+.tenant-section .tenant-insurance-list {
+  margin-block-end: 0;
+}
+.tenant-schedule-list {
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
+  list-style: none;
+}
+.tenant-grid.tenant-section {
+  gap: clamp(2rem, 5vw, 4rem);
+}
+.tenant-grid .tenant-section-head .property-details-link {
+  font-family: var(--font-interface);
+  font-size: 0.95rem;
 }

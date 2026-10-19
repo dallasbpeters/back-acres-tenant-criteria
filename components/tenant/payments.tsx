@@ -14,12 +14,14 @@ export function PaymentHistory({
 }) {
   return (
     <>
-      <h3>Payment history</h3>
-      <p className="small-note">
-        {paymentMode() === "test"
-          ? "Test payments only. No real payments are collected."
-          : "Payments shared by Back Acres Rentals. Bank payments may take several business days to settle."}
-      </p>
+      <header className="tenant-section-head">
+        <h3>Payments</h3>
+        <p className="small-note">
+          {paymentMode() === "test"
+            ? "Test payments only. No real payments are collected."
+            : "Payments shared by Back Acres Rentals. Bank payments may take several business days to settle."}
+        </p>
+      </header>
       {payments.length ? (
         <div className="tenant-table-wrap">
           <table>
@@ -49,7 +51,9 @@ export function PaymentHistory({
           </table>
         </div>
       ) : (
-        <p>No payment records have been shared yet.</p>
+        <p className="tenant-empty-state">
+          No payment records have been shared yet.
+        </p>
       )}
       {!!history.length && (
         <details>
@@ -88,9 +92,9 @@ export function PaymentHistory({
           </ul>
         </details>
       )}
-      <h3>Automatic payments</h3>
+      <h4>Automatic payments</h4>
       {schedules.length ? (
-        <ul>
+        <ul className="tenant-schedule-list">
           {schedules.map((schedule) => (
             <li key={schedule.id}>
               {dollars(schedule.monthlyCents)} per month ·{" "}
@@ -100,9 +104,11 @@ export function PaymentHistory({
           ))}
         </ul>
       ) : (
-        <p>No automatic payment schedules have been shared.</p>
+        <p className="tenant-empty-state">
+          No automatic payment schedules have been shared.
+        </p>
       )}
-      <p>
+      <p className="small-note">
         Use your private enrollment link to authorize or stop automatic
         payments. Contact {contact} to change the payment amount or bank
         account.

@@ -61,11 +61,18 @@ export default async function TenantPortal() {
           } = await tenancyRecords(access, emails);
           return (
             <section className="tenant-tenancy" key={access.id}>
-              <h2>{property?.data.name}</h2>
-              <p>{property?.data.address}</p>
+              <header className="tenant-property-header">
+                <h2>{property?.data.name}</h2>
+                <p>
+                  {property?.data.address}
+                  {property?.data.contact
+                    ? ` · Contact: ${property.data.contact}`
+                    : ""}
+                </p>
+              </header>
               <section
                 aria-label={`${property?.data.name} leases`}
-                className="tenant-leases"
+                className="tenant-section"
                 id={index === 0 ? "leases" : undefined}
               >
                 <TenantLeaseList
@@ -75,7 +82,7 @@ export default async function TenantPortal() {
               </section>
               <section
                 aria-label={`${property?.data.name} renters insurance`}
-                className="tenant-leases"
+                className="tenant-section"
                 id={index === 0 ? "insurance" : undefined}
               >
                 <TenantInsurance
@@ -93,7 +100,7 @@ export default async function TenantPortal() {
                   }))}
                 />
               </section>
-              <div className="tenant-grid">
+              <div className="tenant-grid tenant-section">
                 <section
                   aria-label={`${property?.data.name} payments`}
                   id={index === 0 ? "payments" : undefined}
@@ -109,17 +116,16 @@ export default async function TenantPortal() {
                   aria-label={`${property?.data.name} maintenance`}
                   id={index === 0 ? "maintenance" : undefined}
                 >
-                  <h3>Recent maintenance requests</h3>
+                  <header className="tenant-section-head">
+                    <h3>Maintenance</h3>
+                    <a
+                      className="property-details-link"
+                      href="/tenant/maintenance"
+                    >
+                      Submit or review requests
+                    </a>
+                  </header>
                   <MaintenanceRequestList requests={requests} />
-                  <a
-                    className="property-details-link"
-                    href="/tenant/maintenance"
-                  >
-                    Submit or review maintenance requests
-                  </a>
-                  <p className="small-note">
-                    Property contact: {property?.data.contact}
-                  </p>
                 </section>
               </div>
             </section>
@@ -148,7 +154,9 @@ export default async function TenantPortal() {
   return (
     <ManagementShell title="Tenant portal">
       <TenantNavigation />
-      <p>Welcome{user?.firstName ? `, ${user.firstName}` : ""}.</p>
+      <p className="tenant-welcome">
+        Welcome{user?.firstName ? `, ${user.firstName}` : ""}.
+      </p>
       {content}
     </ManagementShell>
   );

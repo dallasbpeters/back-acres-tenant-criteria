@@ -62,10 +62,10 @@ export async function POST(
     if (!updated) {
       return reply({ error: "You already signed this lease." }, 409);
     }
-    return NextResponse.redirect(new URL(`/sign/lease/${token}`, request.url), {
-      headers: { "Cache-Control": "private, no-store" },
-      status: 303,
-    });
+    return NextResponse.json(
+      { url: `/sign/lease/${token}` },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
   } catch (error) {
     console.error(
       "Portal lease signing failed",

@@ -10,7 +10,12 @@ import {
   it,
   vi,
 } from "vitest";
+import {
+  GET as signingGet,
+  POST as signingPost,
+} from "../../app/api/lease-signing/[token]/route";
 import { GET as download } from "../../app/api/tenant/leases/[packetId]/route";
+import { POST as portalSign } from "../../app/api/tenant/leases/[packetId]/sign/route";
 import { db } from "../../lib/db";
 import {
   leaseDrafts,
@@ -281,5 +286,61 @@ describe("tenant lease archive", () => {
   });
   it("rejects a malformed packet id", async () => {
     expect((await get("not-a-uuid")).status).toBe(404);
+  });
+});
+
+const origin = "https://rental.example.invalid";
+const signFromPortal = () =>
+  portalSign(
+    new NextRequest(`${origin}/api/tenant/leases/${packetId}/sign`, {
+      headers: { origin },
+      method: "POST",
+    }),
+    { params: Promise.resolve({ packetId }) }
+  );
+
+describe("signing without a second email code", () => {
+  it("opens signing from the portal and starts a session without a code", async () => {
+    await lease([{ email: "tenant@example.invalid" }]);
+    await grant();
+    const opening = await signFromPortal();
+    expect(opening.status).toBe(200);
+    const [, , , token] = ((await opening.json()).url as string).split("/");
+    const params = { params: Promise.resolve({ token }) };
+    const url = `${origin}/api/lease-signing/${token}`;
+    expect(
+      (await (await signingGet(new NextRequest(url), params)).json()).verified
+    ).toBe(false);
+    const opened = await signingPost(
+      new NextRequest(url, {
+        body: JSON.stringify({ action: "open" }),
+        headers: { "content-type": "application/json", origin },
+        method: "POST",
+      }),
+      params
+    );
+    expect(opened.status).toBe(200);
+    const { session } = await opened.json();
+    const record = await (
+      await signingGet(
+        new NextRequest(url, {
+          headers: { authorization: `Bearer ${session}` },
+        }),
+        params
+      )
+    ).json();
+    expect(record).toMatchObject({ name: "Signer 0", verified: true });
+  });
+  it("does not open signing for a tenant who is not a signer or already signed", async () => {
+    await lease([
+      { email: "tenant@example.invalid", signedAt: new Date("2026-10-01") },
+      { email: "owner@example.invalid" },
+    ]);
+    await grant();
+    expect((await signFromPortal()).status).toBe(409);
+    clerk.emails = [
+      { emailAddress: "someone@example.invalid", status: "verified" },
+    ];
+    expect((await signFromPortal()).status).toBe(404);
   });
 });

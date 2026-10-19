@@ -72,7 +72,13 @@ export function TenantInsurance({
   }
   return (
     <>
-      <h3>Renters insurance</h3>
+      <header className="tenant-section-head">
+        <h3>Renters insurance</h3>
+        <p className="small-note">
+          Upload your declarations page or certificate of insurance. PDF, JPG,
+          or PNG, up to 10 MB.
+        </p>
+      </header>
       {documents.length ? (
         <ul className="tenant-insurance-list">
           {documents.map((document) => (
@@ -103,13 +109,12 @@ export function TenantInsurance({
           ))}
         </ul>
       ) : (
-        <p>No insurance documents uploaded yet.</p>
-      )}
-      <form className="tenant-insurance-form" onSubmit={submit}>
-        <p className="small-note">
-          Upload your declarations page or certificate of insurance. PDF, JPG,
-          or PNG, up to 10 MB.
+        <p className="tenant-empty-state">
+          No insurance documents uploaded yet.
         </p>
+      )}
+      <form className="tenant-insurance-form tenant-panel" onSubmit={submit}>
+        <h4>Add a policy</h4>
         <div className="fields">
           <label className="field">
             Insurance company

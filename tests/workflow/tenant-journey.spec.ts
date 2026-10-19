@@ -27,7 +27,6 @@ const fullName = "Test Tenant";
 const body =
   "TEST ONLY — NOT A REAL CONTRACT. Synthetic tenant walkthrough. No tenancy or financial obligations are created.";
 const signingLink = /\/sign\/lease\/([a-f0-9]{64})/;
-const emailCode = /verification code is (\d{6})/;
 const signInPath = /\/sign-in/;
 
 type Row = Record<string, string>;
@@ -83,23 +82,13 @@ async function message(
 }
 async function sign(
   page: Page,
-  request: APIRequestContext,
   token: string,
   name: string,
   recipient: string
 ) {
   await page.bringToFront();
-  const endpoint = `/api/lease-signing/${token}`;
   await page.goto(`/sign/lease/${token}`);
-  await expect(
-    page.getByText("Need paper instead?", { exact: false })
-  ).toContainText("Test Owner (owner@example.invalid)");
-  await post(request, endpoint, { action: "code" });
-  const code = await message(request, recipient, emailCode);
-  await page.getByLabel("Six-digit email code").fill(code);
-  await page
-    .getByRole("button", { exact: true, name: "Verify and review lease" })
-    .click();
+  // Opening the private link starts the session; no emailed code.
   await expect(page.getByText(body, { exact: true })).toBeVisible();
   const download = page.waitForEvent("download");
   await page
@@ -345,7 +334,6 @@ test("tenant lifecycle: account, assigned access, signed lease PDF, payment, ACH
         }
         await sign(
           signer.email === email ? page : ownerPage,
-          request,
           link,
           signer.name,
           signer.email

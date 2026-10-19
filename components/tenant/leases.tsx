@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { SignLeaseButton } from "@/components/tenant/sign-lease-button";
 import type { TenantLease } from "@/lib/tenant/leases";
 
 const date = (value: Date) =>
@@ -23,25 +23,24 @@ export function TenantLeaseList({
 }) {
   return (
     <>
-      <h3>Leases</h3>
+      <header className="tenant-section-head">
+        <h3>Leases</h3>
+      </header>
       {leases.length ? (
         <ul className="tenant-lease-list">
           {leases.map((lease) => (
-            <li key={lease.id}>
-              <p className="tenant-lease-title">Lease for {lease.tenantName}</p>
-              <p className="small-note">
-                Sent {date(lease.createdAt)} · {status(lease)}
-              </p>
+            <li className="tenant-row" key={lease.id}>
+              <div className="tenant-row-text">
+                <p className="tenant-lease-title">
+                  Lease for {lease.tenantName}
+                </p>
+                <p className="small-note">
+                  Sent {date(lease.createdAt)} · {status(lease)}
+                </p>
+              </div>
               <div className="tenant-lease-actions">
                 {lease.status === "awaiting" && !lease.mySignedAt && (
-                  <form
-                    action={`/api/tenant/leases/${lease.id}/sign`}
-                    method="post"
-                  >
-                    <Button type="submit" variant="primary">
-                      Review and sign lease
-                    </Button>
-                  </form>
+                  <SignLeaseButton packetId={lease.id} />
                 )}
                 <a
                   className="property-details-link"
@@ -57,7 +56,7 @@ export function TenantLeaseList({
           ))}
         </ul>
       ) : (
-        <p>
+        <p className="tenant-empty-state">
           No leases yet. A lease appears here after {contact} sends it to your
           verified email address.
         </p>
