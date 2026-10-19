@@ -514,3 +514,12 @@ a:not(.submit-button):not(.ui-button).tenant-tab:active {
   font-family: var(--font-interface);
   font-size: 0.95rem;
 }
+.portal-account-connect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+}
+.tenant-access-list .small-note {
+  margin: 0.25rem 0 0;
+}

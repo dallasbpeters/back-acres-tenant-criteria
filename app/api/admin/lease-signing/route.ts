@@ -20,7 +20,6 @@ import {
   textDocument,
 } from "@/lib/leases/document";
 import { leasePdf } from "@/lib/leases/pdf";
-import { withSignaturePages } from "@/lib/leases/signature-pdf";
 import {
   copySigningLink,
   inviteSigner,
@@ -175,14 +174,12 @@ export async function POST(request: NextRequest) {
         document && documentText(document).trim() === body.trim()
           ? document
           : textDocument(body);
-      const pdf = await withSignaturePages(
-        await leasePdf(body, draft.id, pdfDocument, {
-          forSigning: true,
-          logoPng: brand?.logoPng ?? null,
-          name: brand?.name ?? "Back Acres Rental",
-        }),
-        c.data.signers
-      );
+      const pdf = await leasePdf(body, draft.id, pdfDocument, {
+        forSigning: true,
+        logoPng: brand?.logoPng ?? null,
+        name: brand?.name ?? "Back Acres Rental",
+        signers: c.data.signers,
+      });
       const family = await d.execute(
         sql`with recursive ancestors as (select id,parent_id from lease_drafts where id=${draft.id} union all select l.id,l.parent_id from lease_drafts l join ancestors a on l.id=a.parent_id) select id from ancestors where parent_id is null limit 1`
       );

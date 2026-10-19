@@ -4,10 +4,18 @@ const pattern1 = /(?:RESIDENTIAL|LEASE|AGREEMENT)/i;
 const pattern2 =
   /^(?:§|\d+\.\s.{1,90}$|TERMS$|TENANTS$|LANDLORD$|TEXAS RESIDENTIAL)/;
 const pattern3 = /(\n|[^\S\n]+)/;
+const signaturesHeading = /^(?:§\s*)?(?:\d+\.\s*)?signatures?\b/i;
 
 import { PDFDocument, type PDFFont, rgb } from "pdf-lib";
 import { documentLines, type LeaseNode, type LeaseRun } from "./document";
 import { leaseFonts } from "./pdf-fonts";
+import {
+  drawSignatureBlock,
+  encodePositions,
+  SIGNATURE_BLOCK_HEIGHT,
+  type SignaturePosition,
+  signatureOrder,
+} from "./signature-page";
 import { leaseTerms } from "./terms";
 /* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This coordinator keeps the ordered validation, state transitions, and fallback rendering together; its externally visible branches are covered by workflow tests. */
 export async function leasePdf(
@@ -18,6 +26,13 @@ export async function leasePdf(
     name: string;
     logoPng: string | null;
     forSigning?: boolean;
+    /** Signers of a signing copy: their blocks replace the Signatures section. */
+    signers?: {
+      email: string | null;
+      name: string;
+      phone?: string | null;
+      role: string;
+    }[];
   }
 ) {
   const pdf = await PDFDocument.create();
@@ -75,6 +90,31 @@ export async function leasePdf(
     }
     rows.push(row);
     return rows;
+  };
+  const fonts = { bold, label, labelBold };
+  const signers = branding?.signers?.length
+    ? signatureOrder(branding.signers)
+    : [];
+  const positions: SignaturePosition[] = [];
+  let skipping = false;
+  /** Draws a signature block per signer from the current line down. */
+  const drawBlocks = () => {
+    for (const [index, signer] of signers.entries()) {
+      if (y - SIGNATURE_BLOCK_HEIGHT < bottom) {
+        newPage();
+      }
+      const lineY = y - 70;
+      const position = {
+        index,
+        left,
+        page: pdf.getPageCount() - 1,
+        right,
+        y: lineY,
+      };
+      drawSignatureBlock(page, signer, position, fonts);
+      positions.push(position);
+      y = lineY - 42;
+    }
   };
   let first = true;
   for (
@@ -200,6 +240,12 @@ export async function leasePdf(
       }
     }
     const text = paragraph.runs.map((r) => r.text).join("");
+    const isHeading = paragraph.heading || pattern2.test(text);
+    // The section's own lines are replaced by drawn signature blocks.
+    if (skipping && !isHeading) {
+      continue;
+    }
+    skipping = false;
     if (!text.trim()) {
       if (y < top) {
         y -= 7;
@@ -322,6 +368,31 @@ export async function leasePdf(
     });
     y -= heading ? 5 : 3;
     first = false;
+    if (
+      heading &&
+      signers.length &&
+      !positions.length &&
+      signaturesHeading.test(text.trim())
+    ) {
+      drawBlocks();
+      skipping = true;
+    }
+  }
+  if (signers.length && !positions.length) {
+    // No Signatures section in this lease: add one at the end.
+    newPage();
+    page.drawText("Signatures", {
+      color: ink,
+      font: bold,
+      size: 12,
+      x: left,
+      y,
+    });
+    y -= 22;
+    drawBlocks();
+  }
+  if (positions.length) {
+    pdf.setKeywords([encodePositions(positions)]);
   }
   const pages = pdf.getPages();
   pages.forEach(

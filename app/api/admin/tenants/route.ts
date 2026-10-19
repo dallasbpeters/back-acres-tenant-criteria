@@ -24,6 +24,10 @@ import {
   sendClerkInvitation,
 } from "@/lib/tenant/invitations";
 import { tenantAssignmentSchema, verifiedAccountId } from "@/lib/tenant/model";
+import {
+  connectPortalAccount,
+  portalAccounts,
+} from "@/lib/tenant/portal-accounts";
 import { shareCommand, sharePayment } from "@/lib/tenant/sharing";
 
 const input = z.discriminatedUnion("action", [
@@ -31,6 +35,11 @@ const input = z.discriminatedUnion("action", [
   z.object({ action: z.literal("revoke"), id: z.string().uuid() }),
   z.object({ action: z.literal("resendInvite"), id: z.string().uuid() }),
   z.object({ action: z.literal("cancelInvite"), id: z.string().uuid() }),
+  z.object({
+    action: z.literal("connect"),
+    clerkUserId: z.string().min(1).max(100),
+    propertyId: z.string().uuid(),
+  }),
   shareCommand,
 ]);
 export async function GET(request: NextRequest) {
@@ -39,7 +48,18 @@ export async function GET(request: NextRequest) {
     return denied;
   }
   try {
+    // Accounts made in Clerk directly show here before they are connected.
+    const accounts = tenantAuthReady()
+      ? await portalAccounts().catch((error) => {
+          console.error(
+            "Portal account list failed",
+            error instanceof Error ? error.message : String(error)
+          );
+          return [];
+        })
+      : [];
     return reply({
+      accounts,
       assignments: await db()
         .select()
         .from(tenantAccess)
@@ -279,6 +299,12 @@ export async function POST(request: NextRequest) {
     }
     if (command.action === "assign") {
       return await assignAccess(d, command, actor);
+    }
+    if (command.action === "connect") {
+      const result = await connectPortalAccount({ actor, ...command });
+      return "error" in result
+        ? reply({ error: result.error }, result.status)
+        : reply(result);
     }
     return await updateInvitation(d, command);
   } catch (error) {

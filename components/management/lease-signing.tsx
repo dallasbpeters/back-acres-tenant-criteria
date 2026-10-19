@@ -32,6 +32,24 @@ interface Renter {
   name: string;
   source: "account" | "invited";
 }
+/** One signer's progress, as shown on their row. */
+function signerState(s: Signer) {
+  if (s.signedAt) {
+    return `Signed ${new Date(s.signedAt).toLocaleString()}`;
+  }
+  if (s.declinedAt) {
+    return "Declined electronic signing";
+  }
+  if (s.invitedAt) {
+    const sent = new Date(s.invitedAt).toLocaleString();
+    return s.email
+      ? `Email accepted ${sent} · Awaiting signature`
+      : `Link made ${sent} · Awaiting signature`;
+  }
+  return s.email
+    ? "No email send recorded"
+    : "Not sent yet · Text the signing link";
+}
 /** The renter picker's value: the signer's email when it is a listed renter. */
 function pickedRenter(renters: Renter[], email: string | null) {
   const normalized = (email ?? "").trim().toLowerCase();
@@ -354,76 +372,60 @@ export function LeaseSigning({
                   ? "All required signatures recorded."
                   : `${signed} of ${active.signers.length} signed · ${expired ? "Request expired" : `Expires ${new Date(active.expiresAt).toLocaleDateString()}`}`}
               </p>
-              {active.signers.map((s) => {
-                const resolveResult2 = () => {
-                  if (s.signedAt) {
-                    return `Signed ${new Date(s.signedAt).toLocaleString()}`;
-                  }
-                  if (s.declinedAt) {
-                    return "Declined electronic signing";
-                  }
-                  if (s.invitedAt) {
-                    return `Email accepted ${new Date(s.invitedAt).toLocaleString()} · Awaiting signature`;
-                  }
-                  return "No email send recorded";
-                };
-                return (
-                  <div className="signer-status" key={s.id}>
-                    <div>
-                      <strong>{s.name}</strong>
-                      <p>
-                        {s.email || s.phone} · {s.role}
-                      </p>
-                      <p className="signing-recipient-state">
-                        {resolveResult2()}
-                      </p>
-                    </div>
-                    {!!(
-                      !(s.signedAt || s.declinedAt) &&
-                      active.status === "awaiting" &&
-                      !expired
-                    ) &&
-                      (s.role === "landlord" ? (
-                        <Button
-                          disabled={busy}
-                          onClick={() => {
-                            setBusy(true);
-                            signAsLandlord(active.id).catch((e) => {
-                              setError((e as Error).message);
-                              setBusy(false);
-                            });
-                          }}
-                          type="button"
-                          variant="primary"
-                        >
-                          Sign as landlord
-                        </Button>
-                      ) : (
-                        <div className="signer-actions">
-                          {!!s.email && (
-                            <Button
-                              disabled={busy}
-                              onClick={() => {
-                                send([s]);
-                              }}
-                              type="button"
-                            >
-                              {s.invitedAt
-                                ? "Resend signing email"
-                                : "Send signing email"}
-                            </Button>
-                          )}
-                          <CopySigningLink
-                            disabled={busy}
-                            name={s.name}
-                            phone={s.phone ?? null}
-                            signerId={s.id ?? ""}
-                          />
-                        </div>
-                      ))}
+              {active.signers.map((s) => (
+                <div className="signer-status" key={s.id}>
+                  <div>
+                    <strong>{s.name}</strong>
+                    <p>
+                      {s.email || s.phone} · {s.role}
+                    </p>
+                    <p className="signing-recipient-state">{signerState(s)}</p>
                   </div>
-                );
-              })}
+                  {!!(
+                    !(s.signedAt || s.declinedAt) &&
+                    active.status === "awaiting" &&
+                    !expired
+                  ) &&
+                    (s.role === "landlord" ? (
+                      <Button
+                        disabled={busy}
+                        onClick={() => {
+                          setBusy(true);
+                          signAsLandlord(active.id).catch((e) => {
+                            setError((e as Error).message);
+                            setBusy(false);
+                          });
+                        }}
+                        type="button"
+                        variant="primary"
+                      >
+                        Sign as landlord
+                      </Button>
+                    ) : (
+                      <div className="signer-actions">
+                        {!!s.email && (
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              send([s]);
+                            }}
+                            type="button"
+                          >
+                            {s.invitedAt
+                              ? "Resend signing email"
+                              : "Send signing email"}
+                          </Button>
+                        )}
+                        <CopySigningLink
+                          disabled={busy}
+                          name={s.name}
+                          phone={s.phone ?? null}
+                          signerId={s.id ?? ""}
+                        />
+                      </div>
+                    ))}
+                </div>
+              ))}
               <div className="management-actions">
                 {!!(
                   active.status === "awaiting" &&

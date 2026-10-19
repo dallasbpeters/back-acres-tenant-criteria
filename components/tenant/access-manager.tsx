@@ -4,6 +4,7 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
 import { dollars } from "@/lib/management/model";
+import { type PortalAccount, PortalAccounts } from "./portal-accounts";
 
 interface Property {
   data: { name: string; address: string };
@@ -31,6 +32,7 @@ interface Invitation {
   propertyId: string;
 }
 interface Assignment {
+  clerkUserId: string;
   id: string;
   name: string;
   propertyId: string;
@@ -42,6 +44,7 @@ export function TenantAccessManager() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [accounts, setAccounts] = useState<PortalAccount[]>([]);
   const [propertyId, setPropertyId] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -64,6 +67,7 @@ export function TenantAccessManager() {
     setSchedules(management.rentSchedules);
     setAssignments(access.assignments);
     setInvitations(access.invitations ?? []);
+    setAccounts(access.accounts ?? []);
     setReady(access.ready);
   }, []);
   useEffect(() => {
@@ -122,6 +126,18 @@ export function TenantAccessManager() {
           existing access.
         </p>
       )}
+      <PortalAccounts
+        accounts={accounts}
+        assignments={assignments}
+        disabled={pending || !ready}
+        onConnect={(clerkUserId, id) =>
+          send(
+            { action: "connect", clerkUserId, propertyId: id },
+            "Account connected. Any leases signed with its phone or email are attached."
+          )
+        }
+        properties={properties}
+      />
       <section>
         <h2>Property access</h2>
         {assignments.length ? (

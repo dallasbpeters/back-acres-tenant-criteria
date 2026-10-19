@@ -5,26 +5,11 @@ const pattern1 = /\s+/;
 import { PDFDocument, type PDFFont } from "pdf-lib";
 import type { leasePackets, leaseSigners } from "@/lib/db/signing";
 import { leaseFonts } from "./pdf-fonts";
-import {
-  drawSignaturePages,
-  fillSignaturePages,
-  SIGNATURE_PAGE_KEYWORD,
-  signaturePageCount,
-} from "./signature-page";
+import { fillSignatures } from "./signature-page";
 
-/** Ends a new lease PDF with blank signature pages before it is frozen. */
-export async function withSignaturePages(
-  bytes: Uint8Array,
-  signers: { email: string | null; name: string; role: string }[]
-) {
-  const pdf = await PDFDocument.load(bytes);
-  drawSignaturePages(pdf, signers, await leaseFonts(pdf));
-  pdf.setKeywords([SIGNATURE_PAGE_KEYWORD]);
-  return pdf.save();
-}
 /**
- * Draws recorded signatures onto the lease's signature pages, then adds the
- * audit record. Older leases without signature pages get them added first.
+ * Draws recorded signatures on each signer's line in the lease, then adds
+ * the audit record. Older leases without signature lines get a page added.
  */
 export async function signaturePdf(
   packet: typeof leasePackets.$inferSelect,
@@ -48,16 +33,7 @@ export async function signaturePdf(
   const fonts = await leaseFonts(pdf),
     font = fonts.label,
     bold = fonts.labelBold;
-  const hasPages = (pdf.getKeywords() ?? "").includes(SIGNATURE_PAGE_KEYWORD);
-  if (!hasPages) {
-    drawSignaturePages(pdf, signers, fonts);
-  }
-  await fillSignaturePages(
-    pdf,
-    pdf.getPageCount() - signaturePageCount(signers.length),
-    signers,
-    font
-  );
+  await fillSignatures(pdf, signers, fonts);
   let page = pdf.addPage([612, 792]),
     y = 740;
   const safe = (s: string) =>

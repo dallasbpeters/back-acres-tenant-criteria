@@ -25,7 +25,6 @@ import {
   leaseTemplates,
   tenantInvitations,
 } from "../../lib/db/schema";
-import { SIGNATURE_PAGE_KEYWORD } from "../../lib/leases/signature-page";
 import { digest } from "../../lib/leases/signing-model";
 import {
   pg,
@@ -89,7 +88,7 @@ beforeEach(async () => {
     .insert(leaseTemplates)
     .values({ body: "Lease", id: templateId, name: "Lease" });
   await db().insert(leaseDrafts).values({
-    body: "RESIDENTIAL LEASE\n\n1. PARTIES. Landlord and Tenant agree.",
+    body: "RESIDENTIAL LEASE\n\n1. PARTIES. Landlord and Tenant agree.\n\n§ Signatures\n\nTenant signature: ________ Date: ______\n\n§ Clauses\n\n2. RENT. Tenant pays rent monthly.",
     id: draftId,
     propertyId,
     templateId,
@@ -205,7 +204,8 @@ describe("landlord signs first", () => {
       landlord.params
     );
     const document = await PDFDocument.load(await pdf.arrayBuffer());
-    expect(document.getKeywords()).toContain(SIGNATURE_PAGE_KEYWORD);
+    // Signature blocks sit in the lease's own Signatures section.
+    expect(document.getKeywords()).toContain("sigpos:");
 
     // Reissue the tenant link the way the portal does, then sign as tenant.
     const tenantToken = "a".repeat(64);
