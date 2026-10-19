@@ -35,10 +35,15 @@ export async function sendClerkInvitation({
     throw new Error("Clerk did not return an invitation link.");
   }
   const brand = await currentEmailBrand();
+  const intro = `Hello ${name},\n\n${brand.name} invited you to the tenant portal for ${propertyName}. Create your account with this email address to see your lease, payments, renters insurance, and maintenance requests.`;
+  const closing = `This invitation is for ${email}. If you did not expect it, you can ignore this email.`;
   const response = await sendLeaseMail({
+    action: { label: "Create your account", url: invitation.url },
     brand,
+    htmlAfter: closing,
+    htmlText: intro,
     subject: `${brand.name}: your tenant portal invitation`,
-    text: `Hello ${name},\n\n${brand.name} invited you to the tenant portal for ${propertyName}. Create your account with this email address to see your lease, payments, renters insurance, and maintenance requests:\n${invitation.url}\n\nThis invitation is for ${email}. If you did not expect it, you can ignore this email.`,
+    text: `${intro}\n\nCreate your account:\n${invitation.url}\n\n${closing}`,
     to: email,
   });
   if (!response.ok) {

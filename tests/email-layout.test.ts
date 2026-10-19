@@ -8,6 +8,8 @@ import {
 import { sendLeaseMail } from "../lib/leases/mail";
 
 const brand = {
+  buttonInk: "#ffffff",
+  color: "#103e35",
   logoUrl: "https://rental.example.invalid/api/branding/logo?v=fixture",
   name: "Saved <Brand>",
 };
@@ -63,6 +65,60 @@ test("lease email sends branded HTML alongside the plain text", async () => {
     assert.ok(String(body.html).includes("Saved &lt;Brand&gt;"));
     assert.ok(String(body.html).includes("/api/branding/logo?v=fixture"));
     assert.equal("brand" in body, false);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.RESEND_API_KEY;
+    } else {
+      process.env.RESEND_API_KEY = previousKey;
+    }
+    if (previousFrom === undefined) {
+      delete process.env.FROM_EMAIL;
+    } else {
+      process.env.FROM_EMAIL = previousFrom;
+    }
+  }
+});
+
+test("call-to-action emails show a brand-colored button and the plain link", async () => {
+  const previousKey = process.env.RESEND_API_KEY,
+    previousFrom = process.env.FROM_EMAIL;
+  process.env.RESEND_API_KEY = "test-fixture-only";
+  process.env.FROM_EMAIL = "owner@example.invalid";
+  try {
+    let body: Record<string, unknown> = {};
+    await sendLeaseMail(
+      {
+        action: {
+          label: "Create your account",
+          url: "https://example.invalid/accept?t=1&x=2",
+        },
+        brand,
+        htmlAfter: "Closing line.",
+        htmlText: "Intro line.",
+        subject: "Invite",
+        text: "Intro line.\n\nhttps://example.invalid/accept?t=1&x=2\n\nClosing line.",
+        to: "tenant@example.invalid",
+      },
+      (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return Promise.resolve(new Response('{"id":"test"}', { status: 200 }));
+      }
+    );
+    const html = String(body.html);
+    assert.ok(html.includes(">Create your account</a>"));
+    assert.ok(html.includes("background:#103e35"));
+    assert.ok(
+      html.includes('href="https://example.invalid/accept?t=1&amp;x=2"')
+    );
+    assert.ok(
+      html.indexOf("Intro line.") < html.indexOf("Create your account")
+    );
+    assert.ok(
+      html.indexOf("Create your account") < html.indexOf("Closing line.")
+    );
+    assert.ok(
+      String(body.text).includes("https://example.invalid/accept?t=1&x=2")
+    );
   } finally {
     if (previousKey === undefined) {
       delete process.env.RESEND_API_KEY;

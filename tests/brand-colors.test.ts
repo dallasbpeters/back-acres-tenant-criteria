@@ -126,8 +126,8 @@ function block(css: string, selector: string) {
   assert.fail(`${selector} token block exists`);
 }
 
-test("globals.css fallback colors match the brand defaults", () => {
-  const css = readFileSync("app/globals.css", "utf8");
+test("token fallback colors match the brand defaults", () => {
+  const css = readFileSync("app/styles/00-tokens.css", "utf8");
   for (const [mode, selector] of [
     ["light", ":root"],
     ["dark", ':root[data-theme="dark"]'],

@@ -242,10 +242,19 @@ export async function POST(request: NextRequest) {
       return reply({ error: "This signer has already signed." }, 409);
     }
     const contact = await leaseContact(packet.id, packet.brandName);
+    const expires = packet.expiresAt.toLocaleDateString("en-US", {
+      dateStyle: "long",
+      timeZone: "America/Chicago",
+    });
+    const intro = `Hello ${signer.name},\n\nYour lease is ready. Review the complete lease, download a copy, and sign securely.`;
+    const details = `The request expires ${expires}. A separate verification code will be sent to this email address before signing. Do not forward this private link.\n\nYou may request a paper copy or signing alternative by contacting ${contact}.`;
     const response = await sendLeaseMail({
+      action: { label: "Review and sign the lease", url },
       brand: await currentEmailBrand(packet.brandName),
+      htmlAfter: details,
+      htmlText: intro,
       subject: `${packet.brandName}: review and sign your lease`,
-      text: `Hello ${signer.name},\n\nReview the complete lease, download a copy, and sign securely here:\n${url}\n\nThe request expires ${packet.expiresAt.toISOString()}. A separate verification code will be sent to this email address before signing. Do not forward this private link.\n\nYou may request a paper copy or signing alternative by contacting ${contact}.`,
+      text: `${intro}\n\nReview and sign the lease:\n${url}\n\n${details}`,
       to: signer.email,
     });
     if (!response.ok) {

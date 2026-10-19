@@ -141,7 +141,7 @@ a:not(.submit-button):not(.ui-button):active {
 }
 @media (hover: hover) and (pointer: fine) {
   a:not(.submit-button):not(.ui-button):hover {
-    color: var(--actions);
+    color: contrast-color(var(--actions));
     text-decoration: underline;
   }
   .submit-button:enabled:hover {
