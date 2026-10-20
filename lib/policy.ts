@@ -13,7 +13,7 @@ export const POLICY = {
     },
     {
       detail:
-        "Credit history may be reviewed for material payment delinquencies, unpaid collections, charge-offs, and outstanding obligations. These criteria do not establish a minimum credit score. Review will be conducted consistently and applicants may dispute inaccurate report information.",
+        "Credit history may be reviewed for material payment delinquencies, unpaid collections, charge-offs, and outstanding obligations. We require a 650 minimum credit score. Review will be conducted consistently and applicants may dispute inaccurate report information.",
       number: "02",
       title: "Credit history",
     },
