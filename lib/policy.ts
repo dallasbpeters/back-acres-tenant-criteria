@@ -19,7 +19,7 @@ export const POLICY = {
     },
     {
       detail:
-        "Prior housing payment history, unpaid landlord balances, and documented material lease violations may be considered. Applicants who owned a home may provide comparable payment history in place of landlord references.",
+        "Prior housing payment history, unpaid balances, and documented material lease violations may be considered. Applicants who owned a home may provide comparable payment history in place of references.",
       number: "03",
       title: "Rental or housing history",
     },
