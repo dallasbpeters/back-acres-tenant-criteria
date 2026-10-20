@@ -24,6 +24,7 @@ import {
   type RemovedRecord,
   RemovedWorkspace,
 } from "./remove-button";
+import { ScreeningPanel } from "./screening-panel";
 export interface PropertyRecord {
   data: PropertyInput;
   id: string;
@@ -216,16 +217,9 @@ export function Dashboard() {
                 are unverified. Review each application yourself; status changes
                 do not send decisions.
               </p>
-              <p>
-                <a
-                  href="https://www.mysmartmove.com/"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  Open SmartMove for screening
-                </a>{" "}
-                · Screening is arranged separately. Reports are not
-                automatically imported.
+              <p className="small-note">
+                Screening runs through TransUnion SmartMove. Each application
+                shows its next step.
               </p>
               {!records.applications.length && (
                 <p className="management-empty">
@@ -265,9 +259,21 @@ export function Dashboard() {
                     </summary>
                     <p className="document-text">{a.criteriaSnapshot}</p>
                   </details>
+                  <ScreeningPanel
+                    applicant={a.data}
+                    busy={busy}
+                    onStatus={(status) =>
+                      save({ action: "applicationStatus", id: a.id, status })
+                    }
+                    propertyAddress={
+                      records.properties.find((p) => p.id === a.propertyId)
+                        ?.data.address ?? ""
+                    }
+                    status={a.status}
+                  />
                   <AppSelect
                     disabled={busy}
-                    label={<>Application status</>}
+                    label={<>Status (change by hand)</>}
                     onValueChange={(value) =>
                       save({
                         action: "applicationStatus",
@@ -288,9 +294,6 @@ export function Dashboard() {
                     name={a.data.name}
                     onRemoved={load}
                   />
-                  <a href="/admin/adverse-actions">
-                    Prepare a notice separately
-                  </a>
                 </details>
               ))}
             </section>
