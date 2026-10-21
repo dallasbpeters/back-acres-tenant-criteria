@@ -3,7 +3,11 @@ import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
-import { listingProviders, listingText } from "@/lib/management/listings";
+import {
+  type ListingProvider,
+  listingProviders,
+  listingText,
+} from "@/lib/management/listings";
 import type { PropertyRecord } from "./dashboard";
 import { PhotoManager, type PhotoRecord } from "./photos";
 import { SectionCard } from "./section-card";
@@ -73,24 +77,24 @@ export function PublishingWorkspace({
           <h2>Photos & publishing</h2>
           <p>Prepare once, then publish through your listing accounts.</p>
         </div>
+        <AppSelect
+          className="publishing-property"
+          label={<>Property</>}
+          onValueChange={(value) => {
+            setChosen(value);
+            setMessage("");
+          }}
+          value={property.id}
+        >
+          {properties.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.data.name} · {p.data.address}
+            </option>
+          ))}
+        </AppSelect>
       </div>
       {property ? (
         <>
-          <AppSelect
-            className="publishing-property"
-            label={<>Property</>}
-            onValueChange={(value) => {
-              setChosen(value);
-              setMessage("");
-            }}
-            value={property.id}
-          >
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.data.name} · {p.data.address}
-              </option>
-            ))}
-          </AppSelect>
           <PhotoManager
             key={property.id}
             onSaved={onSaved}
@@ -152,7 +156,7 @@ export function PublishingWorkspace({
               </p>
             )}
             <div className="publication-list">
-              {listingProviders.map((provider) => {
+              {listingProviders.map((provider: ListingProvider) => {
                 const record = publications.find(
                     (p) =>
                       p.propertyId === property.id && p.provider === provider.id

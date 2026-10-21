@@ -362,11 +362,19 @@
   max-inline-size: 100%;
 }
 .section-heading-row {
-  display: flex;
+  display: grid;
+  grid-template-areas: "heading actions" "text .";
   gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  margin-block-end: 1.1rem;
+}
+.section-heading-row .app-select.publishing-property,
+.section-heading-row .admin-actionsmanagement-actions {
+  grid-area: actions;
+  margin-block: 0;
+}
+.section-heading-row > div:not([class]) {
+  grid-area: heading;
 }
 .section-heading-row p {
   margin-block-start: 0.35rem;
@@ -377,6 +385,7 @@
   padding: 1.25rem 0;
 }
 .owner-main .record .management-actions {
+  grid-area: actions;
   margin-block-start: 0.5rem;
 }
 .owner-main [role="status"] {

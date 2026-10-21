@@ -605,13 +605,15 @@ function PropertyWorkspace({
         };
         return (
           <article className="record" key={p.id}>
-            <h3>{p.data.name}</h3>
-            <p>
-              {p.data.address} · {dollars(p.data.rentCents)} / month
-            </p>
-            <p>
-              {p.data.published ? "Published" : "Draft"} · {resolveResult1()}
-            </p>
+            <div>
+              <h3>{p.data.name}</h3>
+              <p>
+                {p.data.address} · {dollars(p.data.rentCents)} / month
+              </p>
+              <p>
+                {p.data.published ? "Published" : "Draft"} · {resolveResult1()}
+              </p>
+            </div>
             <div className="management-actions">
               <Button
                 onClick={() => {

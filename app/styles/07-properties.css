@@ -10,11 +10,15 @@
 .property-list article,
 .record {
   display: grid;
+  grid-template-areas: "heading actions" "text .";
   grid-template-columns: 1fr auto;
   gap: 0.75rem;
   min-inline-size: 0;
   padding-block: 1.5rem;
   border-block-start: 1px solid var(--border);
+}
+.record p {
+  grid-area: text;
 }
 /* Space the photo and publishing cards like the other workspace sections. */
 .publishing-workspace {

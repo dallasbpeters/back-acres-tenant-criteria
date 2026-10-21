@@ -23,6 +23,7 @@ export const listingProviders = [
     url: "https://www.apartments.com/rental-manager",
   },
 ] as const;
+export type ListingProvider = (typeof listingProviders)[number];
 export function listingText(data: PropertyInput, slug: string, origin: string) {
   return [
     `${data.name}\n${data.address}`,
