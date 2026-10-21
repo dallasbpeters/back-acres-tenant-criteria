@@ -37,6 +37,15 @@ function emailColors(saved: unknown) {
  * version, so a sent email keeps the logo it was sent with. Email must still
  * send when branding cannot load, so failures fall back to the default name.
  */
+/**
+ * Resend downloads the logo from its URL, and mail clients load it from the
+ * web, so neither can reach a local dev server. Local emails omit the logo.
+ */
+function publicSite() {
+  const { hostname } = new URL(siteUrl());
+  return !["localhost", "127.0.0.1", "[::1]"].includes(hostname);
+}
+
 export async function currentEmailBrand(name?: string): Promise<EmailBrand> {
   try {
     const [brand] = await db()
@@ -51,12 +60,13 @@ export async function currentEmailBrand(name?: string): Promise<EmailBrand> {
       .limit(1);
     return {
       ...emailColors(brand?.colors),
-      logoUrl: brand?.hasLogo
-        ? new URL(
-            `/api/branding/logo?v=${encodeURIComponent(brand.id)}`,
-            siteUrl()
-          ).toString()
-        : null,
+      logoUrl:
+        brand?.hasLogo && publicSite()
+          ? new URL(
+              `/api/branding/logo?v=${encodeURIComponent(brand.id)}`,
+              siteUrl()
+            ).toString()
+          : null,
       name: name ?? brand?.name ?? defaultEmailBrand.name,
     };
   } catch {

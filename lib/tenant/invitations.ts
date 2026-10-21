@@ -59,9 +59,17 @@ export async function sendClerkInvitation({
     to: email,
   });
   if (!response.ok) {
+    // Resend's error name and message say why (for example a bad sender or
+    // attachment); they describe the request shape, not the recipient.
+    const reason = (await response
+      .clone()
+      .json()
+      .catch(() => ({}))) as { message?: string; name?: string };
     console.error(
       "Tenant invitation email rejected by Resend",
       response.status,
+      reason.name ?? "",
+      reason.message ?? "",
       invitation.id
     );
     await revokeClerkInvitation(invitation.id);
