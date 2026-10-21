@@ -12,6 +12,7 @@ import {
 } from "@/lib/brand-colors";
 import { BrandColorStrip } from "./brand-color-strip";
 import { EmailTest } from "./email-test";
+import { SectionCard } from "./section-card";
 
 interface Brand {
   colors?: BrandColors;
@@ -74,8 +75,8 @@ export function BrandingWorkspace() {
   }
 
   return (
-    <section className="branding-workspace">
-      <h2>Branding</h2>
+    <SectionCard className="branding-workspace" labelledBy="branding-heading">
+      <h2 id="branding-heading">Branding</h2>
       <p>
         Your logo appears in the owner navbar, emails, and lease PDFs. Your
         colors apply to every page. Signed leases keep the branding used when
@@ -214,7 +215,7 @@ export function BrandingWorkspace() {
           ))}
         </details>
       )}
-    </section>
+    </SectionCard>
   );
 }
 

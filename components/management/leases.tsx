@@ -2,6 +2,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { SectionCard } from "@/components/management/section-card";
 import { Button } from "@/components/ui/button";
 import { OverflowMenu } from "@/components/ui/overflow-menu";
 import { AppSelect } from "@/components/ui/select";
@@ -516,11 +517,9 @@ export function LeaseWorkspace({
   );
   const listView = (
     <>
-      <div className="lease-list-header">
-        <div>
-          <h2>Leases</h2>
-          <p>Open a saved lease to edit, preview, or send it for signature.</p>
-        </div>
+      <div className="card-header">
+        <h2>Leases</h2>
+        <p>Open a saved lease to edit, preview, or send it for signature.</p>
         <Button
           disabled={busy || wordingOpen}
           onClick={startNew}
@@ -530,6 +529,7 @@ export function LeaseWorkspace({
           New lease
         </Button>
       </div>
+
       <div className="lease-tabs">
         <Button
           aria-pressed={!wordingOpen}
@@ -1299,7 +1299,7 @@ export function LeaseWorkspace({
     </>
   );
   return (
-    <section className="lease-workspace">
+    <SectionCard label="Editor">
       {editorOpen ? (
         <div className="lease-editor">
           {editorBar}
@@ -1309,6 +1309,6 @@ export function LeaseWorkspace({
       ) : (
         listView
       )}
-    </section>
+    </SectionCard>
   );
 }

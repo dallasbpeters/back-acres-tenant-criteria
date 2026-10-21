@@ -1,5 +1,7 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
 "use client";
+// import PixelReveal2 from "@/components/shaders/PixelReveal2";
+import { Text } from "@react-spectrum/s2/Card";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import posthog from "posthog-js";
@@ -8,6 +10,7 @@ import { BrandLogoImage, useBranding } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ThemeControl } from "@/components/ui/theme";
+import PixelReveal2 from "../shaders/pixel-reveal-2";
 import { ownerSections } from "./navigation";
 
 interface OwnerSession {
@@ -179,18 +182,17 @@ export function OwnerFrame({
           </aside>
         )}
         <main className="owner-main management-main">
-          <div className="owner-page-heading">
-            <p className="eyebrow">
-              Back Acres /{" "}
-              {pathname.includes("adverse-actions")
-                ? "Correspondence"
-                : "Management"}
-            </p>
-            <h1>{title}</h1>
-          </div>
+          <Text UNSAFE_className="eyebrow">
+            Back Acres /{" "}
+            {pathname.includes("adverse-actions")
+              ? "Correspondence"
+              : "Management"}
+          </Text>
+          <h1>{title}</h1>
           {children}
         </main>
       </div>
+      {!signedIn && <PixelReveal2 />}
     </div>
   );
 }

@@ -12,7 +12,7 @@
   --secondary: #9da328;
   --actions: #166de7;
   --surface: #fffefa;
-  --paper: var(--surface);
+  --paper: #fffffe;
   --bg: color-mix(in oklch, var(--primary) 4%, var(--surface));
   --muted: color-mix(in oklch, var(--ink) 70%, var(--surface));
   --accent: #18a887;
@@ -39,6 +39,9 @@
   --gutter: clamp(1.25rem, 0.655rem + 2.976vw, 2.5rem);
   --layout-gap: clamp(2rem, 1.048rem + 4.762vw, 4rem);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --radius-sm: 0.35rem;
+  --radius-md: 0.65rem;
+  --radius-lg: 0.72rem;
   scrollbar-gutter: stable;
   overflow-wrap: break-word;
   text-wrap: pretty;
@@ -66,7 +69,7 @@
   --secondary: #b8be57;
   --actions: #166de7;
   --surface: #0e1005;
-  --paper: var(--surface);
+  --paper: #1c1c1c;
   --bg: var(--surface);
   --muted: color-mix(in oklch, var(--ink) 70%, var(--surface));
   --accent: #9bcbb1;

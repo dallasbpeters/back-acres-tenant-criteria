@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
+import { SectionCard } from "./section-card";
 
 export interface PaymentRenter {
   email: string;
@@ -134,7 +135,7 @@ export function RentersOverview({
 }) {
   const { error, renters } = useRenters();
   return (
-    <section aria-labelledby="payment-renters" className="payment-renters">
+    <SectionCard className="payment-renters" labelledBy="payment-renters">
       <div className="payment-renters-heading">
         <h3 id="payment-renters">Renters</h3>
         <a href="/admin/tenants">Invite or manage renters</a>
@@ -164,7 +165,7 @@ export function RentersOverview({
           to them here.
         </p>
       )}
-    </section>
+    </SectionCard>
   );
 }
 

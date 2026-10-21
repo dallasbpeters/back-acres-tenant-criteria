@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
 import { RemoveButton } from "./management/remove-button";
+import { SectionCard } from "./management/section-card";
 
 interface NoticeRow {
   action: string;
@@ -115,7 +116,12 @@ export function AdverseList({
                 <th scope="col">Property / decision</th>
                 <th scope="col">Status</th>
                 <th scope="col">Updated</th>
-                <th aria-label="Actions" scope="col" />
+                <th aria-label="View" scope="col">
+                  View
+                </th>
+                <th aria-label="Actions" scope="col">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -159,6 +165,8 @@ export function AdverseList({
                     >
                       Open notice →
                     </a>
+                  </td>
+                  <td>
                     <RemoveButton
                       disabled={loading}
                       id={row.documentId}
@@ -183,10 +191,10 @@ export function AdverseList({
     );
   };
   return (
-    <section aria-label="Adverse-action notice list">
+    <SectionCard labelledBy="notices-heading">
       <div className="section-heading-row">
         <div>
-          <h2>All notices</h2>
+          <h2 id="notices-heading">All notices</h2>
           <p className="small-note">
             One row per notice. Open a notice to edit it or review its versions.
           </p>
@@ -297,6 +305,6 @@ export function AdverseList({
           )}
         </div>
       )}
-    </section>
+    </SectionCard>
   );
 }

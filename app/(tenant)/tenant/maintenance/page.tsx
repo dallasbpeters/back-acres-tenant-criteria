@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { SectionCard } from "@/components/management/section-card";
 import { ManagementShell } from "@/components/management/shell";
 import { MaintenanceRequestList } from "@/components/tenant/maintenance-requests";
 import { TenantNavigation } from "@/components/tenant/navigation";
@@ -53,11 +54,13 @@ export default async function TenantMaintenance() {
                 <p>{property?.data.address}</p>
               </header>
               <div className="tenant-maintenance-grid">
-                <section
-                  aria-label={`New request for ${name}`}
-                  className="tenant-panel"
+                <SectionCard
+                  className="tenant-request-card"
+                  labelledBy={`new-request-${access.id}`}
                 >
-                  <h3>New maintenance request</h3>
+                  <h3 id={`new-request-${access.id}`}>
+                    New maintenance request
+                  </h3>
                   <TenantRequestForm
                     contact={property?.data.contact}
                     email={email}
@@ -65,18 +68,18 @@ export default async function TenantMaintenance() {
                     name={access.name}
                     phone={access.phone}
                   />
-                </section>
-                <aside
-                  aria-label={`${name} request history`}
+                </SectionCard>
+                <SectionCard
                   className="tenant-aside"
+                  labelledBy={`request-history-${access.id}`}
                 >
-                  <h3>Your requests</h3>
+                  <h3 id={`request-history-${access.id}`}>Your requests</h3>
                   <MaintenanceRequestList requests={requests} />
                   <dl className="tenant-contact">
                     <dt>Property contact</dt>
                     <dd>{property?.data.contact ?? "Back Acres Rentals"}</dd>
                   </dl>
-                </aside>
+                </SectionCard>
               </div>
             </section>
           );

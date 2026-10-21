@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "shaders": {
+    "4744037": {
+      "title": "Pixel Reveal 2",
+      "component": "PixelReveal2",
+      "file": "components/shaders/PixelReveal2.tsx",
+      "framework": "react",
+      "hash": "sha256:d216c01e62c60b06d68ad658cfaaa2ca9fed4ddbf119eb9d27af987fc88c1dee",
+      "updatedAt": "2026-10-20T23:25:33.116923+00:00",
+      "installedAt": "2026-10-20T23:34:48.180Z"
+    }
+  }
+}

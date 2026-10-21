@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native controls capture the selected invitation and pending state.
 "use client";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { SectionCard } from "@/components/management/section-card";
 import { Button } from "@/components/ui/button";
 import { AppSelect } from "@/components/ui/select";
 import { type Person, TenantRow } from "./tenant-row";
@@ -146,7 +147,7 @@ export function TenantAccessManager() {
       <p aria-live="polite" className="tenant-admin-status" role="status">
         {message}
       </p>
-      <section aria-labelledby="tenants-heading">
+      <SectionCard labelledBy="tenants-heading">
         <h2 id="tenants-heading">Tenants</h2>
         {list.length ? (
           <ul className="tenant-rows">
@@ -167,9 +168,9 @@ export function TenantAccessManager() {
             portal account, or when you invite them below.
           </p>
         )}
-      </section>
+      </SectionCard>
       {invitations.length > 0 && (
-        <section aria-labelledby="invitations-heading">
+        <SectionCard labelledBy="invitations-heading">
           <h2 id="invitations-heading">Waiting for sign-up</h2>
           <ul className="tenant-rows">
             {invitations.map((invitation) => (
@@ -212,45 +213,47 @@ export function TenantAccessManager() {
               </li>
             ))}
           </ul>
-        </section>
+        </SectionCard>
       )}
-      <details className="tenant-invite">
-        <summary>Invite someone by email</summary>
-        <p className="small-note">
-          For a tenant without an account. If the email already has an account,
-          it connects now; otherwise we email an invitation.
-        </p>
-        <form className="tenant-invite-form" onSubmit={invite}>
-          <AppSelect
-            label="Property"
-            onValueChange={setInvitePropertyId}
-            required
-            value={invitePropertyId}
-          >
-            <option value="">Choose property</option>
-            {properties.map((property) => (
-              <option key={property.id} value={property.id}>
-                {property.data.name}
-              </option>
-            ))}
-          </AppSelect>
-          <label className="field">
-            Name
-            <input maxLength={300} name="name" required />
-          </label>
-          <label className="field">
-            Email
-            <input maxLength={254} name="email" required type="email" />
-          </label>
-          <Button
-            disabled={pending || !ready || !invitePropertyId}
-            type="submit"
-            variant="primary"
-          >
-            {pending ? "Sending…" : "Send invitation"}
-          </Button>
-        </form>
-      </details>
+      <SectionCard labelledBy="invite-heading">
+        <details className="tenant-invite">
+          <summary id="invite-heading">Invite someone by email</summary>
+          <p className="small-note">
+            For a tenant without an account. If the email already has an
+            account, it connects now; otherwise we email an invitation.
+          </p>
+          <form className="tenant-invite-form" onSubmit={invite}>
+            <AppSelect
+              label="Property"
+              onValueChange={setInvitePropertyId}
+              required
+              value={invitePropertyId}
+            >
+              <option value="">Choose property</option>
+              {properties.map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.data.name}
+                </option>
+              ))}
+            </AppSelect>
+            <label className="field">
+              Name
+              <input maxLength={300} name="name" required />
+            </label>
+            <label className="field">
+              Email
+              <input maxLength={254} name="email" required type="email" />
+            </label>
+            <Button
+              disabled={pending || !ready || !invitePropertyId}
+              type="submit"
+              variant="primary"
+            >
+              {pending ? "Sending…" : "Send invitation"}
+            </Button>
+          </form>
+        </details>
+      </SectionCard>
     </div>
   );
 }

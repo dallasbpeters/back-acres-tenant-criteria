@@ -4,7 +4,6 @@
 .branding-workspace {
   display: grid;
   gap: 1.25rem;
-  max-inline-size: 52rem;
 }
 .branding-workspace form,
 .signing-panel form {
@@ -31,6 +30,12 @@
   display: grid;
   gap: var(--space-lg);
   margin-block: var(--space-lg);
+}
+/* Light and dark side by side once the card is wider than a tablet column. */
+@container (width >= 40rem) {
+  .brand-color-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .brand-color-mode-heading {
   display: flex;
@@ -193,7 +198,7 @@
   margin: 0.75rem 0 0;
   overflow: hidden;
   list-style: none;
-  border: 1px solid var(--border-dark);
+  border-radius: 0.35rem;
 }
 .brand-swatch {
   --bg-current: var(--swatch);
@@ -227,6 +232,13 @@
 }
 .brand-swatch-button[data-hovered] .brand-swatch-hex {
   text-decoration: underline;
+}
+/* The swatch is the color being edited, so it keeps its paint on hover. This
+   matches the global button hover rule's specificity and loads after it. */
+.brand-swatch .brand-swatch-button:not(:disabled):is(:hover, [data-hovered]) {
+  --bg-current: var(--swatch);
+  color: inherit;
+  background: transparent;
 }
 .brand-swatch-name {
   font-size: 1.05rem;

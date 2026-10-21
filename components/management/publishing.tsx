@@ -1,5 +1,4 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
-"use client";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { AppSelect } from "@/components/ui/select";
 import { listingProviders, listingText } from "@/lib/management/listings";
 import type { PropertyRecord } from "./dashboard";
 import { PhotoManager, type PhotoRecord } from "./photos";
+import { SectionCard } from "./section-card";
 export interface PublicationRecord {
   contentDigest: string;
   propertyId: string;
@@ -67,7 +67,7 @@ export function PublishingWorkspace({
   }
 
   return (
-    <section>
+    <section className="publishing-workspace">
       <div className="section-heading-row">
         <div>
           <h2>Photos & publishing</h2>
@@ -97,8 +97,11 @@ export function PublishingWorkspace({
             photos={photos.filter((p) => p.propertyId === property.id)}
             propertyId={property.id}
           />
-          <section className="management-section">
-            <h3>Publish your listing</h3>
+          <SectionCard
+            className="management-section"
+            labelledBy="publish-heading"
+          >
+            <h3 id="publish-heading">Publish your listing</h3>
             <p>
               Download the listing text and photos, then finish publishing in
               each account. This app does not automatically submit listings or
@@ -210,7 +213,7 @@ export function PublishingWorkspace({
               account.
             </p>
             {!!message && <p role="status">{message}</p>}
-          </section>
+          </SectionCard>
         </>
       ) : (
         <p className="management-empty">

@@ -94,6 +94,7 @@
 }
 /* Property operations use the same restrained document layout. */
 .management-main {
+  z-index: 300;
   display: grid;
   gap: 1.5rem;
   align-content: start;
@@ -121,7 +122,6 @@
   display: grid;
   gap: 1.25rem;
   padding-block: 1.5rem;
-  border-block-start: 1px solid var(--border);
 }
 .management-form fieldset {
   display: grid;
@@ -173,7 +173,11 @@
 }
 .management-empty {
   padding-block: 2rem;
+  margin-block: 2rem;
   color: var(--muted);
+  text-align: center;
+  border: solid 1px var(--border);
+  border-radius: var(--radius-sm);
 }
 @media print {
   .management-nav,
@@ -190,6 +194,7 @@
 }
 .owner-navbar {
   --bg-current: var(--paper);
+  z-index: 500;
   display: flex;
   gap: 1rem;
   align-items: center;
@@ -226,6 +231,7 @@
   font: inherit;
 }
 .owner-layout {
+  z-index: 100;
   display: grid;
   grid-template-columns: 12.5rem minmax(0, 1fr);
   inline-size: 100%;
@@ -392,8 +398,15 @@
   margin-block-start: 0;
 }
 .owner-signed-out {
+  display: grid;
   grid-template-columns: 1fr;
-  max-inline-size: 55rem;
+  place-content: center;
+  place-items: center;
+}
+.owner-signed-out > * {
+  grid-template-columns: 1fr;
+  place-items: stretch;
+  max-inline-size: 65rem;
 }
 @media (max-width: 900px) {
   .owner-layout {
@@ -442,7 +455,9 @@
     font-size: 1.65rem;
   }
   .section-heading-row {
+    flex-direction: column;
     align-items: flex-start;
+    max-inline-size: 100%;
   }
 }
 @media print {
@@ -459,8 +474,9 @@
   }
 }
 .owner-app {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr;
 }
 .owner-layout {
   flex: 1;
@@ -574,11 +590,6 @@ button.remove-record-button,
   align-items: center;
 }
 /* Payments: renters overview and per-payment sharing. */
-.payment-renters {
-  padding: 1rem 1.25rem;
-  margin-block: 1rem 1.5rem;
-  border: 1px solid var(--border);
-}
 .payment-renters-heading {
   display: flex;
   flex-wrap: wrap;
@@ -835,7 +846,6 @@ button.remove-record-button,
 .guide {
   display: grid;
   gap: 2.25rem;
-  max-inline-size: 48rem;
 }
 .guide-intro {
   margin: 0;

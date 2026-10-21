@@ -171,11 +171,6 @@
 }
 
 /* Owner renters insurance review. */
-.insurance-review {
-  padding-block-start: 1.5rem;
-  margin-block-start: 2rem;
-  border-block-start: 1px solid var(--border);
-}
 
 .insurance-review-list {
   display: grid;
@@ -300,11 +295,13 @@ a:not(.submit-button):not(.ui-button).tenant-tab:hover {
   border: 1px solid var(--border);
 }
 .tenant-panel h3,
+.tenant-request-card h3,
 .tenant-aside h3 {
   margin: 0 0 1rem;
   font-size: var(--text-subheading);
 }
-.tenant-panel .tenant-form {
+.tenant-panel .tenant-form,
+.tenant-request-card .tenant-form {
   max-inline-size: none;
   padding-block: 0;
 }
@@ -384,9 +381,6 @@ a:not(.submit-button):not(.ui-button).tenant-tab:hover {
 .tenant-form label.check-row {
   display: flex;
   align-items: flex-start;
-}
-.tenant-aside {
-  padding-block-start: clamp(1.25rem, 3vw, 2rem);
 }
 @media (max-width: 800px) {
   .tenant-navigation {
@@ -539,7 +533,6 @@ a:not(.submit-button):not(.ui-button).tenant-tab:hover {
 .tenant-admin {
   display: grid;
   gap: 2rem;
-  max-inline-size: 64rem;
 }
 .tenant-admin h2 {
   margin: 0 0 0.75rem;
@@ -652,10 +645,6 @@ a:not(.submit-button):not(.ui-button).tenant-tab:hover {
   font-family: var(--font-interface);
   font-size: 0.95rem;
 }
-.tenant-invite {
-  padding-block-start: 1rem;
-  border-block-start: 1px solid var(--border);
-}
 .tenant-invite summary {
   font-family: var(--font-interface);
   font-weight: 600;
@@ -697,7 +686,8 @@ a:not(.submit-button):not(.ui-button).tenant-tab:hover {
 /* Getting started checklist and other step lists. */
 .guide-steps {
   display: grid;
-  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.75rem;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -706,11 +696,11 @@ a:not(.submit-button):not(.ui-button).tenant-tab:hover {
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr);
   gap: 0.75rem;
-  padding-block: 0.85rem;
-  border-block-end: 1px solid var(--border);
+  padding: 0.85rem;
+  border-inline-end: 1px solid var(--border);
 }
 .guide-step:last-child {
-  border-block-end: 0;
+  border-inline-end: 0;
 }
 .guide-step-marker {
   display: inline-grid;

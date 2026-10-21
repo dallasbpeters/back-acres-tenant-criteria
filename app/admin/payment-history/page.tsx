@@ -2,6 +2,7 @@ import { count, desc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { OwnerFrame } from "@/components/management/owner-frame";
+import { SectionCard } from "@/components/management/section-card";
 import { OwnerSignIn } from "@/components/management/sign-in";
 import { authenticated } from "@/lib/adverse/auth";
 import { db } from "@/lib/db";
@@ -63,8 +64,8 @@ export default async function PaymentActivity({
       <p>
         <a href="/admin#payments">← Payments workspace</a>
       </p>
-      <section>
-        <h2>Recovery and authorization copies</h2>
+      <SectionCard labelledBy="recovery-heading">
+        <h2 id="recovery-heading">Recovery and authorization copies</h2>
         <p role={stale ? "status" : undefined}>
           {stale
             ? "Review needed: the daily payment recovery job has no recent successful run."
@@ -79,9 +80,11 @@ export default async function PaymentActivity({
           never creates charges or retries debits. Review failed jobs in Vercel;
           longer outages require manual reconciliation in Stripe.
         </p>
-      </section>
-      <section>
-        <h2>{invoice ? "Invoice activity" : "Recent invoice activity"}</h2>
+      </SectionCard>
+      <SectionCard labelledBy="invoice-activity-heading">
+        <h2 id="invoice-activity-heading">
+          {invoice ? "Invoice activity" : "Recent invoice activity"}
+        </h2>
         <p className="small-note">
           Latest 200 changes. Baseline entries show the state when history
           tracking began; they do not reconstruct earlier transactions. Amounts
@@ -134,7 +137,7 @@ export default async function PaymentActivity({
         ) : (
           <p>No recorded activity for this selection.</p>
         )}
-      </section>
+      </SectionCard>
     </OwnerFrame>
   );
 }

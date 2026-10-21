@@ -37,13 +37,13 @@ export default async function RootLayout({
       <body>
         <ThemeProvider>
           {children}
-          <nav aria-label="Site information" className="site-policy-links">
+          <footer className="site-policy-links">
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
             <a href="/properties">Properties</a>
             <a href="/tenant">Tenant portal</a>
             {!!signedIn && <a href="/admin">Owner workspace</a>}
-          </nav>
+          </footer>
         </ThemeProvider>
       </body>
     </html>

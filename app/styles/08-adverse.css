@@ -152,18 +152,29 @@
   min-inline-size: 42rem;
   font-size: 0.85rem;
   text-align: start;
-  border-collapse: collapse;
+}
+.notice-table tbody,
+.notice-table thead {
+  display: contents;
 }
 .notice-table th {
   --bg-current: var(--bg);
   padding: 0.8rem;
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--muted);
+  color: contrast-color(var(--actions));
   text-align: start;
-  background: var(--bg);
+  background: var(--actions);
 }
+.notice-table tr {
+  --grid: 200px 300px 100px auto 120px 120px;
+  display: grid;
+  grid-template-columns: var(--grid);
+}
+
 .notice-table td {
+  display: inline-grid;
+  place-content: start;
   max-inline-size: 24rem;
   padding: 1rem 0.8rem;
   vertical-align: top;
@@ -193,13 +204,28 @@
 .notice-table td:last-child {
   white-space: nowrap;
 }
+/* Stacked rows must fit the card, so drop the wide-table minimum and cell cap. */
+@container (width < 700px) {
+  .notice-table {
+    min-inline-size: 0;
+  }
+  .notice-table thead {
+    display: none;
+  }
+  .notice-table tr {
+    --grid: minmax(0, 1fr);
+  }
+  .notice-table td {
+    max-inline-size: none;
+  }
+}
 .notice-list-footer {
   justify-content: space-between;
   padding-block: 1rem;
 }
-@media (max-width: 640px) {
+@container (width < 640px) {
   .notice-list-filters {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
   .notice-list-filters .field:first-child {
     grid-column: 1 / -1;
@@ -214,11 +240,6 @@
 }
 .notice-table-scroll {
   min-inline-size: 0;
-}
-@media (max-width: 640px) {
-  .notice-list-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 .notice-return {
   display: flex;
@@ -505,4 +526,25 @@
 .property-criteria-section .document-text {
   margin: 0;
   font-size: 1rem;
+}
+/* The history, numbered sections, and send area each sit in a card. The card
+   border replaces their dividers; these selectors follow the earlier rules. */
+.admin-workspace .notice-history {
+  padding: 0;
+  border: 0;
+}
+.notice-fields {
+  display: grid;
+  gap: var(--space-lg);
+  margin-block-end: var(--space-lg);
+}
+.admin-shell .notice-fields section,
+.admin-shell .notice-send {
+  padding-block: 0;
+  border-block-start: 0;
+}
+@media print {
+  .section-card:has(.notice-history, .notice-send) {
+    display: none;
+  }
 }

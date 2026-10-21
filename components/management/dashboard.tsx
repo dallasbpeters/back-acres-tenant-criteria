@@ -25,6 +25,7 @@ import {
   RemovedWorkspace,
 } from "./remove-button";
 import { ScreeningPanel } from "./screening-panel";
+import { SectionCard } from "./section-card";
 export interface PropertyRecord {
   data: PropertyInput;
   id: string;
@@ -210,8 +211,8 @@ export function Dashboard() {
             />
           )}
           {!!(tab === "Applications") && (
-            <section>
-              <h2>Applications</h2>
+            <SectionCard labelledBy="applications-heading">
+              <h2 id="applications-heading">Applications</h2>
               <p>
                 Submitted information is applicant-reported and email addresses
                 are unverified. Review each application yourself; status changes
@@ -296,7 +297,7 @@ export function Dashboard() {
                   />
                 </details>
               ))}
-            </section>
+            </SectionCard>
           )}
           <div hidden={tab !== "Leases"}>
             <LeaseWorkspace
@@ -357,104 +358,110 @@ export function Dashboard() {
             </PaymentRentersProvider>
           )}
           {!!(tab === "Maintenance") && (
-            <section>
-              <h2>Maintenance</h2>
-              <p>
-                Tenants submit requests from the Maintenance page of their
-                tenant portal. Connect a tenant&apos;s account to a property
-                under Tenants; no request link is needed.
-              </p>
-              {records.residentLinks.length > 0 && (
-                <details>
-                  <summary>
-                    Older request links ({records.residentLinks.length})
-                  </summary>
-                  <p className="small-note">
-                    Links created before the tenant portal. They keep working
-                    until they expire or you revoke them.
-                  </p>
-                  {records.residentLinks.map((l) => (
-                    <article className="record" key={l.id}>
-                      <h3>
-                        {l.residentName} · {propertyName(l.propertyId)}
-                      </h3>
-                      <p>
-                        {l.revoked
-                          ? "Revoked"
-                          : `Expires ${new Date(l.expiresAt).toLocaleDateString()}`}
-                      </p>
-                      <RemoveButton
-                        disabled={busy}
-                        id={l.id}
-                        kind="residentLink"
-                        name={l.residentName}
-                        onRemoved={load}
-                      />
-                      {!l.revoked && (
-                        <>
-                          <CopyLink url={l.url} />
-                          <div className="management-actions">
-                            <a href={l.url} rel="noreferrer" target="_blank">
-                              Open request form
-                            </a>
-                            <Button
-                              disabled={busy}
-                              onClick={() =>
-                                save({ action: "revokeLink", id: l.id })
-                              }
-                              type="submit"
-                            >
-                              Revoke link
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </article>
-                  ))}
-                </details>
-              )}
-              <h2>Requests</h2>
-              {!records.maintenance.length && (
-                <p className="management-empty">No maintenance requests yet.</p>
-              )}
-              {records.maintenance.map((m) => (
-                <details className="record" key={m.id}>
-                  <summary>
-                    {m.data.subject} · {m.data.priority} · {m.status}
-                  </summary>
-                  <p>
-                    {propertyName(m.propertyId)} · {m.data.name} ·{" "}
-                    {m.data.email} · {m.data.phone}
-                  </p>
-                  <p>{new Date(m.createdAt).toLocaleString()}</p>
-                  <p className="document-text">{m.data.description}</p>
-                  <p>Access: {m.data.accessNotes || "Contact resident"}</p>
-                  <AppSelect
-                    disabled={busy}
-                    label={<>Request status</>}
-                    onValueChange={(value) =>
-                      save({
-                        action: "maintenanceStatus",
-                        id: m.id,
-                        status: value,
-                      })
-                    }
-                    value={m.status}
-                  >
-                    {maintenanceStatuses.map((s) => (
-                      <option key={s}>{s}</option>
+            <>
+              <SectionCard labelledBy="maintenance-heading">
+                <h2 id="maintenance-heading">Maintenance</h2>
+                <p>
+                  Tenants submit requests from the Maintenance page of their
+                  tenant portal. Connect a tenant&apos;s account to a property
+                  under Tenants; no request link is needed.
+                </p>
+                {records.residentLinks.length > 0 && (
+                  <details>
+                    <summary>
+                      Older request links ({records.residentLinks.length})
+                    </summary>
+                    <p className="small-note">
+                      Links created before the tenant portal. They keep working
+                      until they expire or you revoke them.
+                    </p>
+                    {records.residentLinks.map((l) => (
+                      <article className="record" key={l.id}>
+                        <h3>
+                          {l.residentName} · {propertyName(l.propertyId)}
+                        </h3>
+                        <p>
+                          {l.revoked
+                            ? "Revoked"
+                            : `Expires ${new Date(l.expiresAt).toLocaleDateString()}`}
+                        </p>
+                        <RemoveButton
+                          disabled={busy}
+                          id={l.id}
+                          kind="residentLink"
+                          name={l.residentName}
+                          onRemoved={load}
+                        />
+                        {!l.revoked && (
+                          <>
+                            <CopyLink url={l.url} />
+                            <div className="management-actions">
+                              <a href={l.url} rel="noreferrer" target="_blank">
+                                Open request form
+                              </a>
+                              <Button
+                                disabled={busy}
+                                onClick={() =>
+                                  save({ action: "revokeLink", id: l.id })
+                                }
+                                type="submit"
+                              >
+                                Revoke link
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </article>
                     ))}
-                  </AppSelect>
-                  <RemoveButton
-                    disabled={busy}
-                    id={m.id}
-                    kind="maintenance"
-                    name={m.data.subject}
-                    onRemoved={load}
-                  />
-                </details>
-              ))}
-            </section>
+                  </details>
+                )}
+              </SectionCard>
+              <SectionCard labelledBy="maintenance-requests-heading">
+                <h2 id="maintenance-requests-heading">Requests</h2>
+                {!records.maintenance.length && (
+                  <p className="management-empty">
+                    No maintenance requests yet.
+                  </p>
+                )}
+                {records.maintenance.map((m) => (
+                  <details className="record" key={m.id}>
+                    <summary>
+                      {m.data.subject} · {m.data.priority} · {m.status}
+                    </summary>
+                    <p>
+                      {propertyName(m.propertyId)} · {m.data.name} ·{" "}
+                      {m.data.email} · {m.data.phone}
+                    </p>
+                    <p>{new Date(m.createdAt).toLocaleString()}</p>
+                    <p className="document-text">{m.data.description}</p>
+                    <p>Access: {m.data.accessNotes || "Contact resident"}</p>
+                    <AppSelect
+                      disabled={busy}
+                      label={<>Request status</>}
+                      onValueChange={(value) =>
+                        save({
+                          action: "maintenanceStatus",
+                          id: m.id,
+                          status: value,
+                        })
+                      }
+                      value={m.status}
+                    >
+                      {maintenanceStatuses.map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </AppSelect>
+                    <RemoveButton
+                      disabled={busy}
+                      id={m.id}
+                      kind="maintenance"
+                      name={m.data.subject}
+                      onRemoved={load}
+                    />
+                  </details>
+                ))}
+              </SectionCard>
+            </>
           )}
           <p className="small-note">
             Workspace shows the latest 200 records per section.
@@ -566,10 +573,10 @@ function PropertyWorkspace({
   const data = editing?.data;
 
   return (
-    <section>
+    <SectionCard labelledBy="properties-heading">
       <div className="section-heading-row">
         <div>
-          <h2>Properties</h2>
+          <h2 id="properties-heading">Properties</h2>
           <p className="small-note">
             Manage listings, availability, and applications.
           </p>
@@ -774,6 +781,6 @@ function PropertyWorkspace({
           Add your first property to start listing and accepting applications.
         </p>
       )}
-    </section>
+    </SectionCard>
   );
 }

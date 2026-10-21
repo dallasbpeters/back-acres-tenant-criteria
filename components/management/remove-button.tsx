@@ -1,9 +1,9 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
-"use client";
 import { useState } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { Button } from "@/components/ui/button";
 import { type RemovalKind, removalLabels } from "@/lib/management/removal";
+import { SectionCard } from "./section-card";
 export async function removalCommand(body: unknown) {
   const response = await fetch("/api/admin/removed", {
     body: JSON.stringify(body),
@@ -261,8 +261,8 @@ export function RemovedWorkspace({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
-    <section aria-label="Removed items">
-      <h2>Removed items</h2>
+    <SectionCard labelledBy="removed-heading">
+      <h2 id="removed-heading">Removed items</h2>
       <p>
         Restore items to their original section. Properties stay unpublished,
         resident links stay revoked, and canceled payments stay canceled.
@@ -302,6 +302,6 @@ export function RemovedWorkspace({
             </Button>
           </article>
         ))}
-    </section>
+    </SectionCard>
   );
 }

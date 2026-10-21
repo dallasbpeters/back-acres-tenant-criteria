@@ -17,6 +17,7 @@ import {
 } from "@/lib/adverse/notice";
 import { requireValue } from "@/lib/required";
 import { RemoveButton } from "./management/remove-button";
+import { SectionCard } from "./management/section-card";
 import { NoticeTemplatePicker } from "./notice-template-picker";
 
 interface Version {
@@ -356,8 +357,11 @@ export default function AdverseEditor({
         )}
       </nav>
       <div className="admin-workspace">
-        <aside aria-label="Version history" className="notice-history">
-          <h2>Version history</h2>
+        <SectionCard
+          className="notice-history"
+          labelledBy="notice-history-heading"
+        >
+          <h2 id="notice-history-heading">Version history</h2>
           <div className="admin-actions notice-history-actions">
             <Button disabled={busy} onClick={() => load(null)} type="button">
               New notice
@@ -411,7 +415,7 @@ export default function AdverseEditor({
               Load earlier versions
             </Button>
           )}
-        </aside>
+        </SectionCard>
         <div className="notice-main">
           <div className="admin-actions notice-toolbar">
             <p className="eyebrow">
@@ -492,8 +496,10 @@ export default function AdverseEditor({
             />
           ) : (
             <fieldset className="notice-fields" disabled={busy}>
-              <section>
-                <h2>01 · Applicant and decision</h2>
+              <SectionCard labelledBy="notice-applicant-heading">
+                <h2 id="notice-applicant-heading">
+                  01 · Applicant and decision
+                </h2>
                 <div className="fields">
                   {field("applicantName", "Applicant full name")}
                   {field("applicantEmail", "Applicant email", "email")}
@@ -527,9 +533,11 @@ export default function AdverseEditor({
                     value={notice.actionDetails}
                   />
                 </label>
-              </section>
-              <section>
-                <h2>02 · Reasons for the decision</h2>
+              </SectionCard>
+              <SectionCard labelledBy="notice-reasons-heading">
+                <h2 id="notice-reasons-heading">
+                  02 · Reasons for the decision
+                </h2>
                 <p className="section-intro">
                   Describe the actual reasons for this applicant. Avoid
                   including Social Security numbers or full account numbers.
@@ -539,9 +547,11 @@ export default function AdverseEditor({
                   onChange={(value) => change("reasons", value)}
                   value={notice.reasons}
                 />
-              </section>
-              <section>
-                <h2>03 · Consumer report disclosures</h2>
+              </SectionCard>
+              <SectionCard labelledBy="notice-disclosures-heading">
+                <h2 id="notice-disclosures-heading">
+                  03 · Consumer report disclosures
+                </h2>
                 <label className="check-row">
                   <input
                     checked={notice.reportUsed}
@@ -706,10 +716,10 @@ export default function AdverseEditor({
                     )}
                   </>
                 )}
-              </section>
+              </SectionCard>
             </fieldset>
           )}
-          <section className="notice-send">
+          <SectionCard className="notice-send" label="Send notice">
             <div className="admin-actions">
               {!!preview && (
                 <Button onClick={() => window.print()} type="button">
@@ -807,7 +817,7 @@ export default function AdverseEditor({
               notice does not establish earlier disclosure or resolve any
               application-fee refund obligations.
             </p>
-          </section>
+          </SectionCard>
         </div>
       </div>
     </div>

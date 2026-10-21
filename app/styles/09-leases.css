@@ -10,6 +10,22 @@
 .lease-workspace .section-heading-row p {
   max-inline-size: 65ch;
 }
+
+.card-header {
+  display: grid;
+  grid-template-areas: "heading action" "text .";
+  grid-template-columns: 1fr auto;
+}
+.card-header h2 {
+  grid-area: heading;
+}
+.card-header p {
+  grid-area: text;
+  grid-row: 2;
+}
+.card-header button {
+  grid-area: action;
+}
 /* Guided lease steps: one connected row on a shared rule, no boxes. */
 .lease-progress {
   display: flex;

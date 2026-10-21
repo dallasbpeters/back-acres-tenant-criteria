@@ -1,5 +1,4 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
-"use client";
 import posthog from "posthog-js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { Field, type PropertyRecord, PropertySelect } from "./dashboard";
 import { RenterSharing, useRenters } from "./payment-renters";
 import { CopyLinkButton, PaymentRow, type StatusTone } from "./payment-row";
 import { RemoveButton } from "./remove-button";
+import { SectionCard } from "./section-card";
 export interface RentScheduleRecord {
   collection: string;
   enrollmentUrl: string | null;
@@ -78,7 +78,7 @@ export function BillingWorkspace({
   };
   const target = schedules.find((s) => s.id === removing);
   return (
-    <section aria-labelledby="rent-schedules" className="payment-section">
+    <SectionCard className="payment-section" labelledBy="rent-schedules">
       <div className="payment-section-head">
         <div>
           <h3 id="rent-schedules">Rent schedules</h3>
@@ -307,7 +307,7 @@ export function BillingWorkspace({
           open
         />
       )}
-    </section>
+    </SectionCard>
   );
 }
 

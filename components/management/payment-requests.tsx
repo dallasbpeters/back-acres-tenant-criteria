@@ -1,5 +1,4 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Row and form controls capture the current request and form state.
-"use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { OverflowAction } from "@/components/ui/overflow-menu";
@@ -15,6 +14,7 @@ import {
 import { RenterSharing } from "./payment-renters";
 import { CopyLinkButton, PaymentRow, type StatusTone } from "./payment-row";
 import { RemoveButton } from "./remove-button";
+import { SectionCard } from "./section-card";
 
 const invoiceLabels: Record<string, { label: string; tone: StatusTone }> = {
   open: { label: "Waiting for payment", tone: "waiting" },
@@ -55,7 +55,7 @@ export function PaymentRequests({
   const [removing, setRemoving] = useState<string | null>(null);
   const target = invoices.find((i) => i.id === removing);
   return (
-    <section aria-labelledby="payment-requests" className="payment-section">
+    <SectionCard className="payment-section" labelledBy="payment-requests">
       <div className="payment-section-head">
         <div>
           <h3 id="payment-requests">Payment requests</h3>
@@ -123,7 +123,7 @@ export function PaymentRequests({
           open
         />
       )}
-    </section>
+    </SectionCard>
   );
 }
 

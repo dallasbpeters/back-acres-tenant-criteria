@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native controls capture the current document row and its draft note.
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { SectionCard } from "@/components/management/section-card";
 import { Button } from "@/components/ui/button";
 import type { InsuranceStanding } from "@/lib/tenant/insurance";
 
@@ -82,7 +83,7 @@ export function InsuranceReview() {
     }
   }
   return (
-    <section aria-labelledby="insurance-review" className="insurance-review">
+    <SectionCard className="insurance-review" labelledBy="insurance-review">
       <h2 id="insurance-review">Renters insurance</h2>
       <p className="small-note">
         Renters upload proof of insurance from the tenant portal. Check the
@@ -150,6 +151,6 @@ export function InsuranceReview() {
       ) : (
         <p>No insurance documents uploaded yet.</p>
       )}
-    </section>
+    </SectionCard>
   );
 }

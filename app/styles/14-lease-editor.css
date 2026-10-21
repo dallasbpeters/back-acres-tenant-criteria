@@ -68,6 +68,7 @@
   align-items: center;
 }
 .lease-versions {
+  grid-row: 2;
   margin-block-start: 0.75rem;
   font-size: 0.85rem;
 }

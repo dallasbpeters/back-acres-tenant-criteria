@@ -54,6 +54,8 @@
 }
 .site-policy-links {
   --bg-current: var(--bg);
+  position: relative;
+  z-index: 400;
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 2rem;

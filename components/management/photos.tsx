@@ -1,5 +1,4 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Native and React Aria controls are not memoized app children; local event/render callbacks intentionally capture the current form or row values.
-"use client";
 import {
   closestCenter,
   DndContext,
@@ -21,6 +20,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { SectionCard } from "./section-card";
 
 function SortablePhoto({
   photo,
@@ -213,10 +213,10 @@ export function PhotoManager({
   }
 
   return (
-    <section aria-label="Listing photos" className="photo-manager">
+    <SectionCard className="photo-manager" labelledBy="photos-heading">
       <div className="section-heading-row">
         <div>
-          <h3>Listing photos</h3>
+          <h3 id="photos-heading">Listing photos</h3>
           <p className="small-note">
             {active.length} of 24 photos · drag to rearrange · first photo is
             the cover
@@ -359,6 +359,6 @@ export function PhotoManager({
       )}
       {!!message && <p role="status">{message}</p>}
       {!!error && <p role="alert">{error}</p>}
-    </section>
+    </SectionCard>
   );
 }

@@ -8,12 +8,13 @@
   --button-hover-ink: var(--on-action);
   --button-hover: color-mix(in oklch, var(--actions) 88%, #ffffff);
   --button-active: color-mix(in oklch, var(--actions) 78%, #ffffff);
+  border: none;
 }
 .ui-button--secondary {
   --button-bg: transparent;
   --button-ink: var(--button-ink);
   --button-hover-ink: var(--on-action);
-  --button-hover: color-mix(in oklch, var(--actions) 88%, #ffffff);
+  --button-hover: color-mix(in oklch, var(--actions) 50%, #ffffff 50%);
   --button-active: color-mix(in oklch, var(--actions) 78%, #ffffff);
   --border-color: var(--border);
 }
@@ -39,7 +40,6 @@
 /* contrast-color() only where the state paints a background behind the text. */
 a:not(.submit-button):not(.ui-button):active {
   --bg-current: var(--tint);
-  font-size: var(--text-label);
   color: contrast-color(var(--tint));
   background: transparent;
 }
@@ -125,7 +125,7 @@ a:not(.submit-button):not(.ui-button):active {
   text-align: start;
   cursor: pointer;
   background: var(--actions);
-  border: 1px solid var(--border);
+  border: 0px solid var(--border);
   border-radius: 2px;
   transition: background-color 160ms var(--ease-out);
 }
@@ -141,6 +141,10 @@ a:not(.submit-button):not(.ui-button):active {
   border-color: var(--border);
 }
 .submit-button:enabled:active {
+  --bg-current: color-mix(in oklch, var(--actions) 100%, var(--ink) 0%);
+  background: color-mix(in oklch, var(--actions), var(--ink) 22%);
+}
+.submit-button:hover {
   --bg-current: color-mix(in oklch, var(--actions), var(--ink) 22%);
   background: color-mix(in oklch, var(--actions), var(--ink) 22%);
 }
@@ -375,8 +379,9 @@ textarea::placeholder {
   [aria-disabled="true"]
 ):is(:active, [data-pressed]) {
   --bg-current: var(--button-active, var(--control-active));
-  color: var(--button-ink, var(--ink));
+  color: var(--surface, var(--ink));
   background: var(--button-active, var(--control-active));
+  scale: 0.97;
 }
 :is(button, .ui-button, .submit-button)[aria-pressed="true"] {
   --bg-current: var(--tint);
