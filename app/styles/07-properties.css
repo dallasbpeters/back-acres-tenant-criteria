@@ -496,7 +496,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 1.5rem;
-  padding-block: 0.35rem;
+  padding: 0.35rem;
   font-size: 0.85rem;
   background: var(--surface);
   border-block-end: 1px solid var(--border);
